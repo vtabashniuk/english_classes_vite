@@ -138,6 +138,9 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-.env
-.env.local
-.env.*.local
+# Vercel
+.vercel/
+
+# IDE
+.idea/
+.vscode/
