@@ -1,0 +1,120 @@
+.switcherWrapper {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.selectWrapper {
+  display: flex;
+  align-items: center;
+  background-color: transparent; /* Transparent, як хочеш */
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  border: 1px solid transparent; /* Або none */
+  padding: 4px 8px;
+  font-family: var(--font-body);
+  transition: var(--transition);
+  min-width: 80px;
+  cursor: pointer;
+  gap: 20px; /* Простір між label і стрілкою */
+  position: relative; /* Для позиціонування ul */
+}
+
+.arrow {
+  width: 12px;
+  height: 12px;
+  color: var(--color-text-secondary); /* Сіра стрілка */
+  transition: transform 0.3s ease;
+}
+
+/* Обертання стрілки ТІЛЬКИ при open */
+.selectWrapper.isOpen .arrow {
+  transform: rotate(180deg);
+}
+
+.optionsList {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-bg-secondary);
+  border-radius: var(--border-radius);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  min-width: 80px;
+  z-index: 1001;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.option {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+  margin: 0;
+  font-family: var(--font-body);
+  transition: var(--transition);
+  white-space: nowrap; /* Не переносити текст */
+}
+
+.option:hover {
+  background-color: var(--color-accent-warm);
+  color: white;
+}
+
+.option:first-child {
+  border-radius: var(--border-radius) var(--border-radius) 0 0; /* Закруглення верху */
+}
+
+.option:last-child {
+  border-radius: 0 0 var(--border-radius) var(--border-radius); /* Закруглення низу */
+}
+
+/* Адаптивність */
+@media (max-width: 480px) {
+  .switcherWrapper {
+    top: 0.5rem;
+    right: 0.5rem;
+    transform: scale(0.85);
+  }
+
+  .selectWrapper {
+    min-width: 70px;
+    padding: 2px 6px;
+    gap: 10px;
+  }
+
+  .optionsList {
+    min-width: 70px;
+    right: -4px; /* Зсув для scale */
+  }
+
+  .option {
+    padding: 6px 10px;
+    font-size: 0.875rem; /* Менший текст */
+  }
+}
+
+@media (max-width: 768px) {
+  .switcherWrapper {
+    top: 0.75rem;
+    right: 0.75rem;
+    transform: scale(0.9);
+  }
+
+  .selectWrapper {
+    min-width: 75px;
+    padding: 3px 7px;
+    gap: 15px;
+  }
+
+  .optionsList {
+    min-width: 75px;
+  }
+}

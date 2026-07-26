@@ -1,0 +1,303 @@
+@import "normalize.css";
+@import "./styles/theme.css"; /* Інтеграція теми */
+
+:root {
+  --font-heading: "Playfair Display", Georgia, serif;
+  --font-body: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif; /* Системні fallback для Apple */
+}
+
+/* Глобальний box-model */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Body базові */
+body {
+  background-color: var(--color-bg-primary);
+  margin: 0;
+  padding: 0;
+  font-size: 16px; /* Базовий для rem */
+  -webkit-font-smoothing: antialiased; /* Чіткість на Apple */
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Заголовки — базові fluid */
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-primary-blue); /* синій акцент */
+  margin: 0 0 0.5em 0; /* Скид top/bottom */
+}
+
+h1 {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+} /* Плавний ріст */
+h2 {
+  font-size: clamp(1.25rem, 3.5vw, 2rem);
+}
+h3 {
+  font-size: clamp(1rem, 3vw, 1.5rem);
+}
+
+/* Основний текст */
+body,
+p,
+li {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  margin: 0 0 1em 0; /* Контрольований margin */
+}
+
+ul,
+ol {
+  padding-left: 1.5em; /* Контроль bullets */
+}
+
+/* Допоміжний текст */
+.small-text,
+.caption {
+  font-size: 0.875rem; /* 14px для доступності */
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+/* Цитати */
+blockquote {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: clamp(1rem, 2.5vw, 1.125rem); /* Fluid для цитат */
+  color: var(
+    --color-text-primary
+  ); /* Темний текст для читабельності (замість акценту) */
+  border-left: 4px solid var(--color-accent-warm); /* Персиковий для акценту в рамці */
+  padding: 1em 1.5em;
+  margin: 2em 0;
+  background-color: var(--color-bg-secondary);
+  max-width: 90%;
+  min-width: 300px; /* Не надто вузько */
+  quotes: "“" "”" "‘" "’"; /* Додає кавички для англійських цитат */
+}
+
+/* Кнопки — базові */
+.button {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1rem;
+  background-color: var(--color-accent-warm);
+  color: white;
+  padding: 12px 24px; /* Більше для touch */
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-soft);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+  text-decoration: none;
+  display: inline-block;
+  min-height: 44px; /* WCAG touch target */
+  touch-action: manipulation; /* Швидший тап на iOS */
+}
+
+.button:hover,
+.button:focus {
+  background-color: var(--color-hover);
+  transform: translateY(-2px);
+  outline: none;
+  box-shadow: 0 6px 16px rgba(var(--color-accent-warm-rgb), 0.2);
+}
+
+/* Базові утиліти */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Адаптивність: iPhone 11 portrait/landscape (до 480px) */
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  } /* Менший базовий */
+
+  h1 {
+    font-size: clamp(1.5rem, 6vw, 1.75rem);
+  }
+  h2 {
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+  }
+  h3 {
+    font-size: clamp(1rem, 4vw, 1.25rem);
+  }
+
+  p,
+  li {
+    font-size: clamp(0.875rem, 3vw, 0.95rem);
+    line-height: 1.7;
+  }
+
+  blockquote {
+    padding: 0.75em 1em;
+    margin: 1.5em 0;
+    font-size: 1rem;
+    border-left-width: 3px;
+  }
+
+  .button {
+    padding: 14px 24px;
+    font-size: 1.1rem;
+    min-height: 44px;
+  }
+
+  .container {
+    padding: 0 0.75rem;
+  }
+}
+
+/* 481–767px (landscape iPhone 11 ~896px, small phablet) */
+@media (min-width: 481px) and (max-width: 767px) {
+  h1 {
+    font-size: clamp(1.75rem, 5vw, 2rem);
+  } /* Трохи більші заголовки */
+  h2 {
+    font-size: clamp(1.5rem, 4vw, 1.75rem);
+  }
+  h3 {
+    font-size: clamp(1.125rem, 3.5vw, 1.375rem);
+  }
+
+  blockquote {
+    padding: 0.875em 1.25em;
+    font-size: 1.05rem;
+  } /* Більше простору */
+
+  .button {
+    padding: 13px 26px;
+  } /* Баланс touch/desktop */
+
+  .container {
+    padding: 0 1.25rem;
+    max-width: 100%;
+  } /* Повноекранний, але з відступами */
+}
+
+/* iPad portrait/landscape базовий (768–1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  h1 {
+    font-size: clamp(2rem, 4vw, 2.5rem);
+  }
+  h2 {
+    font-size: clamp(1.75rem, 3.5vw, 2rem);
+  }
+  h3 {
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+  }
+
+  p,
+  li {
+    line-height: 1.65;
+  } /* Трохи компактніше */
+
+  .button {
+    padding: 12px 28px;
+  }
+
+  .container {
+    max-width: 900px;
+    padding: 0 1.5rem;
+  }
+}
+
+/* 1025–1199px (landscape iPad 9 ~1080px, small desktop) */
+@media (min-width: 1025px) and (max-width: 1199px) {
+  h1 {
+    font-size: clamp(2.25rem, 3.5vw, 2.75rem);
+  } /* Більші для landscape iPad */
+  h2 {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+  }
+  h3 {
+    font-size: clamp(1.375rem, 2.5vw, 1.625rem);
+  }
+
+  blockquote {
+    padding: 1.125em 1.75em;
+    font-size: 1.15rem;
+  } /* Більше для tablets */
+
+  .button {
+    padding: 13px 30px;
+    font-size: 1.05rem;
+  } /* Трохи ширші */
+
+  .container {
+    max-width: 1100px;
+    padding: 0 1.75rem;
+  } /* Широкий, але не повний */
+}
+
+/* від 1200px */
+@media (min-width: 1200px) {
+  h1 {
+    font-size: 3.5rem;
+  } /* Великі для десктопу */
+  h2 {
+    font-size: 2.75rem;
+  }
+  h3 {
+    font-size: 1.75rem;
+  }
+
+  .container {
+    max-width: 1400px;
+    padding: 0 2rem;
+  }
+}
+
+/* Retina для Apple (для високої щільності) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  blockquote {
+    border-left-width: 3px;
+  } /* Тоньша на retina */
+}
+
+/* Dark mode адаптація */
+@media (prefers-color-scheme: dark) {
+  /* Адаптивні правки для dark */
+  @media (max-width: 480px) {
+    blockquote {
+      background-color: var(--color-bg-secondary);
+      border-left-color: var(--color-primary-blue); /* Світліший акцент */
+    }
+  }
+
+  @media (min-width: 481px) and (max-width: 767px) {
+    h1,
+    h2,
+    h3 {
+      color: var(--color-primary-blue);
+    } /* Світліший синій */
+  }
+
+  @media (min-width: 1025px) and (max-width: 1199px) {
+    .button {
+      box-shadow: 0 6px 20px rgba(var(--color-accent-warm-rgb), 0.25);
+    } /* Посилена тінь */
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--color-primary-blue);
+  } /* Світліший синій */
+  .button {
+    color: white;
+  } /* Підтвердження */
+}

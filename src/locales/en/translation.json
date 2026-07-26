@@ -1,0 +1,69 @@
+{
+  "home": {
+    "hero": {
+      "title": "Unlock your English<br />with Olga",
+      "description": "Boost your English with personalized one-on-one online lessons. Achieve your goals faster!",
+      "buttons": {
+        "studentArea": "Go to Student Area",
+        "meetTeacher": "Meet Your Teacher"
+      },
+      "benefits": {
+        "personalized": "Personalized Tutoring",
+        "personalizedDesc": "Custom lessons tailored to your unique goals and level",
+        "flexible": "Flexible Scheduling",
+        "flexibleDesc": "Book sessions that fit your busy life — anytime, anywhere",
+        "proven": "Proven Success",
+        "provenDesc": "Time-tested methods with real, obvious achievements"
+      },
+      "imageAlt": "Cozy desk with English books, notebook 'Do You Speak English?', and learning tools",
+      "choice": {
+        "title": "Ready to Start?",
+        "subtitle": "Choose an option below to get started",
+        "student": {
+          "title": "Student Area",
+          "desc": "Access your schedule and study materials",
+          "btn": "Get Started"
+        },
+        "about": {
+          "title": "About Olga",
+          "desc": "Discover my teaching style and story",
+          "btn": "Learn More"
+        }
+      },
+      "cta": {
+        "title": "Ready for the first lesson?",
+        "desc": "Continue your English journey with personalized conversation and grammar practice",
+        "btn": "Start Learning"
+      }
+    }
+  },
+  "student": {
+    "title": "Student Dashboard",
+    "login": "Login",
+    "schedule": "Your Schedule",
+    "materials": "Study Materials"
+  },
+  "about": {
+    "title": "About Olga",
+    "bio": "Olga is a certified English teacher with 10+ years of experience. She specializes in conversational English and exam preparation.",
+    "contact": {
+      "title": "Contact Me",
+      "form": {
+        "name": "Name",
+        "email": "Email",
+        "message": "Message",
+        "submit": "Send"
+      }
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "student": "Student Area",
+    "about": "About"
+  },
+  "lang": {
+    "en": "EN",
+    "ua": "UA",
+    "ru": "RU"
+  }
+}
