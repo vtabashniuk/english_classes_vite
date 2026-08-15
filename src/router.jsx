@@ -1,43 +1,107 @@
 import { createBrowserRouter } from "react-router-dom";
-import MainLayout from "./Layout/MainLayout";
-import HeaderLayout from "./Layout/HeaderLayout";
+
+import PublicLayout from "./Layouts/PublicLayout/PublicLayout";
+import MainLayout from "./Layouts/MainLayout";
+import HeaderLayout from "./Layouts/HeaderLayout";
+import DashboardLayout from "./Layouts/DashboardLayout/DashboardLayout";
+
 import HomePage from "./pages/HomePage/HomePage";
 import AboutMePage from "./pages/AboutMePage";
-import StudentDashboard from "./pages/StudentDashboard";
-import TeacherDashboard from "./pages/TeacherDashboard";
+import LoginPage from "./pages/LoginPage/LoginPage";
+
+import StudentDashboard from "./pages/StudentDashboard/StudentDashboard";
+import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
+
+import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
+import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
+import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
+
 import AuthCallback from "./pages/AuthCallback";
 import NotFoundPage from "./pages/NotFoundPage";
-import RootLayout from "./Layout/RootLayout";
+
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 const router = createBrowserRouter([
   {
-    element: <RootLayout />,
+    element: <PublicLayout />,
     children: [
       {
         path: "/",
         element: <MainLayout />,
-        children: [{ index: true, element: <HomePage /> }],
+        children: [
+          {
+            index: true,
+            element: <HomePage />,
+          },
+        ],
       },
       {
         path: "/about-me",
         element: <HeaderLayout />,
-        children: [{ index: true, element: <AboutMePage /> }],
+        children: [
+          {
+            index: true,
+            element: <AboutMePage />,
+          },
+        ],
       },
       {
-        path: "student-area",
-        element: <HeaderLayout />,
-        children: [{ index: true, element: <StudentDashboard /> }],
-      },
-      {
-        path: "teacher-dashboard",
-        element: <TeacherDashboard />,
-      },
-      { path: "auth/callback", element: <AuthCallback /> },
-      {
-        path: "*",
-        element: <NotFoundPage />,
+        path: "/login",
+        element: <LoginPage />,
       },
     ],
+  },
+
+  {
+    path: "/student-area",
+    element: (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <StudentDashboard />,
+      },
+      {
+        path: "schedule",
+        element: <StudentSchedule />,
+      },
+    ],
+  },
+
+  {
+    path: "/teacher-dashboard",
+    element: (
+      <ProtectedRoute allowedRoles={["teacher"]}>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <TeacherDashboard />,
+      },
+      {
+        path: "schedule",
+        element: <TeacherSchedule />,
+      },
+      {
+        path: "students",
+        element: <TeacherStudents />,
+      },
+    ],
+  },
+
+  {
+    path: "/auth/callback",
+    element: <AuthCallback />,
+  },
+
+  {
+    path: "*",
+    element: <NotFoundPage />,
   },
 ]);
 

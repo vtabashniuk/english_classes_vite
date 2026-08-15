@@ -1,6 +1,6 @@
-import { useTranslation } from 'react-i18next';
-import { useState, useRef, useEffect } from 'react';
-import styles from './LanguageSwitcher.module.css';
+import { useTranslation } from "react-i18next";
+import { useState, useRef, useEffect } from "react";
+import styles from "./LanguageSwitcher.module.css";
 
 const LanguageSwitcher = () => {
   const { i18n } = useTranslation();
@@ -8,9 +8,9 @@ const LanguageSwitcher = () => {
   const wrapperRef = useRef(null);
 
   const languages = [
-    { code: 'ua', label: 'UA' },
-    { code: 'en', label: 'EN' },
-    { code: 'ru', label: 'RU' },
+    { code: "ua", label: "UA" },
+    { code: "en", label: "EN" },
+    { code: "ru", label: "RU" },
   ];
 
   const handleChange = (code) => {
@@ -26,20 +26,32 @@ const LanguageSwitcher = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
     <div className={styles.switcherWrapper} ref={wrapperRef}>
-      <div className={`${styles.selectWrapper} ${isOpen ? styles.isOpen : ''}`} onClick={() => setIsOpen(!isOpen)}>
+      <button
+        type="button"
+        className={`${styles.selectWrapper} ${isOpen ? styles.isOpen : ""}`}
+        onClick={() => setIsOpen((current) => !current)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+      >
         <span>
-          {languages.find(lang => lang.code === i18n.language)?.label}
+          {languages.find((lang) => lang.code === i18n.language)?.label}
         </span>
         <svg className={styles.arrow} viewBox="0 0 20 20" fill="none">
-          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="m6 8 4 4 4-4" />
+          <path
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.5"
+            d="m6 8 4 4 4-4"
+          />
         </svg>
-      </div>
+      </button>
       {isOpen && (
         <ul className={styles.optionsList}>
           {languages.map((lang) => (
