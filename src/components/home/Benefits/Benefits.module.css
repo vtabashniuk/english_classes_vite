@@ -1,0 +1,75 @@
+.section {
+  padding: 1rem 2rem 4rem;
+  background: var(--color-gradient-hero);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+
+  width: 100%;
+  max-width: 900px;
+  margin-inline: auto;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 1.5rem;
+
+  border: var(--glass-border);
+  border-radius: var(--border-radius);
+
+  color: var(--color-text-primary);
+  text-align: center;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+
+  transition: var(--transition);
+}
+
+.card:hover {
+  border-color: var(--color-primary-blue);
+  background: rgba(var(--color-primary-blue-rgb), 0.1);
+  transform: translateY(-2px);
+}
+
+.icon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.card h3 {
+  margin: 0 0 0.75rem;
+  color: var(--color-text-primary);
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+}
+
+.card p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  line-height: 1.5;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (min-width: 769px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

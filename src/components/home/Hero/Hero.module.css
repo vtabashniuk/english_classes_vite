@@ -1,0 +1,134 @@
+.hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 2rem;
+
+  width: 100%;
+  padding: 2rem;
+  background: var(--color-gradient-hero);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.content {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+}
+
+.content h1 {
+  margin: 0 0 1rem;
+  color: var(--color-primary-blue);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.description {
+  margin: 0 0 2rem;
+  color: var(--color-text-primary);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+
+  min-width: 232px;
+  padding: clamp(10px, 2vw, 12px) clamp(20px, 4vw, 24px);
+
+  border: 1px solid var(--color-primary-blue);
+  border-radius: var(--border-radius);
+
+  font-weight: 500;
+  text-align: center;
+  text-decoration: none;
+
+  transition: var(--transition);
+  box-shadow: var(--shadow-soft);
+}
+
+.primaryButton {
+  color: #ffffff;
+  background-color: var(--color-primary-blue);
+}
+
+.primaryButton:hover {
+  background-color: var(--color-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(var(--color-primary-blue-rgb), 0.3);
+}
+
+.secondaryButton {
+  color: var(--color-primary-blue);
+  background-color: #ffffff;
+}
+
+.secondaryButton:hover {
+  color: #ffffff;
+  background-color: var(--color-primary-blue);
+  border-color: var(--color-hover);
+  transform: translateY(-2px);
+}
+
+.secondaryButton:hover .buttonIcon {
+  filter: brightness(0) invert(1);
+}
+
+.buttonIcon {
+  width: 1.375rem;
+  height: 1.375rem;
+  flex-shrink: 0;
+}
+
+.imageWrapper {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+
+  border-radius: var(--border-radius);
+  object-fit: cover;
+
+  transition: var(--transition);
+}
+
+.image:hover {
+  transform: scale(1.01);
+}
+
+@media (min-width: 769px) {
+  .primaryButton,
+  .secondaryButton {
+    min-width: 268px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 3rem;
+    min-height: 70vh;
+    text-align: left;
+  }
+
+  .actions {
+    justify-content: flex-start;
+  }
+}
