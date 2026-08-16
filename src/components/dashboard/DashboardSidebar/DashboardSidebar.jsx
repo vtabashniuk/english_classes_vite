@@ -52,6 +52,10 @@ const DashboardSidebar = () => {
       end: true,
     },
     {
+      to: "/student-area/profile",
+      label: "Профіль",
+    },
+    {
       to: "/student-area/schedule",
       label: "Розклад",
     },
@@ -77,9 +81,7 @@ const DashboardSidebar = () => {
 
   return (
     <aside className={styles.sidebar}>
-      <div className={styles.logo}>
-        English with Olga
-      </div>
+      <div className={styles.logo}>English with Olga</div>
 
       <nav className={styles.nav}>
         {links.map((link) => (
@@ -88,9 +90,7 @@ const DashboardSidebar = () => {
             to={link.to}
             end={link.end}
             className={({ isActive }) =>
-              `${styles.link} ${
-                isActive ? styles.active : ""
-              }`
+              `${styles.link} ${isActive ? styles.active : ""}`
             }
           >
             {link.label}

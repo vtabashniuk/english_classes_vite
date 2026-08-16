@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage/LoginPage";
 
 import StudentDashboard from "./pages/StudentDashboard/StudentDashboard";
 import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
+import StudentProfile from "./pages/StudentProfile/StudentProfile";
 
 import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
 import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
@@ -68,6 +69,10 @@ const router = createBrowserRouter([
       {
         path: "schedule",
         element: <StudentSchedule />,
+      },
+      {
+        path: "profile",
+        element: <StudentProfile />,
       },
     ],
   },

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
@@ -8,23 +9,24 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const loadProfile = async (userId) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, email, full_name, role, phone, is_active")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.error("Не вдалося завантажити профіль:", error);
+
+      return null;
+    }
+
+    return data;
+  };
+
   useEffect(() => {
     let isMounted = true;
-
-    const loadProfile = async (userId) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, role, phone, is_active")
-        .eq("id", userId)
-        .single();
-
-      if (error) {
-        console.error("Не вдалося завантажити профіль:", error);
-        return null;
-      }
-
-      return data;
-    };
 
     const initializeAuth = async () => {
       try {
@@ -49,6 +51,8 @@ export const AuthProvider = ({ children }) => {
           if (isMounted) {
             setProfile(currentProfile);
           }
+        } else {
+          setProfile(null);
         }
       } catch (error) {
         console.error("Помилка ініціалізації авторизації:", error);
@@ -95,6 +99,19 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  const refreshProfile = async () => {
+    if (!session?.user) {
+      setProfile(null);
+      return null;
+    }
+
+    const currentProfile = await loadProfile(session.user.id);
+
+    setProfile(currentProfile);
+
+    return currentProfile;
+  };
+
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
 
@@ -109,6 +126,7 @@ export const AuthProvider = ({ children }) => {
       user: session?.user ?? null,
       profile,
       loading,
+      refreshProfile,
       signOut,
     }),
     [session, profile, loading],
@@ -126,3 +144,5 @@ export const useAuth = () => {
 
   return context;
 };
+
+export default AuthContext;

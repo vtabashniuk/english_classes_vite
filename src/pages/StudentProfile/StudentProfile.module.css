@@ -1,0 +1,147 @@
+.page {
+  width: 100%;
+}
+
+.heading {
+  margin-bottom: 2rem;
+}
+
+.heading h1 {
+  margin: 0 0 0.4rem;
+
+  color: var(--color-text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.heading p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 1.5rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.card h2 {
+  margin: 0 0 1.5rem;
+
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.field input {
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid #d8dde7;
+  border-radius: var(--border-radius);
+
+  color: var(--color-text-primary);
+  background: #ffffff;
+
+  font: inherit;
+}
+
+.field input:focus {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 1px;
+}
+
+.helper {
+  margin: -0.5rem 0 1.5rem;
+
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  padding: 0.7rem 1rem;
+
+  border-radius: var(--border-radius);
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.primaryButton {
+  border: 1px solid var(--color-primary-blue);
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+}
+
+.secondaryButton {
+  border: 1px solid var(--color-primary-blue);
+
+  color: var(--color-primary-blue);
+  background: #ffffff;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  color: #ffffff;
+  background: var(--color-primary-blue);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.success,
+.error {
+  margin: 0;
+  padding: 0.8rem 1rem;
+
+  border-radius: var(--border-radius);
+}
+
+.success {
+  color: #17663b;
+  background: #eaf8f0;
+}
+
+.error {
+  color: #9d2020;
+  background: #fdecec;
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
