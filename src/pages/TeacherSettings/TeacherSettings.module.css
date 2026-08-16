@@ -30,10 +30,10 @@
 
   padding: 1.5rem;
 
-  border: 1px solid #e4e8f0;
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
 
-  background: #ffffff;
+  background: var(--color-surface);
 
   box-shadow: var(--shadow-soft);
 }
@@ -41,7 +41,7 @@
 .cardHeader {
   padding-bottom: 1rem;
 
-  border-bottom: 1px solid #eef1f5;
+  border-bottom: 1px solid var(--color-divider);
 }
 
 .cardHeader h2 {
@@ -88,11 +88,11 @@
 
   padding: 0.7rem 0.8rem;
 
-  border: 1px solid #d8dde7;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--border-radius);
 
   color: var(--color-text-primary);
-  background: #ffffff;
+  background: var(--color-surface);
 
   font: inherit;
 }
@@ -118,10 +118,10 @@
 
   padding: 0.9rem 1rem;
 
-  border: 1px solid #e4e8f0;
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
 
-  background: #f8f9fb;
+  background: var(--color-surface-muted);
 }
 
 .readOnlyField strong {
@@ -143,7 +143,7 @@
   border: 0;
   border-radius: var(--border-radius);
 
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 
   cursor: pointer;
@@ -175,13 +175,13 @@
 }
 
 .error {
-  color: #942727;
-  background: #fdecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .success {
-  color: #17663b;
-  background: #eaf8f0;
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
 }
 
 .state {

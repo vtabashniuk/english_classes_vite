@@ -32,7 +32,7 @@
   border: 0;
   border-radius: var(--border-radius);
 
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 
   font: inherit;
@@ -51,10 +51,10 @@
   margin-bottom: 2rem;
   padding: 1.5rem;
 
-  border: 1px solid #e4e8f0;
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
 
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -94,11 +94,11 @@
   min-height: 46px;
   padding: 0.7rem 0.8rem;
 
-  border: 1px solid #d8dde7;
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--border-radius);
 
   color: var(--color-text-primary);
-  background: #ffffff;
+  background: var(--color-surface);
 
   font: inherit;
 }
@@ -130,16 +130,16 @@
 }
 
 .cancelButton {
-  border: 1px solid #d8dde7;
+  border: 1px solid var(--color-border-strong);
 
   color: var(--color-text-secondary);
-  background: #ffffff;
+  background: var(--color-surface);
 }
 
 .submitButton {
   border: 1px solid var(--color-primary-blue);
 
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 }
 
@@ -157,13 +157,13 @@
 }
 
 .successMessage {
-  color: #17663b;
-  background: #eaf8f0;
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
 }
 
 .errorMessage {
-  color: #9d2020;
-  background: #fdecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .studentsGrid {
@@ -179,10 +179,10 @@
 
   padding: 1.4rem;
 
-  border: 1px solid #e4e8f0;
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
 
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: var(--shadow-soft);
 
   transition: var(--transition);
@@ -208,7 +208,7 @@
 
   border-radius: 50%;
 
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 
   font-size: 1.1rem;
@@ -253,13 +253,13 @@
 }
 
 .active {
-  color: #17663b;
-  background: #eaf8f0;
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
 }
 
 .inactive {
-  color: #8b3131;
-  background: #fdecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .studentDetails {
@@ -305,7 +305,7 @@
 }
 
 .detailsButton:hover {
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 }
 

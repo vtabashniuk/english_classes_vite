@@ -70,9 +70,26 @@
   border-radius: var(--border-radius);
 
   color: var(--color-text-primary);
-  background: #ffffff;
+  background: var(--color-surface);
+  caret-color: var(--color-primary-blue);
 
   font: inherit;
+
+  transition: var(--transition);
+}
+
+.field input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.75;
+}
+
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--color-text-primary);
+  caret-color: var(--color-primary-blue);
+  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  transition: background-color 9999s ease-out 0s;
 }
 
 .field input:focus {
@@ -112,8 +129,8 @@
 
   border-radius: var(--border-radius);
 
-  color: #9b1c1c;
-  background: #feecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .backButton {

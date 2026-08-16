@@ -4,7 +4,7 @@
 
   min-height: 100dvh;
 
-  background: #f6f8fc;
+  background: var(--color-dashboard-bg);
 }
 
 .main {

@@ -35,7 +35,7 @@
 
   border-radius: 50%;
 
-  color: #ffffff;
+  color: var(--color-on-primary);
   background: var(--color-primary-blue);
 
   font-size: 1.4rem;
@@ -72,13 +72,13 @@
 }
 
 .active {
-  color: #17663b;
-  background: #eaf8f0;
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
 }
 
 .inactive {
-  color: #8b3131;
-  background: #fdecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 .grid {
@@ -91,10 +91,10 @@
   min-width: 0;
   padding: 1.5rem;
 
-  border: 1px solid #e4e8f0;
+  border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
 
-  background: #ffffff;
+  background: var(--color-surface);
   box-shadow: var(--shadow-soft);
 }
 
@@ -158,8 +158,8 @@
 
   border-radius: var(--border-radius);
 
-  color: #9d2020;
-  background: #fdecec;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
 }
 
 @media (max-width: 800px) {

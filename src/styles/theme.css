@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   /* RGB-версії */
   --color-accent-warm-rgb: 244, 162, 97; /* Залиш для fallback, але не основний */
   --color-primary-blue-rgb: 63, 114, 175;
@@ -31,10 +32,34 @@
   --transition: all 0.3s ease;
   --glass-bg: rgba(255, 255, 255, 0.1); /* Для карток: напівпрозорий glass */
   --glass-border: 1px solid rgba(var(--color-primary-blue-rgb), 0.2); /* Синій border */
+  /* UI surfaces / dashboard */
+  --color-dashboard-bg: #f6f8fc;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f5f8;
+  --color-border: #e4e8f0;
+  --color-border-strong: #d8dde7;
+  --color-divider: #eef1f5;
+  --color-grid-line: #eef1f5;
+  --color-grid-line-strong: #e1e6ee;
+  --color-on-primary: #ffffff;
+
+  /* Semantic states */
+  --color-success-text: #17663b;
+  --color-success-bg: #eaf8f0;
+  --color-success-border: #2d8053;
+  --color-error-text: #942727;
+  --color-error-bg: #fdecec;
+  --color-error-border: #a64242;
+
+  /* Overlays */
+  --color-overlay: rgba(14, 22, 38, 0.38);
+  --shadow-drawer: 18px 0 40px rgba(19, 30, 55, 0.16);
+
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     /* Фони — м'які сірі пастельні */
     --color-bg-primary: #1a1a1a; /* Темно-сірий */
     --color-bg-secondary: #2a2a2a; /* Світліший сірий */
@@ -46,6 +71,7 @@
 
     /* Акценти — світліший синій */
     --color-primary-blue: #4d9de0;
+    --color-primary-blue-rgb: 77, 157, 224;
     --color-accent-warm: #e8d5c4; /* Залишаємо кремовий — контрастний на темному */
 
     /* Текст — світлий */
@@ -61,5 +87,28 @@
     --shadow-soft: 0 4px 12px rgba(77, 157, 224, 0.15);
     --glass-bg: rgba(42, 42, 42, 0.8); /* Темний glass для dark */
     --glass-border: 1px solid rgba(77, 157, 224, 0.3); /* Світлий синій border */
+
+    /* UI surfaces / dashboard */
+    --color-dashboard-bg: #111419;
+    --color-surface: #1a1d23;
+    --color-surface-muted: #23272f;
+    --color-border: #343a46;
+    --color-border-strong: #46505f;
+    --color-divider: #2d333d;
+    --color-grid-line: #2d333d;
+    --color-grid-line-strong: #3a424f;
+    --color-on-primary: #ffffff;
+
+    /* Semantic states */
+    --color-success-text: #8bd7aa;
+    --color-success-bg: #173426;
+    --color-success-border: #4fa776;
+    --color-error-text: #ffaaaa;
+    --color-error-bg: #3a2023;
+    --color-error-border: #d46a73;
+
+    /* Overlays */
+    --color-overlay: rgba(0, 0, 0, 0.58);
+    --shadow-drawer: 18px 0 40px rgba(0, 0, 0, 0.42);
   }
 }
