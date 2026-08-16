@@ -8,24 +8,18 @@ const benefitItems = [
     icon: "/assets/star.svg",
     titleKey: "home.benefits.personalized.title",
     descriptionKey: "home.benefits.personalized.description",
-    defaultTitle: "Personalized Learning",
-    defaultDescription: "Tailored lessons for your specific goals",
   },
   {
     id: "flexible",
     icon: "/assets/clock.svg",
     titleKey: "home.benefits.flexible.title",
     descriptionKey: "home.benefits.flexible.description",
-    defaultTitle: "Flexible Schedule",
-    defaultDescription: "Book lessons that fit your lifestyle",
   },
   {
     id: "proven",
     icon: "/assets/diploma.svg",
     titleKey: "home.benefits.proven.title",
     descriptionKey: "home.benefits.proven.description",
-    defaultTitle: "Proven Results",
-    defaultDescription: "Effective methods with measurable success",
   },
 ];
 
@@ -38,9 +32,7 @@ const Benefits = () => {
       aria-labelledby="benefits-title"
     >
       <h2 id="benefits-title" className={styles.visuallyHidden}>
-        {t("home.benefits.title", {
-          defaultValue: "Benefits of learning",
-        })}
+        {t("home.benefits.title")}
       </h2>
 
       <div className={styles.grid}>
@@ -53,17 +45,8 @@ const Benefits = () => {
               aria-hidden="true"
             />
 
-            <h3>
-              {t(item.titleKey, {
-                defaultValue: item.defaultTitle,
-              })}
-            </h3>
-
-            <p>
-              {t(item.descriptionKey, {
-                defaultValue: item.defaultDescription,
-              })}
-            </p>
+            <h3>{t(item.titleKey)}</h3>
+            <p>{t(item.descriptionKey)}</p>
           </article>
         ))}
       </div>

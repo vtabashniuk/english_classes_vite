@@ -2,26 +2,29 @@
   width: 100%;
 }
 
-.heading {
+.header {
   margin-bottom: 2rem;
 }
 
-.heading h1 {
+.header h1 {
   margin: 0 0 0.4rem;
 
   color: var(--color-text-primary);
   font-size: clamp(1.8rem, 3vw, 2.4rem);
 }
 
-.heading p {
+.header p {
   margin: 0;
   color: var(--color-text-secondary);
 }
 
-.grid {
+.layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns:
+    minmax(300px, 420px)
+    minmax(0, 1fr);
   gap: 1.25rem;
+  align-items: start;
 }
 
 .card {
@@ -56,6 +59,7 @@
 
 .field input,
 .field select {
+  width: 100%;
   min-height: 46px;
   padding: 0.7rem 0.8rem;
 
@@ -74,19 +78,15 @@
   outline-offset: 1px;
 }
 
-.helper {
-  margin: -0.5rem 0 1.5rem;
-
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-}
-
-.primaryButton,
-.secondaryButton {
-  min-height: 44px;
+.submitButton {
+  min-height: 46px;
   padding: 0.7rem 1rem;
 
+  border: 0;
   border-radius: var(--border-radius);
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
 
   font: inherit;
   font-weight: 600;
@@ -95,31 +95,11 @@
   transition: var(--transition);
 }
 
-.primaryButton {
-  border: 1px solid var(--color-primary-blue);
-
-  color: #ffffff;
-  background: var(--color-primary-blue);
-}
-
-.secondaryButton {
-  border: 1px solid var(--color-primary-blue);
-
-  color: var(--color-primary-blue);
-  background: #ffffff;
-}
-
-.primaryButton:hover:not(:disabled) {
+.submitButton:hover:not(:disabled) {
   background: var(--color-hover);
 }
 
-.secondaryButton:hover:not(:disabled) {
-  color: #ffffff;
-  background: var(--color-primary-blue);
-}
-
-.primaryButton:disabled,
-.secondaryButton:disabled {
+.submitButton:disabled {
   opacity: 0.6;
   cursor: wait;
 }
@@ -142,8 +122,56 @@
   background: #fdecec;
 }
 
-@media (max-width: 800px) {
-  .grid {
+.lessons {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lesson {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+
+  padding: 1rem;
+
+  border: 1px solid #e7eaf0;
+  border-radius: var(--border-radius);
+
+  background: #fafbfe;
+}
+
+.lesson strong {
+  color: var(--color-text-primary);
+}
+
+.lesson p {
+  margin: 0.25rem 0 0;
+
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.status {
+  flex-shrink: 0;
+
+  padding: 0.3rem 0.6rem;
+
+  border-radius: 999px;
+
+  color: var(--color-primary-blue);
+  background: rgba(var(--color-primary-blue-rgb), 0.1);
+
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .layout {
     grid-template-columns: 1fr;
   }
 }

@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
+import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherStudentDetails.module.css";
 
 const TeacherStudentDetails = () => {
   const { studentId } = useParams();
+  const { t, i18n } = useTranslation();
+  const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,52 +24,47 @@ const TeacherStudentDetails = () => {
 
         const { data, error } = await supabase
           .from("profiles")
-          .select(
-            "id, email, full_name, phone, role, is_active, created_at"
-          )
+          .select("id, email, full_name, phone, role, is_active, created_at")
           .eq("id", studentId)
           .eq("role", "student")
           .maybeSingle();
 
-        if (error) {
-          throw error;
-        }
+        if (error) throw error;
 
         if (!data) {
-          setErrorMessage("Учня не знайдено.");
+          setErrorMessage(t("teacherStudentDetails.errors.notFound"));
           return;
         }
 
         setStudent(data);
       } catch (error) {
-        console.error(
-          "Не вдалося завантажити учня:",
-          error
-        );
-
-        setErrorMessage(
-          "Не вдалося завантажити інформацію про учня."
-        );
+        console.error("Student details load error:", error);
+        setErrorMessage(t("teacherStudentDetails.errors.load"));
       } finally {
         setLoading(false);
       }
     };
 
     loadStudent();
-  }, [studentId]);
+  }, [studentId, t]);
 
-  const formatDate = (dateString) => {
-    return new Intl.DateTimeFormat("uk-UA", {
+  const formatDate = (dateString) =>
+    new Intl.DateTimeFormat(intlLocale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     }).format(new Date(dateString));
-  };
+
+  const backLink = (
+    <Link to="/teacher-dashboard/students" className={styles.backLink}>
+      ← {t("teacherStudentDetails.back")}
+    </Link>
+  );
 
   if (loading) {
     return (
       <section className={styles.page}>
-        <p>Завантаження...</p>
+        <p>{t("common.loading")}</p>
       </section>
     );
   }
@@ -73,147 +72,102 @@ const TeacherStudentDetails = () => {
   if (errorMessage) {
     return (
       <section className={styles.page}>
-        <Link
-          to="/teacher-dashboard/students"
-          className={styles.backLink}
-        >
-          ← До списку учнів
-        </Link>
-
-        <p className={styles.error}>
-          {errorMessage}
-        </p>
+        {backLink}
+        <p className={styles.error}>{errorMessage}</p>
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <Link
-        to="/teacher-dashboard/students"
-        className={styles.backLink}
-      >
-        ← До списку учнів
-      </Link>
+      {backLink}
 
       <div className={styles.header}>
         <div className={styles.student}>
           <div className={styles.avatar}>
-            {(student.full_name || student.email || "?")
-              .charAt(0)
-              .toUpperCase()}
+            {(student.full_name || student.email || "?").charAt(0).toUpperCase()}
           </div>
 
           <div>
             <div className={styles.titleRow}>
-              <h1>
-                {student.full_name || "Ім’я не вказано"}
-              </h1>
-
+              <h1>{student.full_name || t("common.nameNotSpecified")}</h1>
               <span
                 className={`${styles.status} ${
-                  student.is_active
-                    ? styles.active
-                    : styles.inactive
+                  student.is_active ? styles.active : styles.inactive
                 }`}
               >
                 {student.is_active
-                  ? "Активний"
-                  : "Неактивний"}
+                  ? t("common.active")
+                  : t("common.inactive")}
               </span>
             </div>
-
-            <p className={styles.email}>
-              {student.email}
-            </p>
+            <p className={styles.email}>{student.email}</p>
           </div>
         </div>
       </div>
 
       <div className={styles.grid}>
         <article className={styles.card}>
-          <h2>Контактна інформація</h2>
-
+          <h2>{t("teacherStudentDetails.contactInfo")}</h2>
           <dl className={styles.details}>
             <div>
-              <dt>Email</dt>
+              <dt>{t("common.email")}</dt>
               <dd>{student.email}</dd>
             </div>
-
             <div>
-              <dt>Телефон</dt>
-              <dd>
-                {student.phone || "Не вказано"}
-              </dd>
+              <dt>{t("common.phone")}</dt>
+              <dd>{student.phone || t("common.notSpecified")}</dd>
             </div>
-
             <div>
-              <dt>Дата додавання</dt>
-              <dd>
-                {formatDate(student.created_at)}
-              </dd>
+              <dt>{t("teacherStudentDetails.addedDate")}</dt>
+              <dd>{formatDate(student.created_at)}</dd>
             </div>
           </dl>
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2>Баланс</h2>
+            <h2>{t("teacherStudentDetails.balance")}</h2>
           </div>
-
           <div className={styles.placeholder}>
             <strong>—</strong>
-            <span>
-              Фінансові дані ще не підключені
-            </span>
+            <span>{t("teacherStudentDetails.balancePlaceholder")}</span>
           </div>
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2>Регулярний розклад</h2>
+            <h2>{t("teacherStudentDetails.recurringSchedule")}</h2>
           </div>
-
           <div className={styles.placeholder}>
-            <span>
-              Регулярні заняття ще не налаштовані
-            </span>
+            <span>{t("teacherStudentDetails.recurringPlaceholder")}</span>
           </div>
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2>Найближчі заняття</h2>
+            <h2>{t("teacherStudentDetails.upcomingLessons")}</h2>
           </div>
-
           <div className={styles.placeholder}>
-            <span>
-              Запланованих занять поки немає
-            </span>
+            <span>{t("teacherStudentDetails.upcomingPlaceholder")}</span>
           </div>
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
-            <h2>Завдання</h2>
+            <h2>{t("teacherStudentDetails.assignments")}</h2>
           </div>
-
           <div className={styles.placeholder}>
-            <span>
-              Завдань поки немає
-            </span>
+            <span>{t("teacherStudentDetails.assignmentsPlaceholder")}</span>
           </div>
         </article>
 
         <article className={`${styles.card} ${styles.notesCard}`}>
           <div className={styles.cardHeader}>
-            <h2>Приватні нотатки</h2>
+            <h2>{t("teacherStudentDetails.privateNotes")}</h2>
           </div>
-
           <div className={styles.placeholder}>
-            <span>
-              Нотатки викладача ще не додані
-            </span>
+            <span>{t("teacherStudentDetails.notesPlaceholder")}</span>
           </div>
         </article>
       </div>

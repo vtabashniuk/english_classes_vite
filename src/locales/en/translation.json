@@ -3,38 +3,45 @@
     "hero": {
       "title": "Unlock your English<br />with Olga",
       "description": "Boost your English with personalized one-on-one online lessons. Achieve your goals faster!",
+      "imageAlt": "Cozy desk with English books, notebook 'Do You Speak English?', and learning tools",
       "buttons": {
         "studentArea": "Go to Student Area",
         "meetTeacher": "Meet Your Teacher"
-      },
-      "benefits": {
-        "personalized": "Personalized Tutoring",
-        "personalizedDesc": "Custom lessons tailored to your unique goals and level",
-        "flexible": "Flexible Scheduling",
-        "flexibleDesc": "Book sessions that fit your busy life — anytime, anywhere",
-        "proven": "Proven Success",
-        "provenDesc": "Time-tested methods with real, obvious achievements"
-      },
-      "imageAlt": "Cozy desk with English books, notebook 'Do You Speak English?', and learning tools",
-      "choice": {
-        "title": "Ready to Start?",
-        "subtitle": "Choose an option below to get started",
-        "student": {
-          "title": "Student Area",
-          "desc": "Access your schedule and study materials",
-          "btn": "Get Started"
-        },
-        "about": {
-          "title": "About Olga",
-          "desc": "Discover my teaching style and story",
-          "btn": "Learn More"
-        }
-      },
-      "cta": {
-        "title": "Ready for the first lesson?",
-        "desc": "Continue your English journey with personalized conversation and grammar practice",
-        "btn": "Start Learning"
       }
+    },
+    "benefits": {
+      "title": "Benefits of Learning",
+      "personalized": {
+        "title": "Personalized Tutoring",
+        "description": "Custom lessons tailored to your unique goals and level"
+      },
+      "flexible": {
+        "title": "Flexible Scheduling",
+        "description": "Book sessions that fit your busy life — anytime, anywhere"
+      },
+      "proven": {
+        "title": "Proven Success",
+        "description": "Time-tested methods with real, measurable results"
+      }
+    },
+    "quickActions": {
+      "title": "What would you like to do?",
+      "description": "Choose the section you need.",
+      "studentArea": {
+        "title": "Student Area",
+        "description": "View your schedule, balance, and learning materials.",
+        "button": "Sign in"
+      },
+      "aboutTeacher": {
+        "title": "About the Teacher",
+        "description": "Learn more about teaching experience and lesson format.",
+        "button": "Learn more"
+      }
+    },
+    "lessonCta": {
+      "title": "Ready for today's lesson?",
+      "description": "Go to your student area and join the lesson.",
+      "button": "Go to lesson"
     }
   },
   "student": {
@@ -42,6 +49,46 @@
     "login": "Login",
     "schedule": "Your Schedule",
     "materials": "Study Materials"
+  },
+  "studentProfile": {
+    "title": "Profile",
+    "description": "Manage your contact information, time zone, and sign-in email.",
+    "contactInfo": "Contact information",
+    "name": "Name",
+    "phone": "Phone",
+    "timezone": "Time zone",
+    "timezoneHelp": "Lesson times are displayed according to the selected time zone. Your schedule itself does not change.",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Contact information saved successfully.",
+    "invalidTimezone": "The selected time zone is invalid.",
+    "profileSaveError": "Could not save profile.",
+    "emailTitle": "Sign-in email",
+    "currentEmail": "Current email",
+    "newEmail": "New email",
+    "changeEmail": "Change email",
+    "sending": "Sending...",
+    "emailRequired": "Enter a new email.",
+    "sameEmail": "This is already your current email.",
+    "emailChangeSent": "Email change request sent. Check your inbox to confirm it.",
+    "emailChangeError": "Could not change email."
+  },
+  "studentSchedule": {
+    "title": "My Schedule",
+    "description": "Upcoming lessons and lesson history.",
+    "timezone": "Time zone",
+    "upcoming": "Upcoming lessons",
+    "history": "Previous lessons",
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "joinZoom": "Join Zoom",
+    "noZoom": "Link has not been added yet",
+    "duration50": "50 minutes",
+    "loading": "Loading schedule...",
+    "loadError": "Could not load the schedule.",
+    "emptyTitle": "No lessons scheduled",
+    "emptyDescription": "When your teacher adds a lesson, it will appear here."
   },
   "about": {
     "title": "About Olga",
@@ -56,6 +103,28 @@
       }
     }
   },
+  "timezones": {
+    "usCanadaEastern": "Eastern US / Canada",
+    "usCanadaCentral": "Central US / Canada",
+    "usCanadaMountain": "Mountain US / Canada",
+    "usCanadaPacific": "Western US / Canada",
+    "iceland": "Iceland",
+    "portugal": "Portugal",
+    "ukIreland": "United Kingdom & Ireland",
+    "centralEurope": "Central Europe",
+    "easternEurope": "Eastern Europe",
+    "moscow": "Moscow / Saint Petersburg",
+    "turkey": "Turkey",
+    "israel": "Israel",
+    "lebanon": "Lebanon",
+    "arabianPeninsula": "Arabian Peninsula",
+    "uaeOman": "UAE / Oman",
+    "georgia": "Georgia",
+    "armenia": "Armenia",
+    "azerbaijan": "Azerbaijan",
+    "westKazakhstan": "Western Kazakhstan",
+    "kazakhstan": "Kazakhstan"
+  },
   "nav": {
     "home": "Home",
     "student": "Student Area",
@@ -65,5 +134,151 @@
     "en": "EN",
     "ua": "UA",
     "ru": "RU"
+  },
+  "common": {
+    "email": "Email",
+    "password": "Password",
+    "phone": "Phone",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "sending": "Sending...",
+    "close": "Close",
+    "cancel": "Cancel",
+    "backHome": "Back to home",
+    "active": "Active",
+    "inactive": "Inactive",
+    "notSpecified": "Not specified",
+    "nameNotSpecified": "Name not specified",
+    "student": "Student",
+    "header": "Header",
+    "footer": "Footer",
+    "teacher": "Teacher",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "description": "Sign in to view your schedule, materials, and lesson information.",
+      "checking": "Checking authentication...",
+      "signIn": "Sign in",
+      "signingIn": "Signing in...",
+      "errors": {
+        "invalidCredentials": "Incorrect email or password.",
+        "profileLoad": "Could not load your profile.",
+        "inactive": "This account has been deactivated."
+      }
+    },
+    "callback": {
+      "finishing": "Finishing authentication..."
+    },
+    "setPassword": {
+      "title": "Create a password",
+      "description": "Set a password to sign in to your account.",
+      "confirmPassword": "Confirm password",
+      "submit": "Set password",
+      "checkingInvite": "Checking invitation...",
+      "errors": {
+        "tooShort": "Password must contain at least 8 characters.",
+        "mismatch": "Passwords do not match.",
+        "save": "Could not set the password."
+      }
+    },
+    "protectedRoute": {
+      "profileNotFound": "User profile was not found.",
+      "accountInactive": "This account has been deactivated."
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "backHome": "Back to home"
+  },
+  "teacherDashboard": {
+    "title": "Overview",
+    "description": "Main page of the teacher dashboard."
+  },
+  "teacherStudents": {
+    "title": "Students",
+    "count": "Students: {{count}}",
+    "added": "Added",
+    "openProfile": "Open profile",
+    "invite": {
+      "open": "+ Invite student",
+      "title": "Invite a new student",
+      "description": "The student will receive an email with a link to create a password.",
+      "name": "Student name",
+      "namePlaceholder": "For example, John Smith",
+      "submit": "Send invitation",
+      "success": "Invitation sent successfully."
+    },
+    "empty": {
+      "title": "No students yet",
+      "description": "Invite your first student to get started."
+    },
+    "errors": {
+      "load": "Could not load the student list.",
+      "invite": "Could not invite the student."
+    }
+  },
+  "teacherSchedule": {
+    "title": "Schedule",
+    "description": "Create and view scheduled lessons.",
+    "newLesson": "New lesson",
+    "student": "Student",
+    "selectStudent": "Select a student",
+    "date": "Date",
+    "time": "Time",
+    "selectTime": "Select a time",
+    "zoomUrl": "Zoom URL",
+    "create": "Create lesson",
+    "creating": "Creating...",
+    "scheduledLessons": "Scheduled lessons",
+    "empty": "No lessons scheduled yet.",
+    "success": "Lesson created successfully.",
+    "errors": {
+      "required": "Select a student, date, and lesson time.",
+      "weekend": "Lessons are not held on Saturday or Sunday.",
+      "workingHours": "The lesson must be within working hours.",
+      "timeSlot": "Lessons can start only on :00 or :30.",
+      "conflict": "This time overlaps with an existing lesson.",
+      "past": "You cannot create a lesson in the past.",
+      "studentNotFound": "The student was not found or the profile is inactive.",
+      "create": "Could not create the lesson."
+    }
+  },
+  "teacherStudentDetails": {
+    "back": "Back to students",
+    "contactInfo": "Contact information",
+    "addedDate": "Date added",
+    "balance": "Balance",
+    "balancePlaceholder": "Financial data is not connected yet",
+    "recurringSchedule": "Recurring schedule",
+    "recurringPlaceholder": "Recurring lessons have not been configured yet",
+    "upcomingLessons": "Upcoming lessons",
+    "upcomingPlaceholder": "No upcoming lessons scheduled",
+    "assignments": "Assignments",
+    "assignmentsPlaceholder": "No assignments yet",
+    "privateNotes": "Private notes",
+    "notesPlaceholder": "No teacher notes yet",
+    "errors": {
+      "notFound": "Student not found.",
+      "load": "Could not load student information."
+    }
+  },
+  "languageSwitcher": {
+    "label": "Change language",
+    "optionsLabel": "Available languages"
+  },
+  "dashboardNav": {
+    "ariaLabel": "Dashboard navigation",
+    "overview": "Overview",
+    "profile": "Profile",
+    "schedule": "Schedule",
+    "students": "Students",
+    "requests": "Requests",
+    "messages": "Messages",
+    "assignments": "Assignments",
+    "materials": "Materials",
+    "finance": "Finance",
+    "balance": "Balance"
   }
 }

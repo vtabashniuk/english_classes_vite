@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
 import { useAuth } from "../../../context/AuthContext";
@@ -5,6 +6,7 @@ import { useAuth } from "../../../context/AuthContext";
 import styles from "./DashboardSidebar.module.css";
 
 const DashboardSidebar = () => {
+  const { t } = useTranslation();
   const { profile } = useAuth();
 
   const isTeacher = profile?.role === "teacher";
@@ -12,68 +14,68 @@ const DashboardSidebar = () => {
   const teacherLinks = [
     {
       to: "/teacher-dashboard",
-      label: "Огляд",
+      labelKey: "dashboardNav.overview",
       end: true,
     },
     {
       to: "/teacher-dashboard/schedule",
-      label: "Розклад",
+      labelKey: "dashboardNav.schedule",
     },
     {
       to: "/teacher-dashboard/students",
-      label: "Учні",
+      labelKey: "dashboardNav.students",
     },
     {
       to: "/teacher-dashboard/requests",
-      label: "Запити",
+      labelKey: "dashboardNav.requests",
     },
     {
       to: "/teacher-dashboard/messages",
-      label: "Повідомлення",
+      labelKey: "dashboardNav.messages",
     },
     {
       to: "/teacher-dashboard/assignments",
-      label: "Завдання",
+      labelKey: "dashboardNav.assignments",
     },
     {
       to: "/teacher-dashboard/materials",
-      label: "Матеріали",
+      labelKey: "dashboardNav.materials",
     },
     {
       to: "/teacher-dashboard/finance",
-      label: "Фінанси",
+      labelKey: "dashboardNav.finance",
     },
   ];
 
   const studentLinks = [
     {
       to: "/student-area",
-      label: "Огляд",
+      labelKey: "dashboardNav.overview",
       end: true,
     },
     {
       to: "/student-area/profile",
-      label: "Профіль",
+      labelKey: "dashboardNav.profile",
     },
     {
       to: "/student-area/schedule",
-      label: "Розклад",
+      labelKey: "dashboardNav.schedule",
     },
     {
       to: "/student-area/messages",
-      label: "Повідомлення",
+      labelKey: "dashboardNav.messages",
     },
     {
       to: "/student-area/assignments",
-      label: "Завдання",
+      labelKey: "dashboardNav.assignments",
     },
     {
       to: "/student-area/materials",
-      label: "Матеріали",
+      labelKey: "dashboardNav.materials",
     },
     {
       to: "/student-area/balance",
-      label: "Баланс",
+      labelKey: "dashboardNav.balance",
     },
   ];
 
@@ -83,7 +85,7 @@ const DashboardSidebar = () => {
     <aside className={styles.sidebar}>
       <div className={styles.logo}>English with Olga</div>
 
-      <nav className={styles.nav}>
+      <nav className={styles.nav} aria-label={t("dashboardNav.ariaLabel")}>
         {links.map((link) => (
           <NavLink
             key={link.to}
@@ -93,7 +95,7 @@ const DashboardSidebar = () => {
               `${styles.link} ${isActive ? styles.active : ""}`
             }
           >
-            {link.label}
+            {t(link.labelKey)}
           </NavLink>
         ))}
       </nav>

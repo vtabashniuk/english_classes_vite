@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
@@ -6,11 +7,12 @@ const ProtectedRoute = ({
   children,
   allowedRoles = [],
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const { session, profile, loading } = useAuth();
 
   if (loading) {
-    return <p>Завантаження...</p>;
+    return <p>{t("common.loading")}</p>;
   }
 
   if (!session) {
@@ -24,11 +26,11 @@ const ProtectedRoute = ({
   }
 
   if (!profile) {
-    return <p>Профіль користувача не знайдено.</p>;
+    return <p>{t("auth.protectedRoute.profileNotFound")}</p>;
   }
 
   if (!profile.is_active) {
-    return <p>Обліковий запис деактивовано.</p>;
+    return <p>{t("auth.protectedRoute.accountInactive")}</p>;
   }
 
   if (

@@ -1,10 +1,12 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 import { supabase } from "../lib/supabase";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -32,7 +34,7 @@ const AuthCallback = () => {
 
   return (
     <section>
-      <p>Завершення авторизації...</p>
+      <p>{t("auth.callback.finishing")}</p>
     </section>
   );
 };

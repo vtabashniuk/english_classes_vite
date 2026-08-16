@@ -1,57 +1,49 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 
+import { useAuth } from "../../context/AuthContext";
 import { supabase } from "../../lib/supabase";
 
 import styles from "./SetPasswordPage.module.css";
 
 const SetPasswordPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { session, loading } = useAuth();
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const { session, loading } = useAuth();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     setErrorMessage("");
 
     if (password.length < 8) {
-      setErrorMessage("Пароль має містити щонайменше 8 символів.");
+      setErrorMessage(t("auth.setPassword.errors.tooShort"));
       return;
     }
 
     if (password !== passwordConfirm) {
-      setErrorMessage("Паролі не співпадають.");
+      setErrorMessage(t("auth.setPassword.errors.mismatch"));
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
         throw error;
       }
 
-      navigate("/student-area", {
-        replace: true,
-      });
+      navigate("/student-area", { replace: true });
     } catch (error) {
-      console.error("Помилка встановлення пароля:", error);
-
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Не вдалося встановити пароль.",
-      );
+      console.error("Set password error:", error);
+      setErrorMessage(t("auth.setPassword.errors.save"));
     } finally {
       setIsSubmitting(false);
     }
@@ -60,7 +52,7 @@ const SetPasswordPage = () => {
   if (loading) {
     return (
       <main>
-        <p>Перевірка запрошення...</p>
+        <p>{t("auth.setPassword.checkingInvite")}</p>
       </main>
     );
   }
@@ -72,14 +64,12 @@ const SetPasswordPage = () => {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <h1>Створіть пароль</h1>
-
-        <p>Встановіть пароль для входу до особистого кабінету.</p>
+        <h1>{t("auth.setPassword.title")}</h1>
+        <p>{t("auth.setPassword.description")}</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label>
-            <span>Пароль</span>
-
+            <span>{t("common.password")}</span>
             <input
               type="password"
               value={password}
@@ -90,8 +80,7 @@ const SetPasswordPage = () => {
           </label>
 
           <label>
-            <span>Повторіть пароль</span>
-
+            <span>{t("auth.setPassword.confirmPassword")}</span>
             <input
               type="password"
               value={passwordConfirm}
@@ -104,7 +93,9 @@ const SetPasswordPage = () => {
           {errorMessage && <p className={styles.error}>{errorMessage}</p>}
 
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Збереження..." : "Встановити пароль"}
+            {isSubmitting
+              ? t("common.saving")
+              : t("auth.setPassword.submit")}
           </button>
         </form>
       </section>

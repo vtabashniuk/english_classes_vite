@@ -1,5 +1,13 @@
+import { useTranslation } from "react-i18next";
+
 const StudentDashboard = () => {
-  return <section><h1>Кабінет учня</h1></section>;
+  const { t } = useTranslation();
+
+  return (
+    <section>
+      <h1>{t("student.title")}</h1>
+    </section>
+  );
 };
 
 export default StudentDashboard;

@@ -1,43 +1,38 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
+import { TIMEZONES } from "../../constants/timezones";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../context/AuthContext";
 
 import styles from "./StudentProfile.module.css";
 
 const StudentProfile = () => {
+  const { t } = useTranslation();
   const { profile, refreshProfile } = useAuth();
 
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
-
+  const [timezone, setTimezone] = useState("Europe/Kyiv");
   const [newEmail, setNewEmail] = useState("");
-
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-
   const [isSavingEmail, setIsSavingEmail] = useState(false);
-
   const [profileMessage, setProfileMessage] = useState("");
-
   const [profileError, setProfileError] = useState("");
-
   const [emailMessage, setEmailMessage] = useState("");
-
   const [emailError, setEmailError] = useState("");
 
   useEffect(() => {
-    if (!profile) {
-      return;
-    }
+    if (!profile) return;
 
     setFullName(profile.full_name ?? "");
     setPhone(profile.phone ?? "");
+    setTimezone(profile.timezone ?? "Europe/Kyiv");
     setNewEmail(profile.email ?? "");
   }, [profile]);
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
-
     setProfileMessage("");
     setProfileError("");
     setIsSavingProfile(true);
@@ -46,20 +41,21 @@ const StudentProfile = () => {
       const { error } = await supabase.rpc("update_my_profile", {
         new_full_name: fullName,
         new_phone: phone,
+        new_timezone: timezone,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       await refreshProfile();
-
-      setProfileMessage("Контактні дані успішно збережено.");
+      setProfileMessage(t("studentProfile.saved"));
     } catch (error) {
-      console.error("Помилка оновлення профілю:", error);
+      console.error("Profile update error:", error);
+      const rawMessage = error?.message ?? "";
 
       setProfileError(
-        error instanceof Error ? error.message : "Не вдалося зберегти профіль.",
+        rawMessage.includes("INVALID_TIMEZONE")
+          ? t("studentProfile.invalidTimezone")
+          : t("studentProfile.profileSaveError"),
       );
     } finally {
       setIsSavingProfile(false);
@@ -68,19 +64,18 @@ const StudentProfile = () => {
 
   const handleEmailSubmit = async (event) => {
     event.preventDefault();
-
     setEmailMessage("");
     setEmailError("");
 
     const normalizedEmail = newEmail.trim().toLowerCase();
 
     if (!normalizedEmail) {
-      setEmailError("Вкажіть новий email.");
+      setEmailError(t("studentProfile.emailRequired"));
       return;
     }
 
     if (normalizedEmail === profile?.email?.toLowerCase()) {
-      setEmailError("Це вже ваш поточний email.");
+      setEmailError(t("studentProfile.sameEmail"));
       return;
     }
 
@@ -91,19 +86,12 @@ const StudentProfile = () => {
         email: normalizedEmail,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      setEmailMessage(
-        "Запит на зміну email надіслано. Перевірте пошту для підтвердження.",
-      );
+      setEmailMessage(t("studentProfile.emailChangeSent"));
     } catch (error) {
-      console.error("Помилка зміни email:", error);
-
-      setEmailError(
-        error instanceof Error ? error.message : "Не вдалося змінити email.",
-      );
+      console.error("Email update error:", error);
+      setEmailError(t("studentProfile.emailChangeError"));
     } finally {
       setIsSavingEmail(false);
     }
@@ -112,19 +100,17 @@ const StudentProfile = () => {
   return (
     <section className={styles.page}>
       <div className={styles.heading}>
-        <h1>Профіль</h1>
-
-        <p>Керуйте контактною інформацією та email для входу.</p>
+        <h1>{t("studentProfile.title")}</h1>
+        <p>{t("studentProfile.description")}</p>
       </div>
 
       <div className={styles.grid}>
         <article className={styles.card}>
-          <h2>Контактні дані</h2>
+          <h2>{t("studentProfile.contactInfo")}</h2>
 
           <form className={styles.form} onSubmit={handleProfileSubmit}>
             <label className={styles.field}>
-              <span>Ім’я</span>
-
+              <span>{t("studentProfile.name")}</span>
               <input
                 type="text"
                 value={fullName}
@@ -134,8 +120,7 @@ const StudentProfile = () => {
             </label>
 
             <label className={styles.field}>
-              <span>Телефон</span>
-
+              <span>{t("studentProfile.phone")}</span>
               <input
                 type="tel"
                 value={phone}
@@ -145,10 +130,25 @@ const StudentProfile = () => {
               />
             </label>
 
+            <label className={styles.field}>
+              <span>{t("studentProfile.timezone")}</span>
+              <select
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+              >
+                {TIMEZONES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(item.labelKey)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className={styles.helper}>{t("studentProfile.timezoneHelp")}</p>
+
             {profileMessage && (
               <p className={styles.success}>{profileMessage}</p>
             )}
-
             {profileError && <p className={styles.error}>{profileError}</p>}
 
             <button
@@ -156,23 +156,23 @@ const StudentProfile = () => {
               className={styles.primaryButton}
               disabled={isSavingProfile}
             >
-              {isSavingProfile ? "Збереження..." : "Зберегти"}
+              {isSavingProfile
+                ? t("studentProfile.saving")
+                : t("studentProfile.save")}
             </button>
           </form>
         </article>
 
         <article className={styles.card}>
-          <h2>Email для входу</h2>
+          <h2>{t("studentProfile.emailTitle")}</h2>
 
           <p className={styles.helper}>
-            Поточний email:
-            <strong> {profile?.email}</strong>
+            {t("studentProfile.currentEmail")}: <strong>{profile?.email}</strong>
           </p>
 
           <form className={styles.form} onSubmit={handleEmailSubmit}>
             <label className={styles.field}>
-              <span>Новий email</span>
-
+              <span>{t("studentProfile.newEmail")}</span>
               <input
                 type="email"
                 value={newEmail}
@@ -183,7 +183,6 @@ const StudentProfile = () => {
             </label>
 
             {emailMessage && <p className={styles.success}>{emailMessage}</p>}
-
             {emailError && <p className={styles.error}>{emailError}</p>}
 
             <button
@@ -191,7 +190,9 @@ const StudentProfile = () => {
               className={styles.secondaryButton}
               disabled={isSavingEmail}
             >
-              {isSavingEmail ? "Надсилання..." : "Змінити email"}
+              {isSavingEmail
+                ? t("studentProfile.sending")
+                : t("studentProfile.changeEmail")}
             </button>
           </form>
         </article>

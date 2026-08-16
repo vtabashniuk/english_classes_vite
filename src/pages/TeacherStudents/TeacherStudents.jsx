@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
+import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherStudents.module.css";
 
 const TeacherStudents = () => {
+  const { t, i18n } = useTranslation();
+  const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
+
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,15 +32,11 @@ const TeacherStudents = () => {
         .eq("role", "student")
         .order("full_name", { ascending: true });
 
-      if (error) {
-        throw error;
-      }
-
+      if (error) throw error;
       setStudents(data ?? []);
     } catch (error) {
-      console.error("Не вдалося завантажити учнів:", error);
-
-      setErrorMessage("Не вдалося завантажити список учнів.");
+      console.error("Students load error:", error);
+      setErrorMessage(t("teacherStudents.errors.load"));
     } finally {
       setLoading(false);
     }
@@ -48,41 +48,25 @@ const TeacherStudents = () => {
 
   const handleInvite = async (event) => {
     event.preventDefault();
-
     setInviteMessage("");
     setInviteError("");
     setIsInviting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "invite-student",
-        {
-          body: {
-            email,
-            fullName,
-          },
-        },
-      );
+      const { data, error } = await supabase.functions.invoke("invite-student", {
+        body: { email, fullName },
+      });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "INVITE_FAILED");
 
-      if (!data?.success) {
-        throw new Error(data?.error || "Не вдалося запросити учня.");
-      }
-
-      setInviteMessage("Запрошення успішно надіслано.");
+      setInviteMessage(t("teacherStudents.invite.success"));
       setFullName("");
       setEmail("");
-
       await loadStudents();
     } catch (error) {
-      console.error("Помилка запрошення:", error);
-
-      setInviteError(
-        error instanceof Error ? error.message : "Не вдалося запросити учня.",
-      );
+      console.error("Student invite error:", error);
+      setInviteError(t("teacherStudents.errors.invite"));
     } finally {
       setIsInviting(false);
     }
@@ -94,21 +78,21 @@ const TeacherStudents = () => {
     setInviteError("");
   };
 
-  const formatDate = (dateString) => {
-    return new Intl.DateTimeFormat("uk-UA", {
+  const formatDate = (dateString) =>
+    new Intl.DateTimeFormat(intlLocale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     }).format(new Date(dateString));
-  };
 
   return (
     <section className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1>Учні</h1>
-
-          <p className={styles.subtitle}>Кількість учнів: {students.length}</p>
+          <h1>{t("teacherStudents.title")}</h1>
+          <p className={styles.subtitle}>
+            {t("teacherStudents.count", { count: students.length })}
+          </p>
         </div>
 
         <button
@@ -116,33 +100,33 @@ const TeacherStudents = () => {
           className={styles.inviteButton}
           onClick={() => setIsInviteOpen((current) => !current)}
         >
-          {isInviteOpen ? "Закрити" : "+ Запросити учня"}
+          {isInviteOpen
+            ? t("common.close")
+            : t("teacherStudents.invite.open")}
         </button>
       </div>
 
       {isInviteOpen && (
         <form className={styles.inviteForm} onSubmit={handleInvite}>
           <div className={styles.formHeading}>
-            <h2>Запросити нового учня</h2>
-            <p>Учень отримає email із посиланням для створення пароля.</p>
+            <h2>{t("teacherStudents.invite.title")}</h2>
+            <p>{t("teacherStudents.invite.description")}</p>
           </div>
 
           <div className={styles.formGrid}>
             <label className={styles.field}>
-              <span>Ім’я учня</span>
-
+              <span>{t("teacherStudents.invite.name")}</span>
               <input
                 type="text"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
-                placeholder="Наприклад, Іван Петренко"
+                placeholder={t("teacherStudents.invite.namePlaceholder")}
                 required
               />
             </label>
 
             <label className={styles.field}>
-              <span>Email</span>
-
+              <span>{t("common.email")}</span>
               <input
                 type="email"
                 value={email}
@@ -156,7 +140,6 @@ const TeacherStudents = () => {
           {inviteMessage && (
             <p className={styles.successMessage}>{inviteMessage}</p>
           )}
-
           {inviteError && <p className={styles.errorMessage}>{inviteError}</p>}
 
           <div className={styles.formActions}>
@@ -165,7 +148,7 @@ const TeacherStudents = () => {
               className={styles.cancelButton}
               onClick={handleCloseInvite}
             >
-              Скасувати
+              {t("common.cancel")}
             </button>
 
             <button
@@ -173,21 +156,22 @@ const TeacherStudents = () => {
               className={styles.submitButton}
               disabled={isInviting}
             >
-              {isInviting ? "Надсилання..." : "Надіслати запрошення"}
+              {isInviting
+                ? t("common.sending")
+                : t("teacherStudents.invite.submit")}
             </button>
           </div>
         </form>
       )}
 
       {loading ? (
-        <div className={styles.state}>Завантаження...</div>
+        <div className={styles.state}>{t("common.loading")}</div>
       ) : errorMessage ? (
         <div className={styles.errorMessage}>{errorMessage}</div>
       ) : students.length === 0 ? (
         <div className={styles.emptyState}>
-          <h2>Учнів поки немає</h2>
-
-          <p>Запросіть першого учня, щоб почати роботу.</p>
+          <h2>{t("teacherStudents.empty.title")}</h2>
+          <p>{t("teacherStudents.empty.description")}</p>
         </div>
       ) : (
         <div className={styles.studentsGrid}>
@@ -201,8 +185,7 @@ const TeacherStudents = () => {
                 </div>
 
                 <div className={styles.studentInfo}>
-                  <h2>{student.full_name || "Ім’я не вказано"}</h2>
-
+                  <h2>{student.full_name || t("common.nameNotSpecified")}</h2>
                   <p>{student.email}</p>
                 </div>
 
@@ -211,18 +194,20 @@ const TeacherStudents = () => {
                     student.is_active ? styles.active : styles.inactive
                   }`}
                 >
-                  {student.is_active ? "Активний" : "Неактивний"}
+                  {student.is_active
+                    ? t("common.active")
+                    : t("common.inactive")}
                 </span>
               </div>
 
               <div className={styles.studentDetails}>
                 <div>
-                  <span>Телефон</span>
-                  <strong>{student.phone || "Не вказано"}</strong>
+                  <span>{t("common.phone")}</span>
+                  <strong>{student.phone || t("common.notSpecified")}</strong>
                 </div>
 
                 <div>
-                  <span>Додано</span>
+                  <span>{t("teacherStudents.added")}</span>
                   <strong>{formatDate(student.created_at)}</strong>
                 </div>
               </div>
@@ -231,7 +216,7 @@ const TeacherStudents = () => {
                 to={`/teacher-dashboard/students/${student.id}`}
                 className={styles.detailsButton}
               >
-                Відкрити профіль
+                {t("teacherStudents.openProfile")}
               </Link>
             </article>
           ))}

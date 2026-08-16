@@ -9,23 +9,11 @@ const LessonCta = () => {
   return (
     <section className={styles.section}>
       <div className={styles.card}>
-        <h2>
-          {t("home.lessonCta.title", {
-            defaultValue: "Ready for today's lesson?",
-          })}
-        </h2>
-
-        <p>
-          {t("home.lessonCta.description", {
-            defaultValue:
-              "Continue your learning journey with personalized lessons and practical exercises.",
-          })}
-        </p>
+        <h2>{t("home.lessonCta.title")}</h2>
+        <p>{t("home.lessonCta.description")}</p>
 
         <Link to="/login" className={styles.button}>
-          {t("home.lessonCta.button", {
-            defaultValue: "Go to your lesson",
-          })}
+          {t("home.lessonCta.button")}
         </Link>
       </div>
     </section>

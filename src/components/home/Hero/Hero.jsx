@@ -21,10 +21,7 @@ const Hero = () => {
         />
 
         <p className={styles.description}>
-          {t("home.hero.description", {
-            defaultValue:
-              "Improve your English skills with personalized one-on-one lessons designed to help you achieve your language goals.",
-          })}
+          {t("home.hero.description")}
         </p>
 
         <div className={styles.actions}>
@@ -36,11 +33,7 @@ const Hero = () => {
               aria-hidden="true"
             />
 
-            <span>
-              {t("home.hero.buttons.studentArea", {
-                defaultValue: "Go to Student Area",
-              })}
-            </span>
+            <span>{t("home.hero.buttons.studentArea")}</span>
           </Link>
 
           <Link to="/about-me" className={styles.secondaryButton}>
@@ -51,11 +44,7 @@ const Hero = () => {
               aria-hidden="true"
             />
 
-            <span>
-              {t("home.hero.buttons.meetTeacher", {
-                defaultValue: "Meet Your Teacher",
-              })}
-            </span>
+            <span>{t("home.hero.buttons.meetTeacher")}</span>
           </Link>
         </div>
       </div>
@@ -63,10 +52,7 @@ const Hero = () => {
       <div className={styles.imageWrapper}>
         <img
           src="/assets/desk-books-1200.webp"
-          alt={t("home.hero.imageAlt", {
-            defaultValue:
-              "Desk with English learning materials and notebook",
-          })}
+          alt={t("home.hero.imageAlt")}
           decoding="async"
           className={styles.image}
         />

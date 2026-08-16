@@ -1,33 +1,37 @@
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useState, useRef, useEffect } from "react";
+
 import styles from "./LanguageSwitcher.module.css";
 
+const languages = ["ua", "en", "ru"];
+
 const LanguageSwitcher = () => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
 
-  const languages = [
-    { code: "ua", label: "UA" },
-    { code: "en", label: "EN" },
-    { code: "ru", label: "RU" },
-  ];
+  const currentLanguage = i18n.resolvedLanguage || i18n.language || "ua";
 
   const handleChange = (code) => {
     i18n.changeLanguage(code);
-    setIsOpen(false); // Закриваємо при виборі
+    setIsOpen(false);
   };
 
-  // Закриття при кліку за межами
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   return (
@@ -36,13 +40,18 @@ const LanguageSwitcher = () => {
         type="button"
         className={`${styles.selectWrapper} ${isOpen ? styles.isOpen : ""}`}
         onClick={() => setIsOpen((current) => !current)}
+        aria-label={t("languageSwitcher.label")}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <span>
-          {languages.find((lang) => lang.code === i18n.language)?.label}
-        </span>
-        <svg className={styles.arrow} viewBox="0 0 20 20" fill="none">
+        <span>{t(`lang.${currentLanguage}`)}</span>
+
+        <svg
+          className={styles.arrow}
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
           <path
             stroke="currentColor"
             strokeLinecap="round"
@@ -52,15 +61,22 @@ const LanguageSwitcher = () => {
           />
         </svg>
       </button>
+
       {isOpen && (
-        <ul className={styles.optionsList}>
-          {languages.map((lang) => (
+        <ul
+          className={styles.optionsList}
+          role="listbox"
+          aria-label={t("languageSwitcher.optionsLabel")}
+        >
+          {languages.map((code) => (
             <li
-              key={lang.code}
+              key={code}
               className={styles.option}
-              onClick={() => handleChange(lang.code)}
+              role="option"
+              aria-selected={currentLanguage === code}
+              onClick={() => handleChange(code)}
             >
-              {lang.label}
+              {t(`lang.${code}`)}
             </li>
           ))}
         </ul>

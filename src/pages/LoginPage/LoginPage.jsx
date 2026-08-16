@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
@@ -6,8 +7,12 @@ import { useAuth } from "../../context/AuthContext";
 
 import styles from "./LoginPage.module.css";
 
+const getDashboardPath = (role) =>
+  role === "teacher" ? "/teacher-dashboard" : "/student-area";
+
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { session, profile, loading } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -18,23 +23,17 @@ const LoginPage = () => {
   if (loading) {
     return (
       <main className={styles.page}>
-        <p>Перевірка авторизації...</p>
+        <p>{t("auth.login.checking")}</p>
       </main>
     );
   }
 
   if (session && profile) {
-    const dashboardPath =
-      profile.role === "teacher"
-        ? "/teacher-dashboard"
-        : "/student-area";
-
-    return <Navigate to={dashboardPath} replace />;
+    return <Navigate to={getDashboardPath(profile.role)} replace />;
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
     setIsSubmitting(true);
     setErrorMessage("");
 
@@ -44,7 +43,7 @@ const LoginPage = () => {
     });
 
     if (error) {
-      setErrorMessage("Неправильний email або пароль.");
+      setErrorMessage(t("auth.login.errors.invalidCredentials"));
       setIsSubmitting(false);
       return;
     }
@@ -57,24 +56,19 @@ const LoginPage = () => {
 
     if (profileError) {
       await supabase.auth.signOut();
-      setErrorMessage("Не вдалося завантажити профіль.");
+      setErrorMessage(t("auth.login.errors.profileLoad"));
       setIsSubmitting(false);
       return;
     }
 
     if (!profileData.is_active) {
       await supabase.auth.signOut();
-      setErrorMessage("Обліковий запис деактивовано.");
+      setErrorMessage(t("auth.login.errors.inactive"));
       setIsSubmitting(false);
       return;
     }
 
-    const dashboardPath =
-      profileData.role === "teacher"
-        ? "/teacher-dashboard"
-        : "/student-area";
-
-    navigate(dashboardPath, { replace: true });
+    navigate(getDashboardPath(profileData.role), { replace: true });
   };
 
   return (
@@ -82,16 +76,13 @@ const LoginPage = () => {
       <section className={styles.card}>
         <div className={styles.heading}>
           <span className={styles.eyebrow}>English with Olga</span>
-          <h1>Вхід до особистого кабінету</h1>
-          <p>
-            Увійдіть, щоб переглянути розклад, матеріали та інформацію
-            про заняття.
-          </p>
+          <h1>{t("auth.login.title")}</h1>
+          <p>{t("auth.login.description")}</p>
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>
-            <span>Email</span>
+            <span>{t("common.email")}</span>
             <input
               type="email"
               value={email}
@@ -102,7 +93,7 @@ const LoginPage = () => {
           </label>
 
           <label className={styles.field}>
-            <span>Пароль</span>
+            <span>{t("common.password")}</span>
             <input
               type="password"
               value={password}
@@ -123,7 +114,7 @@ const LoginPage = () => {
             className={styles.submitButton}
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Вхід..." : "Увійти"}
+            {isSubmitting ? t("auth.login.signingIn") : t("auth.login.signIn")}
           </button>
         </form>
 
@@ -132,7 +123,7 @@ const LoginPage = () => {
           className={styles.backButton}
           onClick={() => navigate("/")}
         >
-          Повернутися на головну
+          {t("common.backHome")}
         </button>
       </section>
     </main>

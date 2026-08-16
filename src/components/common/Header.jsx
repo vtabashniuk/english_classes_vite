@@ -1,7 +1,9 @@
-const Header = () => {
-  return (
-    <div>Header</div>
-  )
-}
+import { useTranslation } from "react-i18next";
 
-export default Header
+const Header = () => {
+  const { t } = useTranslation();
+
+  return <div>{t("common.header")}</div>;
+};
+
+export default Header;

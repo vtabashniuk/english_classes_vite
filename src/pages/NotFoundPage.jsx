@@ -1,10 +1,13 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 const NotFoundPage = () => {
+  const { t } = useTranslation();
+
   return (
     <section>
-      <h1>Сторінку не знайдено</h1>
-      <Link to="/">Повернутися на головну</Link>
+      <h1>{t("notFound.title")}</h1>
+      <Link to="/">{t("notFound.backHome")}</Link>
     </section>
   );
 };
