@@ -13,6 +13,7 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
   const location = useLocation();
 
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
+  const [hasPendingRequests, setHasPendingRequests] = useState(false);
 
   const isTeacher = profile?.role === "teacher";
 
@@ -74,6 +75,43 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       );
     };
   }, [profile?.id, location.pathname]);
+
+  useEffect(() => {
+    if (!profile?.id || !isTeacher) {
+      setHasPendingRequests(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadPendingRequestsState = async () => {
+      const { data, error } = await supabase
+        .from("lesson_requests")
+        .select("id")
+        .eq("teacher_id", profile.id)
+        .eq("status", "pending")
+        .limit(1);
+
+      if (!cancelled && !error) {
+        setHasPendingRequests((data?.length ?? 0) > 0);
+      }
+    };
+
+    const handleRequestsChanged = () => {
+      loadPendingRequestsState();
+    };
+
+    loadPendingRequestsState();
+    window.addEventListener("lesson-requests-changed", handleRequestsChanged);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        "lesson-requests-changed",
+        handleRequestsChanged,
+      );
+    };
+  }, [profile?.id, isTeacher, location.pathname]);
 
   const teacherLinks = [
     {
@@ -197,6 +235,20 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
                     className={styles.notificationDot}
                     title={t("dashboardNav.unreadMessages")}
                     aria-label={t("dashboardNav.unreadMessages")}
+                  />
+                )}
+
+              {isTeacher &&
+                link.labelKey === "dashboardNav.requests" &&
+                hasPendingRequests && (
+                  <span
+                    className={styles.notificationDot}
+                    title={t("dashboardNav.pendingRequests", {
+                      defaultValue: "Є запити, що очікують рішення",
+                    })}
+                    aria-label={t("dashboardNav.pendingRequests", {
+                      defaultValue: "Є запити, що очікують рішення",
+                    })}
                   />
                 )}
             </NavLink>

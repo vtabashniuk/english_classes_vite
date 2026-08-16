@@ -18,6 +18,7 @@ import TeacherSettings from "./pages/TeacherSettings/TeacherSettings";
 import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
 import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
+import TeacherRequests from "./pages/TeacherRequests/TeacherRequests";
 import Notifications from "./pages/Notifications/Notifications";
 
 import AuthCallback from "./pages/AuthCallback";
@@ -109,6 +110,10 @@ const router = createBrowserRouter([
       {
         path: "students/:studentId",
         element: <TeacherStudentDetails />,
+      },
+      {
+        path: "requests",
+        element: <TeacherRequests />,
       },
       {
         path: "messages",

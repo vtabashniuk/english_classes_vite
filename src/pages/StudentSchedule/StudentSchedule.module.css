@@ -351,3 +351,290 @@
     width: 100%;
   }
 }
+
+.extraLessonSection {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.extraLessonHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.extraLessonHeading h2 {
+  margin: 0 0 0.3rem;
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+}
+
+.extraLessonHeading p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.requestToggleButton,
+.submitRequestButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: var(--border-radius);
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.requestToggleButton:hover,
+.submitRequestButton:hover:not(:disabled) {
+  background: var(--color-hover);
+  transform: translateY(-1px);
+}
+
+.submitRequestButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.requestForm {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-divider);
+}
+
+.formField {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.formField > span {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.formField input,
+.formField textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  font: inherit;
+}
+
+.formField textarea {
+  resize: vertical;
+}
+
+.formField input:focus,
+.formField textarea:focus {
+  outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.2);
+  border-color: var(--color-primary-blue);
+}
+
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.slotButton {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.55rem 0.45rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.slotButton:hover:not(.slotButtonSelected) {
+  border-color: var(--color-primary-blue);
+  color: var(--color-primary-blue);
+}
+
+.slotButtonSelected {
+  border-color: var(--color-primary-blue);
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.slotButtonSelected:hover {
+  border-color: var(--color-primary-blue);
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.helperText {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.pendingRequests {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-divider);
+}
+
+.pendingRequests h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.requestCard {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.requestCard strong {
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.requestCard p {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.requestMessage {
+  max-width: 620px;
+  white-space: pre-wrap;
+}
+
+.pendingStatus {
+  flex-shrink: 0;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  color: var(--color-primary-blue);
+  background: rgba(var(--color-primary-blue-rgb), 0.1);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .extraLessonHeading,
+  .requestCard {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .requestToggleButton,
+  .submitRequestButton {
+    width: 100%;
+  }
+
+  .pendingStatus {
+    align-self: flex-start;
+  }
+}
+
+.dateField {
+  width: 240px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.dateField input[type="date"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.requestCardActions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  flex-direction: column;
+}
+
+.cancelRequestButton {
+  min-height: 36px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--border-radius);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.cancelRequestButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.cancelRequestButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 700px) {
+  .extraLessonSection,
+  .requestForm,
+  .formField,
+  .dateField {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dateField {
+    width: 100%;
+  }
+
+  .dateField input[type="date"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .slotGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .requestCardActions {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 360px) {
+  .slotGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

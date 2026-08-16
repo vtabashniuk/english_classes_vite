@@ -102,6 +102,51 @@
         "notFound": "Lesson not found.",
         "generic": "Could not cancel the lesson."
       }
+    },
+    "extraLesson": {
+      "title": "Extra lesson",
+      "description": "Choose an available teacher time and send a request for an extra lesson.",
+      "open": "+ Request an extra lesson",
+      "close": "Close form",
+      "date": "Date",
+      "availableTime": "Available time",
+      "loadingAvailability": "Loading available slots...",
+      "noAvailability": "There are no available times on this date.",
+      "timezoneHint": "Times are shown in your time zone: {{timezone}}.",
+      "message": "Comment",
+      "messagePlaceholder": "Optionally add a short note for the teacher",
+      "submit": "Send request",
+      "submitting": "Sending...",
+      "success": "Your extra lesson request has been sent to the teacher.",
+      "pendingTitle": "Requests awaiting confirmation",
+      "statuses": {
+        "pending": "Awaiting confirmation",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      },
+      "errors": {
+        "availability": "Could not load available times.",
+        "selectSlot": "Select a lesson time.",
+        "lessonConflict": "This time is no longer available. Refresh the slots and choose another one.",
+        "requestConflict": "You already have a pending request that overlaps this time.",
+        "nonWorkingDay": "The teacher does not teach on this day.",
+        "outsideHours": "The selected time is outside the teacher’s working hours.",
+        "invalidSlot": "The selected time does not match the available schedule grid.",
+        "past": "You cannot request a lesson in the past.",
+        "generic": "Could not send the request."
+      },
+      "cancel": {
+        "button": "Cancel request",
+        "cancelling": "Cancelling...",
+        "confirm": "Cancel this extra lesson request?",
+        "success": "The extra lesson request has been cancelled.",
+        "errors": {
+          "notFound": "Request not found.",
+          "notPending": "This request is no longer pending.",
+          "generic": "Could not cancel the request."
+        }
+      }
     }
   },
   "about": {
@@ -405,6 +450,50 @@
       "load": "Could not load notifications.",
       "markRead": "Could not mark the notification as read.",
       "markAllRead": "Could not mark all notifications as read."
+    },
+    "teacherComment": "Teacher comment",
+    "lessonRequestApproved": {
+      "title": "Extra lesson approved",
+      "body": "The teacher approved your lesson request for {{date}} at {{time}}."
+    },
+    "lessonRequestRejected": {
+      "title": "Lesson request rejected",
+      "body": "The teacher rejected your lesson request for {{date}} at {{time}}."
+    }
+  },
+  "teacherRequests": {
+    "title": "Lesson requests",
+    "description": "Student requests for extra lessons awaiting your decision.",
+    "timezone": "Schedule time",
+    "loading": "Loading requests...",
+    "emptyTitle": "No new requests",
+    "emptyDescription": "When a student requests an extra lesson, it will appear here.",
+    "student": "Student",
+    "unknownStudent": "Unknown student",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "minutes": "{{count}} min",
+    "studentComment": "Student comment",
+    "pending": "Awaiting decision",
+    "approve": "Approve",
+    "reject": "Reject",
+    "processing": "Processing...",
+    "approveConfirm": "Approve a lesson for {{student}} on {{date}} at {{time}}?",
+    "approveSuccess": "Request approved. The lesson was created and the student was notified.",
+    "rejectSuccess": "Request rejected. The student was notified.",
+    "rejectionComment": "Rejection comment (optional)",
+    "rejectionCommentPlaceholder": "Optionally add a short reason for rejecting the request",
+    "rejectConfirm": "Reject request",
+    "cancel": "Cancel",
+    "errors": {
+      "load": "Could not load lesson requests.",
+      "lessonConflict": "This time is already occupied by another lesson. The request was left unchanged.",
+      "alreadyResolved": "This request has already been resolved.",
+      "timePassed": "The requested lesson time has already passed.",
+      "notFound": "Request not found.",
+      "commentTooLong": "The comment cannot exceed 500 characters.",
+      "generic": "Could not process the request."
     }
   }
 }

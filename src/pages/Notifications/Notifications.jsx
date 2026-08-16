@@ -96,6 +96,7 @@ const Notifications = () => {
       studentName: notification.data?.studentName || t("notifications.student"),
       date: startsAt ? formatDate(startsAt) : "—",
       time: startsAt ? formatTime(startsAt) : "—",
+      duration: notification.data?.durationMinutes,
     });
   };
 
@@ -217,6 +218,14 @@ const Notifications = () => {
                 </div>
 
                 <p>{getBody(notification)}</p>
+
+                {notification.type === "lesson_request_rejected" &&
+                  notification.data?.comment && (
+                    <div className={styles.teacherComment}>
+                      <strong>{t("notifications.teacherComment")}</strong>
+                      <p>{notification.data.comment}</p>
+                    </div>
+                  )}
 
                 <time dateTime={notification.created_at}>
                   {formatCreatedAt(notification.created_at)}
