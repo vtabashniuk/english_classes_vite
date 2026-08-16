@@ -1,0 +1,211 @@
+.page {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.header h1 {
+  margin: 0 0 0.4rem;
+
+  color: var(--color-text-primary);
+
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.header p {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+}
+
+.content {
+  max-width: 760px;
+}
+
+.card {
+  display: grid;
+  gap: 1.25rem;
+
+  padding: 1.5rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #ffffff;
+
+  box-shadow: var(--shadow-soft);
+}
+
+.cardHeader {
+  padding-bottom: 1rem;
+
+  border-bottom: 1px solid #eef1f5;
+}
+
+.cardHeader h2 {
+  margin: 0 0 0.35rem;
+
+  color: var(--color-text-primary);
+
+  font-size: 1.25rem;
+}
+
+.cardHeader p {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+
+  font-size: 0.9rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.field > span,
+.readOnlyField > span {
+  color: var(--color-text-primary);
+
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 46px;
+
+  box-sizing: border-box;
+
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid #d8dde7;
+  border-radius: var(--border-radius);
+
+  color: var(--color-text-primary);
+  background: #ffffff;
+
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-primary-blue);
+
+  outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.12);
+}
+
+.field small,
+.readOnlyField small {
+  color: var(--color-text-secondary);
+
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.readOnlyField {
+  display: grid;
+  gap: 0.35rem;
+
+  padding: 0.9rem 1rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #f8f9fb;
+}
+
+.readOnlyField strong {
+  color: var(--color-text-primary);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+
+  padding-top: 0.5rem;
+}
+
+.primaryButton {
+  min-height: 46px;
+
+  padding: 0.7rem 1.25rem;
+
+  border: 0;
+  border-radius: var(--border-radius);
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+
+  cursor: pointer;
+
+  font: inherit;
+  font-weight: 600;
+
+  transition: var(--transition);
+}
+
+.primaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error,
+.success {
+  margin: 0;
+
+  padding: 0.8rem 0.9rem;
+
+  border-radius: var(--border-radius);
+
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #942727;
+  background: #fdecec;
+}
+
+.success {
+  color: #17663b;
+  background: #eaf8f0;
+}
+
+.state {
+  padding: 3rem 1rem;
+
+  color: var(--color-text-secondary);
+
+  text-align: center;
+}
+
+@media (max-width: 650px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+}

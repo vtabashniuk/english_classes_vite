@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 
@@ -5,11 +6,33 @@ import { useAuth } from "../../../context/AuthContext";
 
 import styles from "./DashboardSidebar.module.css";
 
-const DashboardSidebar = () => {
+const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
   const { t } = useTranslation();
   const { profile } = useAuth();
 
   const isTeacher = profile?.role === "teacher";
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   const teacherLinks = [
     {
@@ -44,6 +67,10 @@ const DashboardSidebar = () => {
     {
       to: "/teacher-dashboard/finance",
       labelKey: "dashboardNav.finance",
+    },
+    {
+      to: "/teacher-dashboard/settings",
+      labelKey: "dashboardNav.settings",
     },
   ];
 
@@ -82,24 +109,51 @@ const DashboardSidebar = () => {
   const links = isTeacher ? teacherLinks : studentLinks;
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.logo}>English with Olga</div>
+    <>
+      <button
+        type="button"
+        className={styles.overlay}
+        data-open={isOpen ? "true" : "false"}
+        onClick={onClose}
+        aria-label={t("dashboardNav.closeMenu")}
+        tabIndex={isOpen ? 0 : -1}
+      />
 
-      <nav className={styles.nav} aria-label={t("dashboardNav.ariaLabel")}>
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            end={link.end}
-            className={({ isActive }) =>
-              `${styles.link} ${isActive ? styles.active : ""}`
-            }
+      <aside
+        className={styles.sidebar}
+        data-open={isOpen ? "true" : "false"}
+        aria-label={t("dashboardNav.ariaLabel")}
+      >
+        <div className={styles.topRow}>
+          <div className={styles.logo}>English with Olga</div>
+
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label={t("dashboardNav.closeMenu")}
           >
-            {t(link.labelKey)}
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+            ×
+          </button>
+        </div>
+
+        <nav className={styles.nav}>
+          {links.map((link) => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              onClick={onClose}
+              className={({ isActive }) =>
+                `${styles.link} ${isActive ? styles.active : ""}`
+              }
+            >
+              {t(link.labelKey)}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+    </>
   );
 };
 

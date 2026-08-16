@@ -1,12 +1,23 @@
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 30;
 
   height: 100dvh;
   padding: 1.5rem;
+  box-sizing: border-box;
+
+  overflow-y: auto;
 
   background: #ffffff;
   border-right: 1px solid #e8ebf2;
+}
+
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .logo {
@@ -15,6 +26,27 @@
   color: var(--color-primary-blue);
   font-size: 1.2rem;
   font-weight: 700;
+}
+
+.closeButton {
+  display: none;
+  width: 40px;
+  height: 40px;
+  margin: -0.4rem -0.4rem 1.4rem 0;
+
+  border: 0;
+  border-radius: var(--border-radius);
+
+  color: var(--color-text-primary);
+  background: transparent;
+
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f3f5f8;
 }
 
 .nav {
@@ -38,22 +70,65 @@
 
 .link:hover {
   color: var(--color-primary-blue);
-  background: rgba(
-    var(--color-primary-blue-rgb),
-    0.07
-  );
+  background: rgba(var(--color-primary-blue-rgb), 0.07);
 }
 
 .active {
   color: var(--color-primary-blue);
-  background: rgba(
-    var(--color-primary-blue-rgb),
-    0.12
-  );
+  background: rgba(var(--color-primary-blue-rgb), 0.12);
+}
+
+.overlay {
+  display: none;
 }
 
 @media (max-width: 900px) {
   .sidebar {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 101;
+
+    width: min(310px, 86vw);
+
+    transform: translateX(-105%);
+    box-shadow: 18px 0 40px rgba(19, 30, 55, 0.16);
+
+    transition: transform 180ms ease;
+  }
+
+  .sidebar[data-open="true"] {
+    transform: translateX(0);
+  }
+
+  .closeButton {
+    display: block;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+
+    display: block;
+
+    border: 0;
+    padding: 0;
+
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    background: rgba(14, 22, 38, 0.38);
+
+    transition:
+      opacity 180ms ease,
+      visibility 180ms ease;
+  }
+
+  .overlay[data-open="true"] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
   }
 }

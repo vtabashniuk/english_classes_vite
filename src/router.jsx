@@ -14,6 +14,7 @@ import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
 import StudentProfile from "./pages/StudentProfile/StudentProfile";
 
 import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
+import TeacherSettings from "./pages/TeacherSettings/TeacherSettings";
 import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
 import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
@@ -87,6 +88,10 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <TeacherDashboard />,
+      },
+      {
+        path: "settings",
+        element: <TeacherSettings />,
       },
       {
         path: "schedule",

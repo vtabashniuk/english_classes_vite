@@ -6,7 +6,7 @@ import LanguageSwitcher from "../../common/LanguageSwitcher/LanguageSwitcher";
 
 import styles from "./DashboardHeader.module.css";
 
-const DashboardHeader = () => {
+const DashboardHeader = ({ onMenuOpen }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
@@ -27,12 +27,26 @@ const DashboardHeader = () => {
 
   return (
     <header className={styles.header}>
-      <div>
-        <p className={styles.name}>
-          {profile?.full_name || profile?.email}
-        </p>
+      <div className={styles.leftSide}>
+        <button
+          type="button"
+          className={styles.menuButton}
+          onClick={onMenuOpen}
+          aria-label={t("dashboardNav.openMenu")}
+          aria-haspopup="dialog"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
 
-        <span className={styles.role}>{roleLabel}</span>
+        <div>
+          <p className={styles.name}>
+            {profile?.full_name || profile?.email}
+          </p>
+
+          <span className={styles.role}>{roleLabel}</span>
+        </div>
       </div>
 
       <div className={styles.actions}>

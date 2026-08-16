@@ -194,7 +194,21 @@
   },
   "teacherDashboard": {
     "title": "Overview",
-    "description": "Main page of the teacher dashboard."
+    "description": "Teacher dashboard home page.",
+    "actions": {
+      "schedule": {
+        "title": "Schedule",
+        "description": "View the calendar and create lessons."
+      },
+      "students": {
+        "title": "Students",
+        "description": "View students and open their profiles."
+      },
+      "settings": {
+        "title": "Settings",
+        "description": "Working hours, time zone, and lesson duration."
+      }
+    }
   },
   "teacherStudents": {
     "title": "Students",
@@ -221,28 +235,85 @@
   },
   "teacherSchedule": {
     "title": "Schedule",
-    "description": "Create and view scheduled lessons.",
-    "newLesson": "New lesson",
+    "description": "Manage lessons and create new classes.",
+    "timezone": "Schedule time zone",
+    "loading": "Loading schedule...",
+    "previousWeek": "Previous week",
+    "nextWeek": "Next week",
+    "today": "Today",
+    "lessonDuration": "{{count}} min lesson",
+    "createLesson": "Create lesson",
+    "createLessonHint": "Select an available time in the calendar or enter the date and time manually.",
     "student": "Student",
     "selectStudent": "Select a student",
     "date": "Date",
     "time": "Time",
     "selectTime": "Select a time",
-    "zoomUrl": "Zoom URL",
+    "zoomUrl": "Zoom link",
     "create": "Create lesson",
     "creating": "Creating...",
-    "scheduledLessons": "Scheduled lessons",
-    "empty": "No lessons scheduled yet.",
-    "success": "Lesson created successfully.",
+    "lessonDetails": "Lesson details",
+    "lessonDetailsHint": "Click a lesson in the calendar.",
+    "selectLessonHint": "Select a lesson to view its details.",
+    "status": "Status",
+    "openZoom": "Open Zoom",
+    "unknownStudent": "Student",
+    "days": {
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri"
+    },
+    "statuses": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "messages": {
+      "lessonCreated": "Lesson created successfully."
+    },
     "errors": {
-      "required": "Select a student, date, and lesson time.",
-      "weekend": "Lessons are not held on Saturday or Sunday.",
-      "workingHours": "The lesson must be within working hours.",
-      "timeSlot": "Lessons can start only on :00 or :30.",
-      "conflict": "This time overlaps with an existing lesson.",
-      "past": "You cannot create a lesson in the past.",
-      "studentNotFound": "The student was not found or the profile is inactive.",
+      "load": "Could not load the schedule.",
+      "loadLessons": "Could not load lessons.",
+      "requiredFields": "Select a student, date and time.",
+      "weekend": "Lessons are not available on Saturday or Sunday.",
+      "workingHours": "The lesson falls outside working hours.",
+      "invalidSlot": "The lesson must start on an allowed time slot.",
+      "conflict": "This time is already occupied.",
+      "past": "A lesson cannot be created in the past.",
+      "studentNotFound": "The student was not found or the account is inactive.",
       "create": "Could not create the lesson."
+    }
+  },
+  "teacherSettings": {
+    "title": "Settings",
+    "description": "Configure the teacher's working schedule.",
+    "scheduleTitle": "Schedule settings",
+    "scheduleDescription": "These settings are used to create new lessons and build the calendar.",
+    "timezone": "Schedule time zone",
+    "timezoneHint": "The time zone defines the local time used for the teacher's working schedule.",
+    "workdayStart": "Workday starts",
+    "workdayEnd": "Workday ends",
+    "lessonDuration": "Lesson duration",
+    "lessonDurationHint": "Changing the duration applies to new lessons. Existing lessons are not changed.",
+    "slotInterval": "Calendar interval",
+    "slotIntervalHint": "The calendar interval is currently fixed at 30 minutes.",
+    "minutes": "{{count}} min",
+    "save": "Save",
+    "saving": "Saving...",
+    "loading": "Loading settings...",
+    "messages": {
+      "saved": "Schedule settings saved successfully."
+    },
+    "errors": {
+      "load": "Could not load settings.",
+      "save": "Could not save settings.",
+      "invalidTimezone": "The selected time zone is invalid.",
+      "invalidWorkday": "The workday must end after it starts.",
+      "invalidDuration": "The lesson duration is invalid.",
+      "workdayTooShort": "The workday is shorter than one lesson.",
+      "teacherRequired": "This operation is available to teachers only."
     }
   },
   "teacherStudentDetails": {
@@ -279,6 +350,9 @@
     "assignments": "Assignments",
     "materials": "Materials",
     "finance": "Finance",
-    "balance": "Balance"
+    "balance": "Balance",
+    "settings": "Settings",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   }
 }
