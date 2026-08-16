@@ -15,9 +15,11 @@ import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
 import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
 import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
+import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
 
 import AuthCallback from "./pages/AuthCallback";
 import NotFoundPage from "./pages/NotFoundPage";
+import SetPasswordPage from "./pages/SetPasswordPage/SetPasswordPage";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
@@ -51,7 +53,6 @@ const router = createBrowserRouter([
       },
     ],
   },
-
   {
     path: "/student-area",
     element: (
@@ -70,7 +71,6 @@ const router = createBrowserRouter([
       },
     ],
   },
-
   {
     path: "/teacher-dashboard",
     element: (
@@ -91,14 +91,20 @@ const router = createBrowserRouter([
         path: "students",
         element: <TeacherStudents />,
       },
+      {
+        path: "students/:studentId",
+        element: <TeacherStudentDetails />,
+      },
     ],
   },
-
   {
     path: "/auth/callback",
     element: <AuthCallback />,
   },
-
+  {
+    path: "/set-password",
+    element: <SetPasswordPage />,
+  },
   {
     path: "*",
     element: <NotFoundPage />,

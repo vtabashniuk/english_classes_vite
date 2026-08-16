@@ -1,0 +1,184 @@
+.page {
+  width: 100%;
+}
+
+.backLink {
+  display: inline-flex;
+  margin-bottom: 1.5rem;
+
+  color: var(--color-primary-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.student {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.titleRow h1 {
+  margin: 0;
+
+  color: var(--color-text-primary);
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.email {
+  margin: 0.35rem 0 0;
+
+  color: var(--color-text-secondary);
+}
+
+.status {
+  padding: 0.3rem 0.65rem;
+
+  border-radius: 999px;
+
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.active {
+  color: #17663b;
+  background: #eaf8f0;
+}
+
+.inactive {
+  color: #8b3131;
+  background: #fdecec;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  min-width: 0;
+  padding: 1.5rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.card h2 {
+  margin: 0;
+
+  color: var(--color-text-primary);
+  font-size: 1.15rem;
+}
+
+.cardHeader {
+  margin-bottom: 1.25rem;
+}
+
+.details {
+  display: grid;
+  gap: 1.2rem;
+
+  margin: 1.25rem 0 0;
+}
+
+.details div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.details dt {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.details dd {
+  margin: 0;
+
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.5rem;
+
+  min-height: 90px;
+
+  color: var(--color-text-secondary);
+}
+
+.placeholder strong {
+  color: var(--color-text-primary);
+  font-size: 1.8rem;
+}
+
+.notesCard {
+  grid-column: 1 / -1;
+}
+
+.error {
+  padding: 1rem;
+
+  border-radius: var(--border-radius);
+
+  color: #9d2020;
+  background: #fdecec;
+}
+
+@media (max-width: 800px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .notesCard {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 500px) {
+  .student {
+    align-items: flex-start;
+  }
+
+  .avatar {
+    width: 50px;
+    height: 50px;
+  }
+}

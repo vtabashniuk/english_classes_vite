@@ -1,0 +1,365 @@
+.page {
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  margin: 0 0 0.35rem;
+
+  color: var(--color-text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.subtitle {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+}
+
+.inviteButton {
+  flex-shrink: 0;
+
+  padding: 0.75rem 1.1rem;
+
+  border: 0;
+  border-radius: var(--border-radius);
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.inviteButton:hover {
+  background: var(--color-hover);
+  transform: translateY(-1px);
+}
+
+.inviteForm {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+}
+
+.formHeading {
+  margin-bottom: 1.5rem;
+}
+
+.formHeading h2 {
+  margin: 0 0 0.4rem;
+
+  color: var(--color-text-primary);
+  font-size: 1.25rem;
+}
+
+.formHeading p {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+
+  border: 1px solid #d8dde7;
+  border-radius: var(--border-radius);
+
+  color: var(--color-text-primary);
+  background: #ffffff;
+
+  font: inherit;
+}
+
+.field input:focus {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 1px;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+
+  margin-top: 1.5rem;
+}
+
+.cancelButton,
+.submitButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+
+  border-radius: var(--border-radius);
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.cancelButton {
+  border: 1px solid #d8dde7;
+
+  color: var(--color-text-secondary);
+  background: #ffffff;
+}
+
+.submitButton {
+  border: 1px solid var(--color-primary-blue);
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.successMessage,
+.errorMessage {
+  margin: 1rem 0 0;
+  padding: 0.75rem 1rem;
+
+  border-radius: var(--border-radius);
+}
+
+.successMessage {
+  color: #17663b;
+  background: #eaf8f0;
+}
+
+.errorMessage {
+  color: #9d2020;
+  background: #fdecec;
+}
+
+.studentsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.studentCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  padding: 1.4rem;
+
+  border: 1px solid #e4e8f0;
+  border-radius: var(--border-radius);
+
+  background: #ffffff;
+  box-shadow: var(--shadow-soft);
+
+  transition: var(--transition);
+}
+
+.studentCard:hover {
+  transform: translateY(-2px);
+}
+
+.studentTop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  color: #ffffff;
+  background: var(--color-primary-blue);
+
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.studentInfo {
+  min-width: 0;
+}
+
+.studentInfo h2 {
+  margin: 0 0 0.3rem;
+
+  overflow: hidden;
+
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studentInfo p {
+  margin: 0;
+
+  overflow: hidden;
+
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  padding: 0.3rem 0.6rem;
+
+  border-radius: 999px;
+
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.active {
+  color: #17663b;
+  background: #eaf8f0;
+}
+
+.inactive {
+  color: #8b3131;
+  background: #fdecec;
+}
+
+.studentDetails {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.studentDetails div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.studentDetails span {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.studentDetails strong {
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.detailsButton {
+  margin-top: auto;
+  padding: 0.7rem 1rem;
+
+  border: 1px solid var(--color-primary-blue);
+  border-radius: var(--border-radius);
+
+  color: var(--color-primary-blue);
+  background: transparent;
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: var(--transition);
+
+  text-align: center;
+  text-decoration: none;
+}
+
+.detailsButton:hover {
+  color: #ffffff;
+  background: var(--color-primary-blue);
+}
+
+.state,
+.emptyState {
+  padding: 3rem 1rem;
+
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.emptyState h2 {
+  margin: 0 0 0.5rem;
+
+  color: var(--color-text-primary);
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+@media (max-width: 700px) {
+  .header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inviteButton {
+    width: 100%;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelButton,
+  .submitButton {
+    width: 100%;
+  }
+
+  .studentsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .studentTop {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
