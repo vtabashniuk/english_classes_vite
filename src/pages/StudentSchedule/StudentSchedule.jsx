@@ -29,7 +29,7 @@ const StudentSchedule = () => {
 
         const { data, error } = await supabase
           .from("lessons")
-          .select("id, starts_at, ends_at, status, zoom_url")
+          .select("id, starts_at, ends_at, duration_minutes, status, zoom_url")
           .order("starts_at", { ascending: true });
 
         if (error) throw error;
@@ -79,6 +79,17 @@ const StudentSchedule = () => {
       minute: "2-digit",
       hour12: false,
     }).format(new Date(value));
+
+  const getLessonDuration = (lesson) => {
+    if (lesson.duration_minutes) {
+      return lesson.duration_minutes;
+    }
+
+    const startsAt = new Date(lesson.starts_at).getTime();
+    const endsAt = new Date(lesson.ends_at).getTime();
+
+    return Math.round((endsAt - startsAt) / 60000);
+  };
 
   const getStatusLabel = (status) =>
     t(`studentSchedule.${status}`, { defaultValue: status });
@@ -145,7 +156,9 @@ const StudentSchedule = () => {
 
                 <div className={styles.lessonFooter}>
                   <span className={styles.duration}>
-                    {t("studentSchedule.duration50")}
+                    {t("studentSchedule.duration", {
+                      count: getLessonDuration(lesson),
+                    })}
                   </span>
 
                   {lesson.zoom_url ? (

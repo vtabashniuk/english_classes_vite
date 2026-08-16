@@ -88,7 +88,8 @@
     "loading": "Loading schedule...",
     "loadError": "Could not load the schedule.",
     "emptyTitle": "No lessons scheduled",
-    "emptyDescription": "When your teacher adds a lesson, it will appear here."
+    "emptyDescription": "When your teacher adds a lesson, it will appear here.",
+    "duration": "{{count}} min"
   },
   "about": {
     "title": "About Olga",

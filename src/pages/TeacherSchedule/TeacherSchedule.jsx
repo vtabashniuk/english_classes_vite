@@ -12,7 +12,7 @@ import { DEFAULT_SCHEDULE_SETTINGS } from "../../constants/schedule";
 
 import styles from "./TeacherSchedule.module.css";
 
-const PIXELS_PER_MINUTE = 1.25;
+const PIXELS_PER_MINUTE = 1.15;
 const CALENDAR_TOP_PADDING = 18;
 const CALENDAR_BOTTOM_PADDING = 18;
 
@@ -61,6 +61,10 @@ const TeacherSchedule = () => {
     (workdayEndMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE +
     CALENDAR_TOP_PADDING +
     CALENDAR_BOTTOM_PADDING;
+
+  const workdayEndTop =
+    CALENDAR_TOP_PADDING +
+    (workdayEndMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE;
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 5 }, (_, index) => addDays(weekStart, index));
@@ -465,7 +469,10 @@ const TeacherSchedule = () => {
                 );
               })}
 
-              <span className={styles.endTimeLabel}>
+              <span
+                className={styles.endTimeLabel}
+                style={{ top: `${workdayEndTop}px` }}
+              >
                 {scheduleSettings.workdayEnd}
               </span>
             </div>
@@ -501,6 +508,11 @@ const TeacherSchedule = () => {
                       />
                     );
                   })}
+
+                  <div
+                    className={`${styles.gridLine} ${styles.endGridLine}`}
+                    style={{ top: `${workdayEndTop}px` }}
+                  />
 
                   {timeSlots.map((slot) => {
                     const top =

@@ -132,7 +132,7 @@
   width: 100%;
 
   overflow: auto;
-  max-height: min(68vh, 660px);
+  max-height: min(60vh, 580px);
 
   margin-bottom: 2rem;
 
@@ -163,7 +163,13 @@
 }
 
 .timeHeader {
+  position: sticky;
+  left: 0;
+  z-index: 14;
+
   border-right: 1px solid #e4e8f0;
+
+  background: #ffffff;
 }
 
 .dayHeader {
@@ -173,7 +179,7 @@
   align-items: center;
   justify-content: center;
 
-  min-height: 68px;
+  min-height: 56px;
 
   border-right: 1px solid #e4e8f0;
 }
@@ -213,9 +219,13 @@
 }
 
 .timeColumn {
-  position: relative;
+  position: sticky;
+  left: 0;
+  z-index: 7;
 
   border-right: 1px solid #e4e8f0;
+
+  background: #ffffff;
 }
 
 .timeLabel {
@@ -234,7 +244,8 @@
   position: absolute;
 
   right: 0.55rem;
-  bottom: 4px;
+
+  transform: translateY(-50%);
 
   color: var(--color-text-secondary);
 
@@ -270,6 +281,10 @@
   background: #eef1f5;
 
   pointer-events: none;
+}
+
+.endGridLine {
+  background: #e1e6ee;
 }
 
 .slot {
