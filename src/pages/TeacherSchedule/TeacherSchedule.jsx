@@ -45,6 +45,8 @@ const TeacherSchedule = () => {
 
   const [creating, setCreating] = useState(false);
 
+  const [cancellingLessonId, setCancellingLessonId] = useState(null);
+
   const [errorMessage, setErrorMessage] = useState("");
 
   const [successMessage, setSuccessMessage] = useState("");
@@ -195,6 +197,9 @@ const TeacherSchedule = () => {
             duration_minutes,
             status,
             zoom_url,
+            cancelled_by,
+            cancelled_at,
+            cancellation_reason,
             profiles:student_id (
               id,
               full_name,
@@ -280,6 +285,46 @@ const TeacherSchedule = () => {
     });
   };
 
+  const handleCancelLesson = async () => {
+    if (!selectedLesson || selectedLesson.status !== "scheduled") {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      t("teacherSchedule.cancel.confirm"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingLessonId(selectedLesson.id);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { error } = await supabase.rpc("cancel_lesson", {
+        p_lesson_id: selectedLesson.id,
+        p_reason: null,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccessMessage(t("teacherSchedule.cancel.success"));
+
+      setSelectedLesson(null);
+
+      await loadLessons();
+    } catch (error) {
+      console.error("Cancel lesson error:", error);
+      setErrorMessage(getCancelLessonError(error, t));
+    } finally {
+      setCancellingLessonId(null);
+    }
+  };
+
   const handleCreateLesson = async (event) => {
     event.preventDefault();
 
@@ -331,6 +376,10 @@ const TeacherSchedule = () => {
     const dayKey = formatDateForInput(date);
 
     return lessons.filter((lesson) => {
+      if (lesson.status === "cancelled") {
+        return false;
+      }
+
       const lessonDate = getDatePartsInTimezone(
         lesson.starts_at,
         scheduleTimezone,
@@ -752,6 +801,21 @@ const TeacherSchedule = () => {
                   <strong>—</strong>
                 )}
               </div>
+
+              {selectedLesson.status === "scheduled" && (
+                <div className={styles.lessonActions}>
+                  <button
+                    type="button"
+                    className={styles.dangerButton}
+                    onClick={handleCancelLesson}
+                    disabled={cancellingLessonId === selectedLesson.id}
+                  >
+                    {cancellingLessonId === selectedLesson.id
+                      ? t("teacherSchedule.cancel.cancelling")
+                      : t("teacherSchedule.cancel.button")}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -1008,6 +1072,29 @@ const getCreateLessonError = (error, t) => {
   }
 
   return t("teacherSchedule.errors.create");
+};
+
+
+const getCancelLessonError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("LESSON_ALREADY_CANCELLED")) {
+    return t("teacherSchedule.cancel.errors.alreadyCancelled");
+  }
+
+  if (message.includes("COMPLETED_LESSON_CANNOT_BE_CANCELLED")) {
+    return t("teacherSchedule.cancel.errors.completed");
+  }
+
+  if (message.includes("PAST_LESSON_CANNOT_BE_CANCELLED")) {
+    return t("teacherSchedule.cancel.errors.past");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.cancel.errors.notFound");
+  }
+
+  return t("teacherSchedule.cancel.errors.generic");
 };
 
 export default TeacherSchedule;

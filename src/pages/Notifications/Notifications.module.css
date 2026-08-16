@@ -1,0 +1,208 @@
+.page {
+  width: 100%;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.header h1 {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.header p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.headerMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+
+.headerMeta span {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.headerMeta strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.unreadCount {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.secondaryButton,
+.markReadButton {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-primary-blue);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.secondaryButton {
+  min-height: 42px;
+  padding: 0.6rem 0.9rem;
+}
+
+.markReadButton {
+  flex-shrink: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.85rem;
+}
+
+.secondaryButton:hover:not(:disabled),
+.markReadButton:hover:not(:disabled) {
+  border-color: var(--color-primary-blue);
+  transform: translateY(-1px);
+}
+
+.secondaryButton:disabled,
+.markReadButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  transition: var(--transition);
+}
+
+.unread {
+  border-left: 4px solid var(--color-primary-blue);
+  box-shadow: var(--shadow-soft);
+}
+
+.read {
+  opacity: 0.78;
+}
+
+.cardContent {
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.titleRow h2 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.unreadDot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-primary-blue);
+}
+
+.card p {
+  margin: 0.4rem 0;
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+.card time {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.emptyState {
+  padding: 3rem 1.5rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  text-align: center;
+}
+
+.emptyState h2 {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-primary);
+  font-size: 1.1rem;
+}
+
+.emptyState p {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.error {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--border-radius);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
+.state {
+  padding: 3rem 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .headerMeta {
+    align-items: flex-start;
+  }
+
+  .toolbar,
+  .card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .secondaryButton,
+  .markReadButton {
+    width: 100%;
+  }
+}

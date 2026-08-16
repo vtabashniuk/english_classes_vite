@@ -89,7 +89,20 @@
     "loadError": "Could not load the schedule.",
     "emptyTitle": "No lessons scheduled",
     "emptyDescription": "When your teacher adds a lesson, it will appear here.",
-    "duration": "{{count}} min"
+    "duration": "{{count}} min",
+    "cancel": {
+      "button": "Cancel lesson",
+      "cancelling": "Cancelling...",
+      "confirm": "Cancel this lesson? Your teacher will be notified.",
+      "success": "The lesson was cancelled. Your teacher has been notified.",
+      "errors": {
+        "alreadyCancelled": "This lesson has already been cancelled.",
+        "completed": "A completed lesson cannot be cancelled.",
+        "past": "A past lesson cannot be cancelled.",
+        "notFound": "Lesson not found.",
+        "generic": "Could not cancel the lesson."
+      }
+    }
   },
   "about": {
     "title": "About Olga",
@@ -285,6 +298,19 @@
       "past": "A lesson cannot be created in the past.",
       "studentNotFound": "The student was not found or the account is inactive.",
       "create": "Could not create the lesson."
+    },
+    "cancel": {
+      "button": "Cancel lesson",
+      "cancelling": "Cancelling...",
+      "confirm": "Cancel this lesson? The student will be notified.",
+      "success": "The lesson was cancelled. The student has been notified.",
+      "errors": {
+        "alreadyCancelled": "This lesson has already been cancelled.",
+        "completed": "A completed lesson cannot be cancelled.",
+        "past": "A past lesson cannot be cancelled.",
+        "notFound": "Lesson not found.",
+        "generic": "Could not cancel the lesson."
+      }
     }
   },
   "teacherSettings": {
@@ -354,6 +380,31 @@
     "balance": "Balance",
     "settings": "Settings",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "unreadMessages": "There are unread notifications"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "System notifications about lesson and request changes.",
+    "timezone": "Time zone",
+    "loading": "Loading notifications...",
+    "emptyTitle": "No notifications",
+    "empty": "There are no new notifications yet.",
+    "markAllRead": "Mark all as read",
+    "markingAllRead": "Updating...",
+    "markRead": "Mark as read",
+    "markingRead": "Updating...",
+    "unreadCount": "Unread: {{count}}",
+    "student": "Student",
+    "lessonCancelled": {
+      "title": "Lesson cancelled",
+      "byStudent": "{{studentName}} cancelled the lesson on {{date}} at {{time}}.",
+      "byTeacher": "The teacher cancelled the lesson on {{date}} at {{time}}."
+    },
+    "errors": {
+      "load": "Could not load notifications.",
+      "markRead": "Could not mark the notification as read.",
+      "markAllRead": "Could not mark all notifications as read."
+    }
   }
 }

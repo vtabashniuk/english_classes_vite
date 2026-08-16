@@ -1,14 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { useAuth } from "../../../context/AuthContext";
+import { supabase } from "../../../lib/supabase";
 
 import styles from "./DashboardSidebar.module.css";
 
 const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const location = useLocation();
+
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
   const isTeacher = profile?.role === "teacher";
 
@@ -33,6 +37,43 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
+
+
+  useEffect(() => {
+    if (!profile?.id) {
+      setHasUnreadNotifications(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadUnreadState = async () => {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("is_read", false)
+        .limit(1);
+
+      if (!cancelled && !error) {
+        setHasUnreadNotifications((data?.length ?? 0) > 0);
+      }
+    };
+
+    const handleNotificationsChanged = () => {
+      loadUnreadState();
+    };
+
+    loadUnreadState();
+    window.addEventListener("notifications-changed", handleNotificationsChanged);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener(
+        "notifications-changed",
+        handleNotificationsChanged,
+      );
+    };
+  }, [profile?.id, location.pathname]);
 
   const teacherLinks = [
     {
@@ -148,7 +189,16 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
                 `${styles.link} ${isActive ? styles.active : ""}`
               }
             >
-              {t(link.labelKey)}
+              <span className={styles.linkLabel}>{t(link.labelKey)}</span>
+
+              {link.labelKey === "dashboardNav.messages" &&
+                hasUnreadNotifications && (
+                  <span
+                    className={styles.notificationDot}
+                    title={t("dashboardNav.unreadMessages")}
+                    aria-label={t("dashboardNav.unreadMessages")}
+                  />
+                )}
             </NavLink>
           ))}
         </nav>

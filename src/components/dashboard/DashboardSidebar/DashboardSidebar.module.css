@@ -55,7 +55,10 @@
 }
 
 .link {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 
   padding: 0.8rem 1rem;
 
@@ -131,4 +134,18 @@
     visibility: visible;
     pointer-events: auto;
   }
+}
+
+.linkLabel {
+  min-width: 0;
+}
+
+.notificationDot {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+
+  border-radius: 999px;
+  background: var(--color-primary-blue);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-blue-rgb), 0.14);
 }
