@@ -10,6 +10,8 @@ import { getTimezone } from "../../constants/timezones";
 
 import { DEFAULT_SCHEDULE_SETTINGS } from "../../constants/schedule";
 
+import Button from "../../components/common/ui/Button/Button";
+
 import styles from "./TeacherSchedule.module.css";
 
 const PIXELS_PER_MINUTE = 1.15;
@@ -944,15 +946,16 @@ const TeacherSchedule = () => {
                 <p className={styles.success}>{successMessage}</p>
               )}
 
-              <button
+              <Button
                 type="submit"
-                className={styles.primaryButton}
+                variant="primary"
+                size="large"
                 disabled={creating}
               >
                 {creating
                   ? t("teacherSchedule.creating")
                   : t("teacherSchedule.create")}
-              </button>
+              </Button>
             </form>
           ) : (
             <form
@@ -1076,15 +1079,16 @@ const TeacherSchedule = () => {
                 <p className={styles.success}>{successMessage}</p>
               )}
 
-              <button
+              <Button
                 type="submit"
-                className={styles.primaryButton}
+                variant="primary"
+                size="large"
                 disabled={creating}
               >
                 {creating
                   ? t("teacherSchedule.recurring.creating")
                   : t("teacherSchedule.recurring.create")}
-              </button>
+              </Button>
             </form>
           )}
         </section>
@@ -1191,20 +1195,19 @@ const TeacherSchedule = () => {
                       </label>
 
                       <div className={styles.inlineActions}>
-                        <button
-                          type="button"
-                          className={styles.primaryButton}
+                        <Button
+                          variant="primary"
+                          size="large"
                           onClick={handleSaveLessonZoom}
                           disabled={savingZoom}
                         >
                           {savingZoom
                             ? t("teacherSchedule.zoomEdit.saving")
                             : t("teacherSchedule.zoomEdit.save")}
-                        </button>
+                        </Button>
 
-                        <button
-                          type="button"
-                          className={styles.secondaryButton}
+                        <Button
+                          variant="secondary"
                           onClick={() => {
                             setLessonZoomDraft(selectedLesson.zoom_url || "");
                             setEditingZoom(false);
@@ -1212,20 +1215,19 @@ const TeacherSchedule = () => {
                           disabled={savingZoom}
                         >
                           {t("teacherSchedule.zoomEdit.cancel")}
-                        </button>
+                        </Button>
                       </div>
                     </>
                   ) : (
-                    <button
-                      type="button"
-                      className={styles.secondaryButton}
+                    <Button
+                      variant="secondary"
                       onClick={() => {
                         setLessonZoomDraft(selectedLesson.zoom_url || "");
                         setEditingZoom(true);
                       }}
                     >
                       {t("teacherSchedule.zoomEdit.button")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -1238,41 +1240,38 @@ const TeacherSchedule = () => {
                   selectedLesson.status !== "cancelled" && (
                     <>
                       {selectedLesson.status !== "completed" && (
-                        <button
-                          type="button"
-                          className={styles.successButton}
+                        <Button
+                          variant="success"
                           onClick={() => handleSetLessonOutcome("completed")}
                           disabled={updatingOutcome}
                         >
                           {t("teacherSchedule.outcome.completed")}
-                        </button>
+                        </Button>
                       )}
 
                       {selectedLesson.status !== "missed" && (
-                        <button
-                          type="button"
-                          className={styles.secondaryButton}
+                        <Button
+                          variant="warning"
                           onClick={() => handleSetLessonOutcome("missed")}
                           disabled={updatingOutcome}
                         >
                           {t("teacherSchedule.outcome.missed")}
-                        </button>
+                        </Button>
                       )}
                     </>
                   )}
 
                 {selectedLesson.status === "scheduled" &&
                   !isLessonStarted(selectedLesson) && (
-                    <button
-                      type="button"
-                      className={styles.dangerButton}
+                    <Button
+                      variant="danger"
                       onClick={handleCancelLesson}
                       disabled={cancellingLessonId === selectedLesson.id}
                     >
                       {cancellingLessonId === selectedLesson.id
                         ? t("teacherSchedule.cancel.cancelling")
                         : t("teacherSchedule.cancel.button")}
-                    </button>
+                    </Button>
                   )}
               </div>
             </div>

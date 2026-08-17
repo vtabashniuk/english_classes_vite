@@ -501,37 +501,6 @@
   outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.12);
 }
 
-.primaryButton {
-  min-height: 46px;
-
-  padding: 0.7rem 1rem;
-
-  border: 0;
-
-  border-radius: var(--border-radius);
-
-  color: var(--color-on-primary);
-
-  background: var(--color-primary-blue);
-
-  cursor: pointer;
-
-  font: inherit;
-  font-weight: 600;
-
-  transition: var(--transition);
-}
-
-.primaryButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.primaryButton:disabled {
-  opacity: 0.55;
-
-  cursor: not-allowed;
-}
-
 .error,
 .success {
   margin: 0;
@@ -671,63 +640,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-}
-
-.secondaryButton,
-.successButton {
-  min-height: 42px;
-  padding: 0.65rem 1rem;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  transition: var(--transition);
-}
-
-.secondaryButton {
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text-primary);
-  background: var(--color-surface-muted);
-}
-
-.successButton {
-  border: 1px solid var(--color-success-border);
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-}
-
-.secondaryButton:hover:not(:disabled),
-.successButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.secondaryButton:disabled,
-.successButton:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.dangerButton {
-  min-height: 42px;
-  padding: 0.65rem 1rem;
-  border: 1px solid var(--color-error-border);
-  border-radius: var(--border-radius);
-  color: var(--color-error-text);
-  background: var(--color-error-bg);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  transition: var(--transition);
-}
-
-.dangerButton:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(0.98);
-}
-
-.dangerButton:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .createModeSwitch {
