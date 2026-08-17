@@ -39,6 +39,16 @@ const TeacherSchedule = () => {
 
   const [zoomUrl, setZoomUrl] = useState("");
 
+  const [createMode, setCreateMode] = useState("single");
+
+  const [recurringWeekday, setRecurringWeekday] = useState("1");
+
+  const [recurringValidFrom, setRecurringValidFrom] = useState("");
+
+  const [recurringValidUntil, setRecurringValidUntil] = useState("");
+
+  const [recurringIntervalWeeks, setRecurringIntervalWeeks] = useState("1");
+
   const [selectedLesson, setSelectedLesson] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -46,6 +56,14 @@ const TeacherSchedule = () => {
   const [creating, setCreating] = useState(false);
 
   const [cancellingLessonId, setCancellingLessonId] = useState(null);
+
+  const [editingZoom, setEditingZoom] = useState(false);
+
+  const [lessonZoomDraft, setLessonZoomDraft] = useState("");
+
+  const [savingZoom, setSavingZoom] = useState(false);
+
+  const [updatingOutcome, setUpdatingOutcome] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -192,11 +210,14 @@ const TeacherSchedule = () => {
             id,
             student_id,
             teacher_id,
+            recurring_lesson_id,
             starts_at,
             ends_at,
             duration_minutes,
             status,
             zoom_url,
+            completed_at,
+            missed_at,
             cancelled_by,
             cancelled_at,
             cancellation_reason,
@@ -258,9 +279,17 @@ const TeacherSchedule = () => {
 
     setSelectedLesson(null);
 
-    setSelectedDate(formatDateForInput(date));
+    const dateValue = formatDateForInput(date);
+
+    setSelectedDate(dateValue);
 
     setSelectedTime(slot);
+
+    if (date.getDay() >= 1 && date.getDay() <= 5) {
+      setRecurringWeekday(String(date.getDay()));
+    }
+
+    setRecurringValidFrom(dateValue);
 
     setSuccessMessage("");
 
@@ -276,6 +305,10 @@ const TeacherSchedule = () => {
     event.stopPropagation();
 
     setSelectedLesson(lesson);
+    setLessonZoomDraft(lesson.zoom_url || "");
+    setEditingZoom(false);
+    setErrorMessage("");
+    setSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-details-panel")?.scrollIntoView({
@@ -325,6 +358,92 @@ const TeacherSchedule = () => {
     }
   };
 
+  const handleSaveLessonZoom = async () => {
+    if (!selectedLesson || selectedLesson.status === "cancelled") {
+      return;
+    }
+
+    try {
+      setSavingZoom(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const normalizedZoomUrl = lessonZoomDraft.trim() || null;
+
+      const { error } = await supabase.rpc("update_lesson_zoom", {
+        p_lesson_id: selectedLesson.id,
+        p_zoom_url: normalizedZoomUrl,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setSelectedLesson((current) =>
+        current
+          ? {
+              ...current,
+              zoom_url: normalizedZoomUrl,
+            }
+          : current,
+      );
+
+      setEditingZoom(false);
+      setSuccessMessage(t("teacherSchedule.zoomEdit.success"));
+      await loadLessons();
+    } catch (error) {
+      console.error("Update lesson Zoom error:", error);
+      setErrorMessage(getUpdateLessonZoomError(error, t));
+    } finally {
+      setSavingZoom(false);
+    }
+  };
+
+  const handleSetLessonOutcome = async (status) => {
+    if (!selectedLesson || selectedLesson.status === "cancelled") {
+      return;
+    }
+
+    try {
+      setUpdatingOutcome(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { error } = await supabase.rpc("set_lesson_outcome", {
+        p_lesson_id: selectedLesson.id,
+        p_status: status,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setSelectedLesson((current) =>
+        current
+          ? {
+              ...current,
+              status,
+              completed_at: status === "completed" ? new Date().toISOString() : null,
+              missed_at: status === "missed" ? new Date().toISOString() : null,
+            }
+          : current,
+      );
+
+      setSuccessMessage(
+        status === "completed"
+          ? t("teacherSchedule.outcome.completedSuccess")
+          : t("teacherSchedule.outcome.missedSuccess"),
+      );
+
+      await loadLessons();
+    } catch (error) {
+      console.error("Set lesson outcome error:", error);
+      setErrorMessage(getLessonOutcomeError(error, t));
+    } finally {
+      setUpdatingOutcome(false);
+    }
+  };
+
   const handleCreateLesson = async (event) => {
     event.preventDefault();
 
@@ -367,6 +486,87 @@ const TeacherSchedule = () => {
       console.error("Create lesson error:", error);
 
       setErrorMessage(getCreateLessonError(error, t));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCreateModeChange = (mode) => {
+    setCreateMode(mode);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (mode === "recurring" && selectedDate) {
+      const date = parseInputDate(selectedDate);
+
+      if (date && date.getDay() >= 1 && date.getDay() <= 5) {
+        setRecurringWeekday(String(date.getDay()));
+        setRecurringValidFrom((current) => current || selectedDate);
+      }
+    }
+  };
+
+  const handleCreateRecurringLesson = async (event) => {
+    event.preventDefault();
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (
+      !selectedStudentId ||
+      !recurringWeekday ||
+      !selectedTime ||
+      !recurringValidFrom
+    ) {
+      setErrorMessage(t("teacherSchedule.recurring.errors.requiredFields"));
+      return;
+    }
+
+    try {
+      setCreating(true);
+
+      const { data, error } = await supabase.rpc(
+        "create_recurring_lesson_with_generation",
+        {
+          p_student_id: selectedStudentId,
+          p_weekday: Number(recurringWeekday),
+          p_start_time: selectedTime,
+          p_valid_from: recurringValidFrom,
+          p_valid_until: recurringValidUntil || null,
+          p_zoom_url: zoomUrl.trim() || null,
+          p_interval_weeks: Number(recurringIntervalWeeks),
+          p_generate_weeks: 8,
+        },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+      const createdCount = result?.created_count ?? 0;
+      const conflictCount = result?.conflict_count ?? 0;
+
+      setSuccessMessage(
+        conflictCount > 0
+          ? t("teacherSchedule.recurring.messages.createdWithConflicts", {
+              createdCount,
+              conflictCount,
+            })
+          : t("teacherSchedule.recurring.messages.created", {
+              createdCount,
+            }),
+      );
+
+      setSelectedStudentId("");
+      setRecurringValidUntil("");
+      setZoomUrl("");
+      setSelectedLesson(null);
+
+      await loadLessons();
+    } catch (error) {
+      console.error("Create recurring lesson error:", error);
+      setErrorMessage(getCreateRecurringLessonError(error, t));
     } finally {
       setCreating(false);
     }
@@ -646,83 +846,247 @@ const TeacherSchedule = () => {
           <div className={styles.panelHeader}>
             <h2>{t("teacherSchedule.createLesson")}</h2>
 
-            <p>{t("teacherSchedule.createLessonHint")}</p>
+            <p>
+              {createMode === "single"
+                ? t("teacherSchedule.createLessonHint")
+                : t("teacherSchedule.recurring.hint")}
+            </p>
           </div>
 
-          <form className={styles.form} onSubmit={handleCreateLesson}>
-            <label className={styles.field}>
-              <span>{t("teacherSchedule.student")}</span>
+          <div
+            className={styles.createModeSwitch}
+            role="group"
+            aria-label={t("teacherSchedule.createMode.label")}
+          >
+            <button
+              type="button"
+              className={`${styles.modeButton} ${
+                createMode === "single" ? styles.modeButtonActive : ""
+              }`}
+              onClick={() => handleCreateModeChange("single")}
+            >
+              {t("teacherSchedule.createMode.single")}
+            </button>
 
-              <select
-                value={selectedStudentId}
-                onChange={(event) => setSelectedStudentId(event.target.value)}
-              >
-                <option value="">{t("teacherSchedule.selectStudent")}</option>
+            <button
+              type="button"
+              className={`${styles.modeButton} ${
+                createMode === "recurring" ? styles.modeButtonActive : ""
+              }`}
+              onClick={() => handleCreateModeChange("recurring")}
+            >
+              {t("teacherSchedule.createMode.recurring")}
+            </button>
+          </div>
 
-                {students.map((student) => (
-                  <option key={student.id} value={student.id}>
-                    {student.full_name || student.email}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className={styles.formRow}>
+          {createMode === "single" ? (
+            <form className={styles.form} onSubmit={handleCreateLesson}>
               <label className={styles.field}>
-                <span>{t("teacherSchedule.date")}</span>
-
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(event) => setSelectedDate(event.target.value)}
-                />
-              </label>
-
-              <label className={styles.field}>
-                <span>{t("teacherSchedule.time")}</span>
+                <span>{t("teacherSchedule.student")}</span>
 
                 <select
-                  value={selectedTime}
-                  onChange={(event) => setSelectedTime(event.target.value)}
+                  value={selectedStudentId}
+                  onChange={(event) => setSelectedStudentId(event.target.value)}
                 >
-                  <option value="">{t("teacherSchedule.selectTime")}</option>
+                  <option value="">{t("teacherSchedule.selectStudent")}</option>
 
-                  {timeSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
+                  {students.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.full_name || student.email}
                     </option>
                   ))}
                 </select>
               </label>
-            </div>
 
-            <label className={styles.field}>
-              <span>{t("teacherSchedule.zoomUrl")}</span>
+              <div className={styles.formRow}>
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.date")}</span>
 
-              <input
-                type="url"
-                value={zoomUrl}
-                onChange={(event) => setZoomUrl(event.target.value)}
-                placeholder="https://..."
-              />
-            </label>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(event) => setSelectedDate(event.target.value)}
+                  />
+                </label>
 
-            {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.time")}</span>
 
-            {successMessage && (
-              <p className={styles.success}>{successMessage}</p>
-            )}
+                  <select
+                    value={selectedTime}
+                    onChange={(event) => setSelectedTime(event.target.value)}
+                  >
+                    <option value="">{t("teacherSchedule.selectTime")}</option>
 
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={creating}
+                    {timeSlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.zoomUrl")}</span>
+
+                <input
+                  type="url"
+                  value={zoomUrl}
+                  onChange={(event) => setZoomUrl(event.target.value)}
+                  placeholder="https://..."
+                />
+              </label>
+
+              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+
+              {successMessage && (
+                <p className={styles.success}>{successMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={creating}
+              >
+                {creating
+                  ? t("teacherSchedule.creating")
+                  : t("teacherSchedule.create")}
+              </button>
+            </form>
+          ) : (
+            <form
+              className={styles.form}
+              onSubmit={handleCreateRecurringLesson}
             >
-              {creating
-                ? t("teacherSchedule.creating")
-                : t("teacherSchedule.create")}
-            </button>
-          </form>
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.student")}</span>
+
+                <select
+                  value={selectedStudentId}
+                  onChange={(event) => setSelectedStudentId(event.target.value)}
+                >
+                  <option value="">{t("teacherSchedule.selectStudent")}</option>
+
+                  {students.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.full_name || student.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className={styles.formRow}>
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.recurring.weekday")}</span>
+
+                  <select
+                    value={recurringWeekday}
+                    onChange={(event) => setRecurringWeekday(event.target.value)}
+                  >
+                    {DAY_NAMES.map((dayName, index) => (
+                      <option key={dayName} value={index + 1}>
+                        {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.time")}</span>
+
+                  <select
+                    value={selectedTime}
+                    onChange={(event) => setSelectedTime(event.target.value)}
+                  >
+                    <option value="">{t("teacherSchedule.selectTime")}</option>
+
+                    {timeSlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.recurring.repeat")}</span>
+
+                <select
+                  value={recurringIntervalWeeks}
+                  onChange={(event) =>
+                    setRecurringIntervalWeeks(event.target.value)
+                  }
+                >
+                  <option value="1">
+                    {t("teacherSchedule.recurring.everyWeek")}
+                  </option>
+                  <option value="2">
+                    {t("teacherSchedule.recurring.everyTwoWeeks")}
+                  </option>
+                </select>
+              </label>
+
+              <div className={styles.formRow}>
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.recurring.validFrom")}</span>
+
+                  <input
+                    type="date"
+                    value={recurringValidFrom}
+                    onChange={(event) =>
+                      setRecurringValidFrom(event.target.value)
+                    }
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.recurring.validUntil")}</span>
+
+                  <input
+                    type="date"
+                    value={recurringValidUntil}
+                    min={recurringValidFrom || undefined}
+                    onChange={(event) =>
+                      setRecurringValidUntil(event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.zoomUrl")}</span>
+
+                <input
+                  type="url"
+                  value={zoomUrl}
+                  onChange={(event) => setZoomUrl(event.target.value)}
+                  placeholder="https://..."
+                />
+              </label>
+
+              <p className={styles.formNote}>
+                {t("teacherSchedule.recurring.generationNote")}
+              </p>
+
+              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+
+              {successMessage && (
+                <p className={styles.success}>{successMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={creating}
+              >
+                {creating
+                  ? t("teacherSchedule.recurring.creating")
+                  : t("teacherSchedule.recurring.create")}
+              </button>
+            </form>
+          )}
         </section>
 
         <section id="lesson-details-panel" className={styles.panel}>
@@ -786,6 +1150,14 @@ const TeacherSchedule = () => {
                 </strong>
               </div>
 
+              {selectedLesson.recurring_lesson_id && (
+                <div className={styles.detailItem}>
+                  <span>{t("teacherSchedule.recurring.series")}</span>
+
+                  <strong>{t("teacherSchedule.recurring.seriesYes")}</strong>
+                </div>
+              )}
+
               <div className={styles.detailItem}>
                 <span>Zoom</span>
 
@@ -802,20 +1174,107 @@ const TeacherSchedule = () => {
                 )}
               </div>
 
-              {selectedLesson.status === "scheduled" && (
-                <div className={styles.lessonActions}>
-                  <button
-                    type="button"
-                    className={styles.dangerButton}
-                    onClick={handleCancelLesson}
-                    disabled={cancellingLessonId === selectedLesson.id}
-                  >
-                    {cancellingLessonId === selectedLesson.id
-                      ? t("teacherSchedule.cancel.cancelling")
-                      : t("teacherSchedule.cancel.button")}
-                  </button>
+              {selectedLesson.status !== "cancelled" && (
+                <div className={styles.zoomEditor}>
+                  {editingZoom ? (
+                    <>
+                      <label className={styles.field}>
+                        <span>{t("teacherSchedule.zoomEdit.label")}</span>
+                        <input
+                          type="url"
+                          value={lessonZoomDraft}
+                          onChange={(event) =>
+                            setLessonZoomDraft(event.target.value)
+                          }
+                          placeholder="https://..."
+                        />
+                      </label>
+
+                      <div className={styles.inlineActions}>
+                        <button
+                          type="button"
+                          className={styles.primaryButton}
+                          onClick={handleSaveLessonZoom}
+                          disabled={savingZoom}
+                        >
+                          {savingZoom
+                            ? t("teacherSchedule.zoomEdit.saving")
+                            : t("teacherSchedule.zoomEdit.save")}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => {
+                            setLessonZoomDraft(selectedLesson.zoom_url || "");
+                            setEditingZoom(false);
+                          }}
+                          disabled={savingZoom}
+                        >
+                          {t("teacherSchedule.zoomEdit.cancel")}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={() => {
+                        setLessonZoomDraft(selectedLesson.zoom_url || "");
+                        setEditingZoom(true);
+                      }}
+                    >
+                      {t("teacherSchedule.zoomEdit.button")}
+                    </button>
+                  )}
                 </div>
               )}
+
+              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+              {successMessage && <p className={styles.success}>{successMessage}</p>}
+
+              <div className={styles.lessonActions}>
+                {isLessonStarted(selectedLesson) &&
+                  selectedLesson.status !== "cancelled" && (
+                    <>
+                      {selectedLesson.status !== "completed" && (
+                        <button
+                          type="button"
+                          className={styles.successButton}
+                          onClick={() => handleSetLessonOutcome("completed")}
+                          disabled={updatingOutcome}
+                        >
+                          {t("teacherSchedule.outcome.completed")}
+                        </button>
+                      )}
+
+                      {selectedLesson.status !== "missed" && (
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => handleSetLessonOutcome("missed")}
+                          disabled={updatingOutcome}
+                        >
+                          {t("teacherSchedule.outcome.missed")}
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                {selectedLesson.status === "scheduled" &&
+                  !isLessonStarted(selectedLesson) && (
+                    <button
+                      type="button"
+                      className={styles.dangerButton}
+                      onClick={handleCancelLesson}
+                      disabled={cancellingLessonId === selectedLesson.id}
+                    >
+                      {cancellingLessonId === selectedLesson.id
+                        ? t("teacherSchedule.cancel.cancelling")
+                        : t("teacherSchedule.cancel.button")}
+                    </button>
+                  )}
+              </div>
             </div>
           )}
         </section>
@@ -911,6 +1370,20 @@ const startOfDay = (date) => {
   result.setHours(0, 0, 0, 0);
 
   return result;
+};
+
+const parseInputDate = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
 };
 
 const formatDateForInput = (date) => {
@@ -1074,6 +1547,88 @@ const getCreateLessonError = (error, t) => {
   return t("teacherSchedule.errors.create");
 };
 
+
+const getCreateRecurringLessonError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("INVALID_WEEKDAY")) {
+    return t("teacherSchedule.recurring.errors.weekday");
+  }
+
+  if (message.includes("INVALID_INTERVAL_WEEKS")) {
+    return t("teacherSchedule.recurring.errors.interval");
+  }
+
+  if (message.includes("VALID_FROM_IN_PAST")) {
+    return t("teacherSchedule.recurring.errors.past");
+  }
+
+  if (message.includes("INVALID_DATE_RANGE")) {
+    return t("teacherSchedule.recurring.errors.dateRange");
+  }
+
+  if (message.includes("NO_OCCURRENCE_IN_DATE_RANGE")) {
+    return t("teacherSchedule.recurring.errors.noOccurrence");
+  }
+
+  if (message.includes("OUTSIDE_WORKING_HOURS")) {
+    return t("teacherSchedule.errors.workingHours");
+  }
+
+  if (message.includes("INVALID_TIME_SLOT")) {
+    return t("teacherSchedule.errors.invalidSlot");
+  }
+
+  if (message.includes("RECURRING_TEACHER_CONFLICT")) {
+    return t("teacherSchedule.recurring.errors.teacherConflict");
+  }
+
+  if (message.includes("RECURRING_STUDENT_CONFLICT")) {
+    return t("teacherSchedule.recurring.errors.studentConflict");
+  }
+
+  if (message.includes("STUDENT_NOT_FOUND")) {
+    return t("teacherSchedule.errors.studentNotFound");
+  }
+
+  return t("teacherSchedule.recurring.errors.create");
+};
+
+const isLessonStarted = (lesson) => {
+  return new Date(lesson.starts_at).getTime() <= Date.now();
+};
+
+const getUpdateLessonZoomError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("LESSON_CANCELLED")) {
+    return t("teacherSchedule.zoomEdit.errors.cancelled");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.zoomEdit.errors.notFound");
+  }
+
+  return t("teacherSchedule.zoomEdit.errors.generic");
+};
+
+const getLessonOutcomeError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("LESSON_NOT_STARTED")) {
+    return t("teacherSchedule.outcome.errors.notStarted");
+  }
+
+  if (message.includes("LESSON_CANCELLED")) {
+    return t("teacherSchedule.outcome.errors.cancelled");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.outcome.errors.notFound");
+  }
+
+  return t("teacherSchedule.outcome.errors.generic");
+};
 
 const getCancelLessonError = (error, t) => {
   const message = error?.message ?? "";

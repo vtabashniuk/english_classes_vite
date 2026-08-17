@@ -132,8 +132,8 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       labelKey: "dashboardNav.requests",
     },
     {
-      to: "/teacher-dashboard/messages",
-      labelKey: "dashboardNav.messages",
+      to: "/teacher-dashboard/notifications",
+      labelKey: "dashboardNav.notifications",
     },
     {
       to: "/teacher-dashboard/assignments",
@@ -168,8 +168,8 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       labelKey: "dashboardNav.schedule",
     },
     {
-      to: "/student-area/messages",
-      labelKey: "dashboardNav.messages",
+      to: "/student-area/notifications",
+      labelKey: "dashboardNav.notifications",
     },
     {
       to: "/student-area/assignments",
@@ -229,12 +229,12 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
             >
               <span className={styles.linkLabel}>{t(link.labelKey)}</span>
 
-              {link.labelKey === "dashboardNav.messages" &&
+              {link.labelKey === "dashboardNav.notifications" &&
                 hasUnreadNotifications && (
                   <span
                     className={styles.notificationDot}
-                    title={t("dashboardNav.unreadMessages")}
-                    aria-label={t("dashboardNav.unreadMessages")}
+                    title={t("dashboardNav.unreadNotifications")}
+                    aria-label={t("dashboardNav.unreadNotifications")}
                   />
                 )}
 

@@ -44,6 +44,7 @@
 }
 
 .menuButton {
+  position: relative;
   display: none;
   width: 42px;
   height: 42px;
@@ -56,7 +57,7 @@
   cursor: pointer;
 }
 
-.menuButton span {
+.menuButton > span:not(.mobileIndicators) {
   display: block;
   width: 100%;
   height: 2px;
@@ -116,4 +117,26 @@
   .name {
     max-width: 150px;
   }
+}
+
+.mobileIndicators {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+
+  display: flex;
+  gap: 3px;
+
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.mobileIndicatorDot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-primary-blue);
 }

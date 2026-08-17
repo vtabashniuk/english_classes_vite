@@ -401,6 +401,12 @@
   background: var(--color-success-bg);
 }
 
+.missed {
+  opacity: 0.78;
+  border-left-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+}
+
 .bottomGrid {
   display: grid;
 
@@ -652,8 +658,56 @@
 
 .lessonActions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.65rem;
   padding-top: 0.35rem;
+}
+
+.zoomEditor {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.2rem;
+}
+
+.inlineActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.secondaryButton,
+.successButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.secondaryButton {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+}
+
+.successButton {
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+}
+
+.secondaryButton:hover:not(:disabled),
+.successButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.secondaryButton:disabled,
+.successButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .dangerButton {
@@ -677,4 +731,52 @@
 .dangerButton:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.createModeSwitch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 1.15rem;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.modeButton {
+  min-height: 42px;
+  padding: 0.6rem 0.8rem;
+  border: 0;
+  border-radius: calc(var(--border-radius) - 3px);
+  color: var(--color-text-secondary);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.modeButton:hover {
+  color: var(--color-primary-blue);
+}
+
+.modeButtonActive,
+.modeButtonActive:hover {
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+  box-shadow: var(--shadow-soft);
+}
+
+.formNote {
+  margin: -0.15rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 420px) {
+  .createModeSwitch {
+    grid-template-columns: 1fr;
+  }
 }

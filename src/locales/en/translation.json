@@ -327,7 +327,8 @@
     "statuses": {
       "scheduled": "Scheduled",
       "completed": "Completed",
-      "cancelled": "Cancelled"
+      "cancelled": "Cancelled",
+      "missed": "Missed"
     },
     "messages": {
       "lessonCreated": "Lesson created successfully."
@@ -355,6 +356,72 @@
         "past": "A past lesson cannot be cancelled.",
         "notFound": "Lesson not found.",
         "generic": "Could not cancel the lesson."
+      }
+    },
+    "createMode": {
+      "label": "Lesson creation type",
+      "single": "One-time lesson",
+      "recurring": "Recurring lesson"
+    },
+    "recurring": {
+      "hint": "Create a lesson series on the selected weekday and time. The first lessons will be generated 8 weeks ahead.",
+      "weekday": "Weekday",
+      "repeat": "Repeat",
+      "everyWeek": "Every week",
+      "everyTwoWeeks": "Every 2 weeks",
+      "validFrom": "Starting from",
+      "validUntil": "Until date (optional)",
+      "generationNote": "The system will immediately create concrete lessons 8 weeks ahead. If one date conflicts with an existing one-time lesson, that date will be skipped while the series remains active.",
+      "create": "Create recurring lesson",
+      "creating": "Creating series...",
+      "series": "Lesson type",
+      "seriesYes": "Recurring",
+      "weekdays": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday"
+      },
+      "messages": {
+        "created": "Recurring lesson created. Lessons created: {{createdCount}}.",
+        "createdWithConflicts": "Recurring lesson created. Lessons created: {{createdCount}}. Skipped due to conflicts: {{conflictCount}}."
+      },
+      "errors": {
+        "requiredFields": "Select a student, weekday, time and start date.",
+        "weekday": "Select a weekday from Monday to Friday.",
+        "interval": "Invalid repeat interval.",
+        "past": "The recurring lesson start date cannot be in the past.",
+        "dateRange": "The end date cannot be earlier than the start date.",
+        "noOccurrence": "There is no occurrence on this weekday within the selected date range.",
+        "teacherConflict": "Another recurring lesson series already occupies this time.",
+        "studentConflict": "This student already has a recurring lesson at this time.",
+        "create": "Could not create the recurring lesson."
+      }
+    },
+    "zoomEdit": {
+      "button": "Edit Zoom",
+      "label": "Zoom link",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel editing",
+      "success": "Zoom link updated.",
+      "errors": {
+        "cancelled": "Zoom cannot be changed for a cancelled lesson.",
+        "notFound": "Lesson not found.",
+        "generic": "Could not update the Zoom link."
+      }
+    },
+    "outcome": {
+      "completed": "Mark as completed",
+      "missed": "Mark as missed",
+      "completedSuccess": "Lesson marked as completed.",
+      "missedSuccess": "Lesson marked as missed. The student has been notified.",
+      "errors": {
+        "notStarted": "A future lesson cannot have an outcome yet.",
+        "cancelled": "A cancelled lesson cannot have its outcome changed.",
+        "notFound": "Lesson not found.",
+        "generic": "Could not change the lesson status."
       }
     }
   },
@@ -418,7 +485,6 @@
     "schedule": "Schedule",
     "students": "Students",
     "requests": "Requests",
-    "messages": "Messages",
     "assignments": "Assignments",
     "materials": "Materials",
     "finance": "Finance",
@@ -426,7 +492,10 @@
     "settings": "Settings",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
-    "unreadMessages": "There are unread notifications"
+    "notifications": "Notifications",
+    "unreadNotifications": "There are unread notifications",
+    "openMenuWithUpdates": "Open menu — there are new notifications or requests",
+    "pendingRequests": "There are requests awaiting a decision"
   },
   "notifications": {
     "title": "Notifications",
@@ -459,6 +528,16 @@
     "lessonRequestRejected": {
       "title": "Lesson request rejected",
       "body": "The teacher rejected your lesson request for {{date}} at {{time}}."
+    },
+    "lessonStatusChanged": {
+      "missed": {
+        "title": "Lesson missed",
+        "body": "The lesson on {{date}} at {{time}} was marked as missed."
+      },
+      "completed": {
+        "title": "Lesson status corrected",
+        "body": "The lesson on {{date}} at {{time}} was changed to “Completed”."
+      }
     }
   },
   "teacherRequests": {
