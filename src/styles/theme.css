@@ -1,7 +1,8 @@
 :root {
   color-scheme: light;
   /* RGB-версії */
-  --color-accent-warm-rgb: 244, 162, 97; /* Залиш для fallback, але не основний */
+  --color-accent-warm-rgb:
+    244, 162, 97; /* Залиш для fallback, але не основний */
   --color-primary-blue-rgb: 63, 114, 175;
 
   /* Фони — пастельні для Hero */
@@ -50,11 +51,13 @@
   --color-error-text: #942727;
   --color-error-bg: #fdecec;
   --color-error-border: #a64242;
+  --color-warning-text: #7a4b00;
+  --color-warning-bg: #fff4d6;
+  --color-warning-border: #c88719;
 
   /* Overlays */
   --color-overlay: rgba(14, 22, 38, 0.38);
   --shadow-drawer: 18px 0 40px rgba(19, 30, 55, 0.16);
-
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,6 +109,9 @@
     --color-error-text: #ffaaaa;
     --color-error-bg: #3a2023;
     --color-error-border: #d46a73;
+    --color-warning-text: #f2c66d;
+    --color-warning-bg: #3a2d16;
+    --color-warning-border: #c99538;
 
     /* Overlays */
     --color-overlay: rgba(0, 0, 0, 0.58);

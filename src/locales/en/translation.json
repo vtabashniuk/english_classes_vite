@@ -82,6 +82,7 @@
     "scheduled": "Scheduled",
     "completed": "Completed",
     "cancelled": "Cancelled",
+    "missed": "Missed",
     "joinZoom": "Join Zoom",
     "noZoom": "Link has not been added yet",
     "duration50": "50 minutes",

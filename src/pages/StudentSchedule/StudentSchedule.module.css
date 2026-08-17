@@ -150,7 +150,6 @@
 
 .scheduled {
   color: var(--color-primary-blue);
-
   background: rgba(var(--color-primary-blue-rgb), 0.1);
 }
 
@@ -162,6 +161,11 @@
 .cancelled {
   color: var(--color-error-text);
   background: var(--color-error-bg);
+}
+
+.missed {
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
 }
 
 .lessonFooter {

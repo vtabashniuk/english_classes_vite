@@ -236,7 +236,6 @@ const StudentSchedule = () => {
     await loadAvailability(value);
   };
 
-
   const handleCancelRequest = async (request) => {
     const confirmed = window.confirm(
       t("studentSchedule.extraLesson.cancel.confirm"),
@@ -413,7 +412,9 @@ const StudentSchedule = () => {
                 rows="3"
                 value={requestMessage}
                 onChange={(event) => setRequestMessage(event.target.value)}
-                placeholder={t("studentSchedule.extraLesson.messagePlaceholder")}
+                placeholder={t(
+                  "studentSchedule.extraLesson.messagePlaceholder",
+                )}
               />
             </label>
 
@@ -440,10 +441,10 @@ const StudentSchedule = () => {
                 <div>
                   <strong>{formatDate(request.requested_starts_at)}</strong>
                   <p>
-                    {formatTime(request.requested_starts_at)} · {t(
-                      "studentSchedule.duration",
-                      { count: request.duration_minutes },
-                    )}
+                    {formatTime(request.requested_starts_at)} ·{" "}
+                    {t("studentSchedule.duration", {
+                      count: request.duration_minutes,
+                    })}
                   </p>
                   {request.message && (
                     <p className={styles.requestMessage}>{request.message}</p>
@@ -489,9 +490,12 @@ const StudentSchedule = () => {
               <article key={lesson.id} className={styles.lessonCard}>
                 <div className={styles.lessonHeader}>
                   <div>
-                    <p className={styles.date}>{formatDate(lesson.starts_at)}</p>
+                    <p className={styles.date}>
+                      {formatDate(lesson.starts_at)}
+                    </p>
                     <p className={styles.time}>
-                      {formatTime(lesson.starts_at)} — {formatTime(lesson.ends_at)}
+                      {formatTime(lesson.starts_at)} —{" "}
+                      {formatTime(lesson.ends_at)}
                     </p>
                   </div>
 
@@ -554,18 +558,13 @@ const StudentSchedule = () => {
                 <div>
                   <strong>{formatDate(lesson.starts_at)}</strong>
                   <p>
-                    {formatTime(lesson.starts_at)} — {formatTime(lesson.ends_at)}
+                    {formatTime(lesson.starts_at)} —{" "}
+                    {formatTime(lesson.ends_at)}
                   </p>
                 </div>
 
                 <span
-                  className={`${styles.status} ${
-                    lesson.status === "completed"
-                      ? styles.completed
-                      : lesson.status === "cancelled"
-                        ? styles.cancelled
-                        : styles.scheduled
-                  }`}
+                  className={`${styles.status} ${styles[lesson.status] || styles.scheduled}`}
                 >
                   {getStatusLabel(lesson.status)}
                 </span>
@@ -629,7 +628,6 @@ const getExtraLessonRequestError = (error, t) => {
 
   return t("studentSchedule.extraLesson.errors.generic");
 };
-
 
 const getCancelExtraLessonRequestError = (error, t) => {
   const message = error?.message ?? "";

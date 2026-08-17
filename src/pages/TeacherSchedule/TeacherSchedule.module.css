@@ -389,22 +389,19 @@
 
 .cancelled {
   opacity: 0.55;
-
   border-left-color: var(--color-error-border);
-
   background: var(--color-error-bg);
 }
 
 .completed {
   border-left-color: var(--color-success-border);
-
   background: var(--color-success-bg);
 }
 
 .missed {
   opacity: 0.78;
-  border-left-color: var(--color-border-strong);
-  background: var(--color-surface-muted);
+  border-left-color: var(--color-warning-border);
+  background: var(--color-warning-bg);
 }
 
 .bottomGrid {
