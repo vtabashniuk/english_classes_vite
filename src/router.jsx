@@ -12,6 +12,8 @@ import LoginPage from "./pages/LoginPage/LoginPage";
 import StudentDashboard from "./pages/StudentDashboard/StudentDashboard";
 import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
 import StudentProfile from "./pages/StudentProfile/StudentProfile";
+import StudentAssignments from "./pages/StudentAssignments/StudentAssignments";
+import StudentMaterials from "./pages/StudentMaterials/StudentMaterials";
 
 import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
 import TeacherSettings from "./pages/TeacherSettings/TeacherSettings";
@@ -19,6 +21,8 @@ import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
 import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
 import TeacherRequests from "./pages/TeacherRequests/TeacherRequests";
+import TeacherAssignments from "./pages/TeacherAssignments/TeacherAssignments";
+import TeacherMaterials from "./pages/TeacherMaterials/TeacherMaterials";
 import Notifications from "./pages/Notifications/Notifications";
 
 import AuthCallback from "./pages/AuthCallback";
@@ -81,6 +85,14 @@ const router = createBrowserRouter([
         path: "notifications",
         element: <Notifications />,
       },
+      {
+        path: "assignments",
+        element: <StudentAssignments />,
+      },
+      {
+        path: "materials",
+        element: <StudentMaterials />,
+      },
     ],
   },
   {
@@ -118,6 +130,14 @@ const router = createBrowserRouter([
       {
         path: "notifications",
         element: <Notifications />,
+      },
+      {
+        path: "assignments",
+        element: <TeacherAssignments />,
+      },
+      {
+        path: "materials",
+        element: <TeacherMaterials />,
       },
     ],
   },

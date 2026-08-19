@@ -97,6 +97,8 @@ const Notifications = () => {
       date: startsAt ? formatDate(startsAt) : "—",
       time: startsAt ? formatTime(startsAt) : "—",
       duration: notification.data?.durationMinutes,
+      assignmentTitle: notification.data?.assignmentTitle || "—",
+      materialTitle: notification.data?.materialTitle || "—",
     });
   };
 

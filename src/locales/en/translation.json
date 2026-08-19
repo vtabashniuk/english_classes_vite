@@ -579,6 +579,14 @@
     "recurringSeriesChanged": {
       "title": "Recurring lesson schedule changed",
       "body": "The teacher changed the recurring lesson schedule starting from {{date}}. New lessons have been added to your schedule."
+    },
+    "assignmentCreated": {
+      "title": "New assignment",
+      "body": "Your teacher added a new assignment: “{{assignmentTitle}}”."
+    },
+    "materialShared": {
+      "title": "New material",
+      "body": "Your teacher shared a material with you: “{{materialTitle}}”."
     }
   },
   "teacherRequests": {
@@ -614,6 +622,118 @@
       "notFound": "Request not found.",
       "commentTooLong": "The comment cannot exceed 500 characters.",
       "generic": "Could not process the request."
+    }
+  },
+  "teacherMaterials": {
+    "title": "Materials",
+    "description": "Your teaching-material library. Files stay in external storage; only links are stored here.",
+    "loading": "Loading materials...",
+    "libraryTitle": "Library",
+    "empty": "No materials yet.",
+    "open": "Open material",
+    "selectStudent": "Select a student",
+    "alreadyShared": "already available",
+    "share": "Share",
+    "sharedCount": "Available to students: {{count}}",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete “{{title}}”?",
+    "form": {
+      "createTitle": "Add material",
+      "editTitle": "Edit material",
+      "title": "Title",
+      "category": "Category (optional)",
+      "url": "Link",
+      "description": "Description (optional)",
+      "create": "Add",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "openCreate": "Add material"
+    },
+    "messages": {
+      "created": "Material added.",
+      "updated": "Material updated.",
+      "deleted": "Material deleted.",
+      "shared": "Material shared with the student."
+    },
+    "errors": {
+      "load": "Could not load materials.",
+      "save": "Could not save material.",
+      "delete": "Could not delete material.",
+      "share": "Could not share material."
+    }
+  },
+  "studentMaterials": {
+    "title": "Materials",
+    "description": "Learning materials your teacher has shared with you.",
+    "loading": "Loading materials...",
+    "search": "Search by title, description, or category",
+    "open": "Open",
+    "empty": "Your teacher has not shared any materials yet.",
+    "noResults": "Nothing matches your search.",
+    "errors": {
+      "load": "Could not load materials."
+    }
+  },
+  "teacherAssignments": {
+    "title": "Assignments",
+    "description": "Create assignments for students and attach materials from your library.",
+    "loading": "Loading assignments...",
+    "createTitle": "New assignment",
+    "student": "Student",
+    "selectStudent": "Select a student",
+    "dueDate": "Due date (optional)",
+    "assignmentTitle": "Assignment title",
+    "descriptionLabel": "Instructions / description",
+    "lesson": "Related lesson (optional)",
+    "noLesson": "No lesson link",
+    "materials": "Materials",
+    "noMaterials": "There are no materials in the library yet. You can create the assignment without them.",
+    "create": "Create assignment",
+    "creating": "Creating...",
+    "listTitle": "Assigned work",
+    "empty": "No assignments yet.",
+    "deadline": "Due",
+    "noDeadline": "no deadline",
+    "statuses": {
+      "assigned": "Assigned",
+      "completed": "Completed"
+    },
+    "messages": {
+      "created": "Assignment created. The student received a notification.",
+      "updated": "Assignment updated."
+    },
+    "errors": {
+      "load": "Could not load assignment data.",
+      "create": "Could not create assignment.",
+      "update": "Could not update the assignment.",
+      "completed": "A completed assignment can no longer be edited."
+    },
+    "editTitle": "Edit assignment",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "cancelEdit": "Cancel editing",
+    "edit": "Edit",
+    "openCreate": "Add assignment",
+    "cancel": "Cancel"
+  },
+  "studentAssignments": {
+    "title": "Assignments",
+    "description": "Your current and completed learning assignments.",
+    "loading": "Loading assignments...",
+    "empty": "No assignments yet.",
+    "deadline": "Due",
+    "noDeadline": "no deadline",
+    "materials": "Materials",
+    "complete": "Mark as completed",
+    "statuses": {
+      "assigned": "To do",
+      "completed": "Completed"
+    },
+    "errors": {
+      "load": "Could not load assignments.",
+      "complete": "Could not mark the assignment as completed."
     }
   }
 }
