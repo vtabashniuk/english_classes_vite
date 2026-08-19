@@ -398,6 +398,38 @@
         "teacherConflict": "Another recurring lesson series already occupies this time.",
         "studentConflict": "This student already has a recurring lesson at this time.",
         "create": "Could not create the recurring lesson."
+      },
+      "cancelFromHere": {
+        "button": "Cancel this and following",
+        "cancelling": "Cancelling series...",
+        "confirm": "Cancel this recurring lesson and all following lessons in the series? Previous lessons and history will remain unchanged.",
+        "success": "The series has been ended. Future lessons cancelled: {{count}}. The student was notified.",
+        "errors": {
+          "notRecurring": "This lesson is not part of a recurring series.",
+          "notScheduled": "The series can only be ended from a future scheduled lesson.",
+          "past": "The series cannot be ended starting from a lesson that has already begun.",
+          "notFound": "The lesson or recurring series was not found.",
+          "generic": "Could not end the recurring series."
+        }
+      },
+      "editFromHere": {
+        "button": "Change this and following",
+        "loading": "Loading series...",
+        "title": "Change this and following lessons",
+        "hint": "The new settings will apply from the selected lesson onward. Earlier lessons and their history will remain unchanged.",
+        "save": "Save changes",
+        "saving": "Saving...",
+        "cancel": "Keep unchanged",
+        "confirm": "Change this recurring lesson and all following lessons? The earlier part of the series and its history will remain unchanged.",
+        "success": "Series updated. New lessons created: {{createdCount}}. Skipped due to conflicts: {{conflictCount}}. The student was notified.",
+        "errors": {
+          "notRecurring": "This lesson does not belong to a recurring series.",
+          "notScheduled": "A series can only be changed from a future scheduled lesson.",
+          "past": "You cannot change a series starting from a lesson that has already begun.",
+          "notFound": "The lesson or recurring series was not found.",
+          "load": "Could not load the recurring series settings.",
+          "generic": "Could not update the recurring series."
+        }
       }
     },
     "zoomEdit": {
@@ -539,6 +571,14 @@
         "title": "Lesson status corrected",
         "body": "The lesson on {{date}} at {{time}} was changed to “Completed”."
       }
+    },
+    "recurringSeriesCancelled": {
+      "title": "Recurring lessons cancelled",
+      "body": "Recurring lessons from {{date}} at {{time}} onward were cancelled by the teacher."
+    },
+    "recurringSeriesChanged": {
+      "title": "Recurring lesson schedule changed",
+      "body": "The teacher changed the recurring lesson schedule starting from {{date}}. New lessons have been added to your schedule."
     }
   },
   "teacherRequests": {

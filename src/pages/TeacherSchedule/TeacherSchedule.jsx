@@ -59,6 +59,24 @@ const TeacherSchedule = () => {
 
   const [cancellingLessonId, setCancellingLessonId] = useState(null);
 
+  const [cancellingSeriesId, setCancellingSeriesId] = useState(null);
+
+  const [editingRecurringSeries, setEditingRecurringSeries] = useState(false);
+
+  const [loadingRecurringSeries, setLoadingRecurringSeries] = useState(false);
+
+  const [savingRecurringSeries, setSavingRecurringSeries] = useState(false);
+
+  const [seriesWeekday, setSeriesWeekday] = useState("1");
+
+  const [seriesTime, setSeriesTime] = useState("");
+
+  const [seriesIntervalWeeks, setSeriesIntervalWeeks] = useState("1");
+
+  const [seriesValidUntil, setSeriesValidUntil] = useState("");
+
+  const [seriesZoomUrl, setSeriesZoomUrl] = useState("");
+
   const [editingZoom, setEditingZoom] = useState(false);
 
   const [lessonZoomDraft, setLessonZoomDraft] = useState("");
@@ -309,6 +327,7 @@ const TeacherSchedule = () => {
     setSelectedLesson(lesson);
     setLessonZoomDraft(lesson.zoom_url || "");
     setEditingZoom(false);
+    setEditingRecurringSeries(false);
     setErrorMessage("");
     setSuccessMessage("");
 
@@ -357,6 +376,150 @@ const TeacherSchedule = () => {
       setErrorMessage(getCancelLessonError(error, t));
     } finally {
       setCancellingLessonId(null);
+    }
+  };
+
+  const handleStartEditRecurringSeries = async () => {
+    if (!selectedLesson?.recurring_lesson_id) {
+      return;
+    }
+
+    try {
+      setLoadingRecurringSeries(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { data, error } = await supabase
+        .from("recurring_lessons")
+        .select("weekday, start_time, interval_weeks, valid_until, zoom_url")
+        .eq("id", selectedLesson.recurring_lesson_id)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      setSeriesWeekday(String(data.weekday));
+      setSeriesTime(data.start_time?.slice(0, 5) || "");
+      setSeriesIntervalWeeks(String(data.interval_weeks ?? 1));
+      setSeriesValidUntil(data.valid_until || "");
+      setSeriesZoomUrl(data.zoom_url || "");
+      setEditingRecurringSeries(true);
+      setEditingZoom(false);
+    } catch (error) {
+      console.error("Load recurring series error:", error);
+      setErrorMessage(t("teacherSchedule.recurring.editFromHere.errors.load"));
+    } finally {
+      setLoadingRecurringSeries(false);
+    }
+  };
+
+  const handleSaveRecurringSeries = async () => {
+    if (
+      !selectedLesson?.recurring_lesson_id ||
+      selectedLesson.status !== "scheduled" ||
+      !seriesWeekday ||
+      !seriesTime
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      t("teacherSchedule.recurring.editFromHere.confirm"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSavingRecurringSeries(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { data, error } = await supabase.rpc(
+        "edit_recurring_series_from_lesson",
+        {
+          p_lesson_id: selectedLesson.id,
+          p_weekday: Number(seriesWeekday),
+          p_start_time: seriesTime,
+          p_interval_weeks: Number(seriesIntervalWeeks),
+          p_valid_until: seriesValidUntil || null,
+          p_zoom_url: seriesZoomUrl.trim() || null,
+          p_generate_weeks: 8,
+        },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      const result = Array.isArray(data) ? data[0] : data;
+
+      setSuccessMessage(
+        t("teacherSchedule.recurring.editFromHere.success", {
+          createdCount: result?.created_count ?? 0,
+          conflictCount: result?.conflict_count ?? 0,
+        }),
+      );
+
+      setEditingRecurringSeries(false);
+      setSelectedLesson(null);
+      await loadLessons();
+    } catch (error) {
+      console.error("Edit recurring series error:", error);
+      setErrorMessage(getEditRecurringSeriesError(error, t));
+    } finally {
+      setSavingRecurringSeries(false);
+    }
+  };
+
+  const handleCancelRecurringSeriesFromLesson = async () => {
+    if (
+      !selectedLesson ||
+      !selectedLesson.recurring_lesson_id ||
+      selectedLesson.status !== "scheduled"
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      t("teacherSchedule.recurring.cancelFromHere.confirm"),
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setCancellingSeriesId(selectedLesson.recurring_lesson_id);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { data, error } = await supabase.rpc(
+        "cancel_recurring_series_from_lesson",
+        {
+          p_lesson_id: selectedLesson.id,
+        },
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      setSuccessMessage(
+        t("teacherSchedule.recurring.cancelFromHere.success", {
+          count: data ?? 0,
+        }),
+      );
+
+      setSelectedLesson(null);
+      await loadLessons();
+    } catch (error) {
+      console.error("Cancel recurring series error:", error);
+      setErrorMessage(getCancelRecurringSeriesError(error, t));
+    } finally {
+      setCancellingSeriesId(null);
     }
   };
 
@@ -1162,6 +1325,111 @@ const TeacherSchedule = () => {
                 </div>
               )}
 
+              {selectedLesson.recurring_lesson_id &&
+                selectedLesson.status === "scheduled" &&
+                !isLessonStarted(selectedLesson) &&
+                editingRecurringSeries && (
+                  <div className={styles.recurringSeriesEditor}>
+                    <div>
+                      <h3>{t("teacherSchedule.recurring.editFromHere.title")}</h3>
+                      <p>{t("teacherSchedule.recurring.editFromHere.hint")}</p>
+                    </div>
+
+                    <div className={styles.formRow}>
+                      <label className={styles.field}>
+                        <span>{t("teacherSchedule.recurring.weekday")}</span>
+                        <select
+                          value={seriesWeekday}
+                          onChange={(event) => setSeriesWeekday(event.target.value)}
+                        >
+                          {DAY_NAMES.map((dayName, index) => (
+                            <option key={dayName} value={index + 1}>
+                              {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{t("teacherSchedule.time")}</span>
+                        <select
+                          value={seriesTime}
+                          onChange={(event) => setSeriesTime(event.target.value)}
+                        >
+                          {timeSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.repeat")}</span>
+                      <select
+                        value={seriesIntervalWeeks}
+                        onChange={(event) =>
+                          setSeriesIntervalWeeks(event.target.value)
+                        }
+                      >
+                        <option value="1">
+                          {t("teacherSchedule.recurring.everyWeek")}
+                        </option>
+                        <option value="2">
+                          {t("teacherSchedule.recurring.everyTwoWeeks")}
+                        </option>
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.validUntil")}</span>
+                      <input
+                        type="date"
+                        value={seriesValidUntil}
+                        min={formatZonedDateForInput(
+                          selectedLesson.starts_at,
+                          scheduleTimezone,
+                        )}
+                        onChange={(event) =>
+                          setSeriesValidUntil(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.zoomUrl")}</span>
+                      <input
+                        type="url"
+                        value={seriesZoomUrl}
+                        onChange={(event) => setSeriesZoomUrl(event.target.value)}
+                        placeholder="https://..."
+                      />
+                    </label>
+
+                    <div className={styles.inlineActions}>
+                      <Button
+                        variant="primary"
+                        size="large"
+                        onClick={handleSaveRecurringSeries}
+                        disabled={savingRecurringSeries}
+                      >
+                        {savingRecurringSeries
+                          ? t("teacherSchedule.recurring.editFromHere.saving")
+                          : t("teacherSchedule.recurring.editFromHere.save")}
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        onClick={() => setEditingRecurringSeries(false)}
+                        disabled={savingRecurringSeries}
+                      >
+                        {t("teacherSchedule.recurring.editFromHere.cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
               <div className={styles.detailItem}>
                 <span>Zoom</span>
 
@@ -1178,7 +1446,8 @@ const TeacherSchedule = () => {
                 )}
               </div>
 
-              {selectedLesson.status !== "cancelled" && (
+              {selectedLesson.status !== "cancelled" &&
+                !editingRecurringSeries && (
                 <div className={styles.zoomEditor}>
                   {editingZoom ? (
                     <>
@@ -1263,15 +1532,58 @@ const TeacherSchedule = () => {
 
                 {selectedLesson.status === "scheduled" &&
                   !isLessonStarted(selectedLesson) && (
-                    <Button
-                      variant="danger"
-                      onClick={handleCancelLesson}
-                      disabled={cancellingLessonId === selectedLesson.id}
-                    >
-                      {cancellingLessonId === selectedLesson.id
-                        ? t("teacherSchedule.cancel.cancelling")
-                        : t("teacherSchedule.cancel.button")}
-                    </Button>
+                    <>
+                      {selectedLesson.recurring_lesson_id && (
+                        <Button
+                          variant="secondary"
+                          onClick={handleStartEditRecurringSeries}
+                          disabled={
+                            loadingRecurringSeries ||
+                            savingRecurringSeries ||
+                            cancellingSeriesId === selectedLesson.recurring_lesson_id ||
+                            cancellingLessonId === selectedLesson.id ||
+                            savingRecurringSeries
+                          }
+                        >
+                          {loadingRecurringSeries
+                            ? t("teacherSchedule.recurring.editFromHere.loading")
+                            : t("teacherSchedule.recurring.editFromHere.button")}
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="danger"
+                        onClick={handleCancelLesson}
+                        disabled={
+                          cancellingLessonId === selectedLesson.id ||
+                          cancellingSeriesId === selectedLesson.recurring_lesson_id ||
+                          savingRecurringSeries
+                        }
+                      >
+                        {cancellingLessonId === selectedLesson.id
+                          ? t("teacherSchedule.cancel.cancelling")
+                          : t("teacherSchedule.cancel.button")}
+                      </Button>
+
+                      {selectedLesson.recurring_lesson_id && (
+                        <Button
+                          variant="danger"
+                          onClick={handleCancelRecurringSeriesFromLesson}
+                          disabled={
+                            cancellingSeriesId === selectedLesson.recurring_lesson_id ||
+                            cancellingLessonId === selectedLesson.id
+                          }
+                        >
+                          {cancellingSeriesId === selectedLesson.recurring_lesson_id
+                            ? t(
+                                "teacherSchedule.recurring.cancelFromHere.cancelling",
+                              )
+                            : t(
+                                "teacherSchedule.recurring.cancelFromHere.button",
+                              )}
+                        </Button>
+                      )}
+                    </>
                   )}
               </div>
             </div>
@@ -1392,6 +1704,13 @@ const formatDateForInput = (date) => {
     pad(date.getDate()),
   ].join("-");
 };
+
+const formatZonedDateForInput = (value, timezone) => {
+  const parts = getDatePartsInTimezone(value, timezone);
+
+  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
+};
+
 
 const formatWeekRange = (weekStart, locale) => {
   const weekEnd = addDays(weekStart, 4);
@@ -1627,6 +1946,83 @@ const getLessonOutcomeError = (error, t) => {
   }
 
   return t("teacherSchedule.outcome.errors.generic");
+};
+
+const getEditRecurringSeriesError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("NOT_RECURRING_LESSON")) {
+    return t("teacherSchedule.recurring.editFromHere.errors.notRecurring");
+  }
+
+  if (message.includes("LESSON_NOT_SCHEDULED")) {
+    return t("teacherSchedule.recurring.editFromHere.errors.notScheduled");
+  }
+
+  if (message.includes("PAST_LESSON_CANNOT_BE_EDITED")) {
+    return t("teacherSchedule.recurring.editFromHere.errors.past");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND") ||
+      message.includes("RECURRING_LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.recurring.editFromHere.errors.notFound");
+  }
+
+  if (message.includes("INVALID_WEEKDAY")) {
+    return t("teacherSchedule.recurring.errors.weekday");
+  }
+
+  if (message.includes("INVALID_INTERVAL_WEEKS")) {
+    return t("teacherSchedule.recurring.errors.interval");
+  }
+
+  if (message.includes("INVALID_DATE_RANGE")) {
+    return t("teacherSchedule.recurring.errors.dateRange");
+  }
+
+  if (message.includes("NO_OCCURRENCE_IN_DATE_RANGE")) {
+    return t("teacherSchedule.recurring.errors.noOccurrence");
+  }
+
+  if (message.includes("OUTSIDE_WORKING_HOURS")) {
+    return t("teacherSchedule.errors.workingHours");
+  }
+
+  if (message.includes("INVALID_TIME_SLOT")) {
+    return t("teacherSchedule.errors.invalidSlot");
+  }
+
+  if (message.includes("RECURRING_TEACHER_CONFLICT")) {
+    return t("teacherSchedule.recurring.errors.teacherConflict");
+  }
+
+  if (message.includes("RECURRING_STUDENT_CONFLICT")) {
+    return t("teacherSchedule.recurring.errors.studentConflict");
+  }
+
+  return t("teacherSchedule.recurring.editFromHere.errors.generic");
+};
+
+const getCancelRecurringSeriesError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("NOT_RECURRING_LESSON")) {
+    return t("teacherSchedule.recurring.cancelFromHere.errors.notRecurring");
+  }
+
+  if (message.includes("LESSON_NOT_SCHEDULED")) {
+    return t("teacherSchedule.recurring.cancelFromHere.errors.notScheduled");
+  }
+
+  if (message.includes("PAST_LESSON_CANNOT_BE_CANCELLED")) {
+    return t("teacherSchedule.recurring.cancelFromHere.errors.past");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.recurring.cancelFromHere.errors.notFound");
+  }
+
+  return t("teacherSchedule.recurring.cancelFromHere.errors.generic");
 };
 
 const getCancelLessonError = (error, t) => {
