@@ -2,11 +2,61 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getTimezone } from "../../constants/timezones";
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/useAuth";
+import {
+  approveLessonRequest,
+  listPendingTeacherLessonRequests,
+  rejectLessonRequest,
+} from "../../features/lessonRequests/api/lessonRequestsApi";
+import { getStudentsByIds } from "../../features/profiles/api/profilesApi";
+import { getTeacherTimezone } from "../../features/settings/api/teacherSettingsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherRequests.module.css";
+
+const fetchTeacherScheduleTimezone = async (teacherId) => {
+  if (!teacherId) {
+    return null;
+  }
+
+  const { data, error } = await getTeacherTimezone(teacherId);
+
+  if (error) {
+    console.error("Teacher settings timezone load error:", error);
+    return null;
+  }
+
+  return data?.schedule_timezone ?? null;
+};
+
+const fetchPendingRequestsWithStudents = async () => {
+  const { data, error } = await listPendingTeacherLessonRequests();
+
+  if (error) {
+    throw error;
+  }
+
+  const nextRequests = data ?? [];
+  const studentIds = [...new Set(nextRequests.map((item) => item.student_id))];
+
+  if (studentIds.length === 0) {
+    return { requests: nextRequests, students: {} };
+  }
+
+  const { data: studentRows, error: studentsError } =
+    await getStudentsByIds(studentIds);
+
+  if (studentsError) {
+    throw studentsError;
+  }
+
+  return {
+    requests: nextRequests,
+    students: Object.fromEntries(
+      (studentRows ?? []).map((student) => [student.id, student]),
+    ),
+  };
+};
 
 const TeacherRequests = () => {
   const { t, i18n } = useTranslation();
@@ -36,85 +86,50 @@ const TeacherRequests = () => {
     [requests],
   );
 
-  const loadScheduleTimezone = async () => {
-    if (!profile?.id) {
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("teacher_settings")
-      .select("schedule_timezone")
-      .eq("teacher_id", profile.id)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Teacher settings timezone load error:", error);
-      return;
-    }
-
-    if (data?.schedule_timezone) {
-      setScheduleTimezone(data.schedule_timezone);
-    }
-  };
-
   const loadRequests = async () => {
-    const { data, error } = await supabase
-      .from("lesson_requests")
-      .select(
-        "id, student_id, requested_starts_at, duration_minutes, message, status, created_at",
-      )
-      .eq("status", "pending")
-      .order("requested_starts_at", { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    const nextRequests = data ?? [];
-    setRequests(nextRequests);
-
-    const studentIds = [...new Set(nextRequests.map((item) => item.student_id))];
-
-    if (studentIds.length === 0) {
-      setStudents({});
-      return;
-    }
-
-    const { data: studentRows, error: studentsError } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .in("id", studentIds);
-
-    if (studentsError) {
-      throw studentsError;
-    }
-
-    setStudents(
-      Object.fromEntries((studentRows ?? []).map((student) => [student.id, student])),
-    );
-  };
-
-  const loadAll = async () => {
-    try {
-      setErrorMessage("");
-      await Promise.all([loadScheduleTimezone(), loadRequests()]);
-    } catch (error) {
-      console.error("Teacher requests load error:", error);
-      setErrorMessage(t("teacherRequests.errors.load"));
-    }
+    const next = await fetchPendingRequestsWithStudents();
+    setRequests(next.requests);
+    setStudents(next.students);
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const initialize = async () => {
       try {
-        setLoading(true);
-        await loadAll();
+        const [nextTimezone, next] = await Promise.all([
+          fetchTeacherScheduleTimezone(profile?.id),
+          fetchPendingRequestsWithStudents(),
+        ]);
+
+        if (!cancelled) {
+          setErrorMessage("");
+
+          if (nextTimezone) {
+            setScheduleTimezone(nextTimezone);
+          }
+
+          setRequests(next.requests);
+          setStudents(next.students);
+        }
+      } catch (error) {
+        console.error("Teacher requests load error:", error);
+
+        if (!cancelled) {
+          setErrorMessage(t("teacherRequests.errors.load"));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, [profile?.id, t]);
 
   const formatDate = (value) =>
@@ -186,9 +201,7 @@ const TeacherRequests = () => {
       setRejectingId(null);
       setRejectionComment("");
 
-      const { error } = await supabase.rpc("approve_lesson_request", {
-        p_request_id: request.id,
-      });
+      const { error } = await approveLessonRequest(request.id);
 
       if (error) {
         throw error;
@@ -223,9 +236,9 @@ const TeacherRequests = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("reject_lesson_request", {
-        p_request_id: request.id,
-        p_comment: rejectionComment.trim() || null,
+      const { error } = await rejectLessonRequest({
+        requestId: request.id,
+        comment: rejectionComment.trim() || null,
       });
 
       if (error) {

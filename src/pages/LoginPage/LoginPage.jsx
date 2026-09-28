@@ -2,8 +2,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { supabase } from "../../lib/supabase";
-import { useAuth } from "../../context/AuthContext";
+import {
+  signInWithPassword,
+  signOut,
+} from "../../features/auth/api/authApi";
+import { getLoginProfileById } from "../../features/profiles/api/profilesApi";
+import { useAuth } from "../../context/useAuth";
 
 import styles from "./LoginPage.module.css";
 
@@ -37,7 +41,7 @@ const LoginPage = () => {
     setIsSubmitting(true);
     setErrorMessage("");
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await signInWithPassword({
       email: email.trim(),
       password,
     });
@@ -48,21 +52,18 @@ const LoginPage = () => {
       return;
     }
 
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("role, is_active")
-      .eq("id", data.user.id)
-      .single();
+    const { data: profileData, error: profileError } =
+      await getLoginProfileById(data.user.id);
 
     if (profileError) {
-      await supabase.auth.signOut();
+      await signOut();
       setErrorMessage(t("auth.login.errors.profileLoad"));
       setIsSubmitting(false);
       return;
     }
 
     if (!profileData.is_active) {
-      await supabase.auth.signOut();
+      await signOut();
       setErrorMessage(t("auth.login.errors.inactive"));
       setIsSubmitting(false);
       return;

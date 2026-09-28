@@ -2,7 +2,53 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
 
-import { supabase } from "../../lib/supabase";
+import {
+  cancelLesson,
+  createLesson,
+  listTeacherLessonsForRange,
+  setLessonOutcome,
+  updateLessonZoom,
+} from "../../features/lessons/api/lessonsApi";
+import {
+  cancelRecurringSeriesFromLesson,
+  createRecurringLessonWithGeneration,
+  editRecurringSeriesFromLesson,
+  getRecurringLessonById,
+} from "../../features/lessons/api/recurringLessonsApi";
+import { listActiveStudents } from "../../features/profiles/api/profilesApi";
+import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
+import {
+  getCancelLessonError,
+  getCancelRecurringSeriesError,
+  getCreateLessonError,
+  getCreateRecurringLessonError,
+  getEditRecurringSeriesError,
+  getLessonOutcomeError,
+  getUpdateLessonZoomError,
+} from "../../features/schedule/lib/scheduleErrors";
+import {
+  addDays,
+  CALENDAR_BOTTOM_PADDING,
+  CALENDAR_TOP_PADDING,
+  createDisplayTimeSlots,
+  createTimeSlots,
+  formatDateForInput,
+  formatFullDate,
+  formatLessonTime,
+  formatWeekRange,
+  formatZonedDateForInput,
+  getDatePartsInTimezone,
+  getLessonPosition,
+  getMonday,
+  isLessonStarted,
+  isSameCalendarDate,
+  isSlotBlockedByLesson,
+  pad,
+  parseInputDate,
+  PIXELS_PER_MINUTE,
+  startOfDay,
+  timeToMinutes,
+} from "../../features/schedule/lib/scheduleUtils";
 
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
@@ -14,11 +60,55 @@ import Button from "../../components/common/ui/Button/Button";
 
 import styles from "./TeacherSchedule.module.css";
 
-const PIXELS_PER_MINUTE = 1.15;
-const CALENDAR_TOP_PADDING = 18;
-const CALENDAR_BOTTOM_PADDING = 18;
-
 const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+
+const fetchActiveStudents = async () => {
+  const { data, error } = await listActiveStudents({ includeContact: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
+
+const fetchTeacherScheduleSettings = async () => {
+  const { data, error } = await getMyTeacherScheduleSettings();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    timezone: data?.schedule_timezone || DEFAULT_SCHEDULE_SETTINGS.timezone,
+    workdayStart:
+      data?.workday_start?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayStart,
+    workdayEnd:
+      data?.workday_end?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
+    lessonDurationMinutes:
+      data?.lesson_duration_minutes ??
+      DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
+    slotIntervalMinutes:
+      data?.slot_interval_minutes ??
+      DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
+  };
+};
+
+const fetchTeacherLessonsForWeek = async (weekStart) => {
+  const start = startOfDay(addDays(weekStart, -1));
+  const end = startOfDay(addDays(weekStart, 6));
+
+  const { data, error } = await listTeacherLessonsForRange({
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
 
 const TeacherSchedule = () => {
   const { t, i18n } = useTranslation();
@@ -134,134 +224,74 @@ const TeacherSchedule = () => {
     : scheduleTimezone;
 
   useEffect(() => {
+    let cancelled = false;
+
     const initialize = async () => {
       try {
-        setLoading(true);
-        setErrorMessage("");
+        const [nextStudents, nextSettings] = await Promise.all([
+          fetchActiveStudents(),
+          fetchTeacherScheduleSettings(),
+        ]);
 
-        await Promise.all([loadStudents(), loadTeacherSettings()]);
+        if (!cancelled) {
+          setErrorMessage("");
+          setStudents(nextStudents);
+          setScheduleSettings(nextSettings);
+        }
       } catch (error) {
         console.error("TeacherSchedule initialization error:", error);
 
-        setErrorMessage(t("teacherSchedule.errors.load"));
+        if (!cancelled) {
+          setErrorMessage(t("teacherSchedule.errors.load"));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   useEffect(() => {
-    loadLessons();
-  }, [weekStart]);
+    let cancelled = false;
 
-  const loadStudents = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, is_active")
-      .eq("role", "student")
-      .eq("is_active", true)
-      .order("full_name");
+    const refreshWeek = async () => {
+      try {
+        const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
 
-    if (error) {
-      throw error;
-    }
+        if (!cancelled) {
+          setErrorMessage("");
+          setLessons(nextLessons);
+        }
+      } catch (error) {
+        console.error("Load lessons error:", error);
 
-    setStudents(data ?? []);
-  };
+        if (!cancelled) {
+          setErrorMessage(t("teacherSchedule.errors.loadLessons"));
+        }
+      }
+    };
 
-  const loadTeacherSettings = async () => {
-    const { data, error } = await supabase
-      .from("teacher_settings")
-      .select(
-        `
-          schedule_timezone,
-          workday_start,
-          workday_end,
-          lesson_duration_minutes,
-          slot_interval_minutes
-        `,
-      )
-      .single();
+    refreshWeek();
 
-    if (error) {
-      throw error;
-    }
-
-    setScheduleSettings({
-      timezone: data?.schedule_timezone || DEFAULT_SCHEDULE_SETTINGS.timezone,
-
-      workdayStart:
-        data?.workday_start?.slice(0, 5) ||
-        DEFAULT_SCHEDULE_SETTINGS.workdayStart,
-
-      workdayEnd:
-        data?.workday_end?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
-
-      lessonDurationMinutes:
-        data?.lesson_duration_minutes ??
-        DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
-
-      slotIntervalMinutes:
-        data?.slot_interval_minutes ??
-        DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
-    });
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [weekStart, t]);
 
   const loadLessons = async () => {
     try {
+      const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
       setErrorMessage("");
-
-      /*
-          Беремо невеликий запас з обох
-          боків, а вже сам календар
-          фільтрує уроки у timezone
-          викладача.
-        */
-      const start = startOfDay(addDays(weekStart, -1));
-
-      const end = startOfDay(addDays(weekStart, 6));
-
-      const { data, error } = await supabase
-        .from("lessons")
-        .select(
-          `
-            id,
-            student_id,
-            teacher_id,
-            recurring_lesson_id,
-            starts_at,
-            ends_at,
-            duration_minutes,
-            status,
-            zoom_url,
-            completed_at,
-            missed_at,
-            cancelled_by,
-            cancelled_at,
-            cancellation_reason,
-            profiles:student_id (
-              id,
-              full_name,
-              email
-            )
-          `,
-        )
-        .gte("starts_at", start.toISOString())
-        .lt("starts_at", end.toISOString())
-        .order("starts_at", {
-          ascending: true,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      setLessons(data ?? []);
+      setLessons(nextLessons);
     } catch (error) {
       console.error("Load lessons error:", error);
-
       setErrorMessage(t("teacherSchedule.errors.loadLessons"));
     }
   };
@@ -357,9 +387,8 @@ const TeacherSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("cancel_lesson", {
-        p_lesson_id: selectedLesson.id,
-        p_reason: null,
+      const { error } = await cancelLesson({
+        lessonId: selectedLesson.id,
       });
 
       if (error) {
@@ -389,11 +418,9 @@ const TeacherSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { data, error } = await supabase
-        .from("recurring_lessons")
-        .select("weekday, start_time, interval_weeks, valid_until, zoom_url")
-        .eq("id", selectedLesson.recurring_lesson_id)
-        .single();
+      const { data, error } = await getRecurringLessonById(
+        selectedLesson.recurring_lesson_id,
+      );
 
       if (error) {
         throw error;
@@ -437,18 +464,15 @@ const TeacherSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { data, error } = await supabase.rpc(
-        "edit_recurring_series_from_lesson",
-        {
-          p_lesson_id: selectedLesson.id,
-          p_weekday: Number(seriesWeekday),
-          p_start_time: seriesTime,
-          p_interval_weeks: Number(seriesIntervalWeeks),
-          p_valid_until: seriesValidUntil || null,
-          p_zoom_url: seriesZoomUrl.trim() || null,
-          p_generate_weeks: 8,
-        },
-      );
+      const { data, error } = await editRecurringSeriesFromLesson({
+        p_lesson_id: selectedLesson.id,
+        p_weekday: Number(seriesWeekday),
+        p_start_time: seriesTime,
+        p_interval_weeks: Number(seriesIntervalWeeks),
+        p_valid_until: seriesValidUntil || null,
+        p_zoom_url: seriesZoomUrl.trim() || null,
+        p_generate_weeks: 8,
+      });
 
       if (error) {
         throw error;
@@ -496,11 +520,8 @@ const TeacherSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { data, error } = await supabase.rpc(
-        "cancel_recurring_series_from_lesson",
-        {
-          p_lesson_id: selectedLesson.id,
-        },
+      const { data, error } = await cancelRecurringSeriesFromLesson(
+        selectedLesson.id,
       );
 
       if (error) {
@@ -535,9 +556,9 @@ const TeacherSchedule = () => {
 
       const normalizedZoomUrl = lessonZoomDraft.trim() || null;
 
-      const { error } = await supabase.rpc("update_lesson_zoom", {
-        p_lesson_id: selectedLesson.id,
-        p_zoom_url: normalizedZoomUrl,
+      const { error } = await updateLessonZoom({
+        lessonId: selectedLesson.id,
+        zoomUrl: normalizedZoomUrl,
       });
 
       if (error) {
@@ -574,9 +595,9 @@ const TeacherSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("set_lesson_outcome", {
-        p_lesson_id: selectedLesson.id,
-        p_status: status,
+      const { error } = await setLessonOutcome({
+        lessonId: selectedLesson.id,
+        status,
       });
 
       if (error) {
@@ -624,14 +645,11 @@ const TeacherSchedule = () => {
     try {
       setCreating(true);
 
-      const { error } = await supabase.rpc("create_lesson", {
-        p_student_id: selectedStudentId,
-
-        p_lesson_date: selectedDate,
-
-        p_start_time: selectedTime,
-
-        p_zoom_url: zoomUrl.trim() || null,
+      const { error } = await createLesson({
+        studentId: selectedStudentId,
+        lessonDate: selectedDate,
+        startTime: selectedTime,
+        zoomUrl: zoomUrl.trim() || null,
       });
 
       if (error) {
@@ -690,19 +708,16 @@ const TeacherSchedule = () => {
     try {
       setCreating(true);
 
-      const { data, error } = await supabase.rpc(
-        "create_recurring_lesson_with_generation",
-        {
-          p_student_id: selectedStudentId,
-          p_weekday: Number(recurringWeekday),
-          p_start_time: selectedTime,
-          p_valid_from: recurringValidFrom,
-          p_valid_until: recurringValidUntil || null,
-          p_zoom_url: zoomUrl.trim() || null,
-          p_interval_weeks: Number(recurringIntervalWeeks),
-          p_generate_weeks: 8,
-        },
-      );
+      const { data, error } = await createRecurringLessonWithGeneration({
+        p_student_id: selectedStudentId,
+        p_weekday: Number(recurringWeekday),
+        p_start_time: selectedTime,
+        p_valid_from: recurringValidFrom,
+        p_valid_until: recurringValidUntil || null,
+        p_zoom_url: zoomUrl.trim() || null,
+        p_interval_weeks: Number(recurringIntervalWeeks),
+        p_generate_weeks: 8,
+      });
 
       if (error) {
         throw error;
@@ -1592,459 +1607,6 @@ const TeacherSchedule = () => {
       </div>
     </section>
   );
-};
-
-const pad = (value) => String(value).padStart(2, "0");
-
-const timeToMinutes = (value) => {
-  const [hours, minutes] = value.split(":").map(Number);
-
-  return hours * 60 + minutes;
-};
-
-const minutesToTime = (minutes) => {
-  const hours = Math.floor(minutes / 60);
-
-  const mins = minutes % 60;
-
-  return `${pad(hours)}:${pad(mins)}`;
-};
-
-const createTimeSlots = (
-  workdayStart,
-  workdayEnd,
-  lessonDurationMinutes,
-  slotIntervalMinutes,
-) => {
-  const start = timeToMinutes(workdayStart);
-
-  const end = timeToMinutes(workdayEnd);
-
-  const lastStart = end - lessonDurationMinutes;
-
-  const slots = [];
-
-  for (
-    let current = start;
-    current <= lastStart;
-    current += slotIntervalMinutes
-  ) {
-    slots.push(minutesToTime(current));
-  }
-
-  return slots;
-};
-
-const createDisplayTimeSlots = (
-  workdayStart,
-  workdayEnd,
-  slotIntervalMinutes,
-) => {
-  const start = timeToMinutes(workdayStart);
-
-  const end = timeToMinutes(workdayEnd);
-
-  const slots = [];
-
-  for (let current = start; current < end; current += slotIntervalMinutes) {
-    slots.push(minutesToTime(current));
-  }
-
-  return slots;
-};
-
-const getMonday = (date) => {
-  const result = new Date(date);
-
-  result.setHours(12, 0, 0, 0);
-
-  const day = result.getDay();
-
-  const difference = day === 0 ? -6 : 1 - day;
-
-  result.setDate(result.getDate() + difference);
-
-  return result;
-};
-
-const addDays = (date, amount) => {
-  const result = new Date(date);
-
-  result.setDate(result.getDate() + amount);
-
-  return result;
-};
-
-const startOfDay = (date) => {
-  const result = new Date(date);
-
-  result.setHours(0, 0, 0, 0);
-
-  return result;
-};
-
-const parseInputDate = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day, 12, 0, 0, 0);
-};
-
-const formatDateForInput = (date) => {
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-  ].join("-");
-};
-
-const formatZonedDateForInput = (value, timezone) => {
-  const parts = getDatePartsInTimezone(value, timezone);
-
-  return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}`;
-};
-
-
-const formatWeekRange = (weekStart, locale) => {
-  const weekEnd = addDays(weekStart, 4);
-
-  const startText = new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-  }).format(weekStart);
-
-  const endText = new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(weekEnd);
-
-  return `${startText} — ${endText}`;
-};
-
-const isSameCalendarDate = (first, second) => {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
-};
-
-const getDatePartsInTimezone = (value, timezone) => {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-
-    hour: "2-digit",
-    minute: "2-digit",
-
-    hour12: false,
-  }).formatToParts(new Date(value));
-
-  const result = {};
-
-  parts.forEach((part) => {
-    if (part.type !== "literal") {
-      result[part.type] = Number(part.value);
-    }
-  });
-
-  return result;
-};
-
-const getLessonPosition = (lesson, timezone, workdayStartMinutes) => {
-  const start = getDatePartsInTimezone(lesson.starts_at, timezone);
-
-  const end = getDatePartsInTimezone(lesson.ends_at, timezone);
-
-  const startMinutes = start.hour * 60 + start.minute;
-
-  const endMinutes = end.hour * 60 + end.minute;
-
-  return {
-    top:
-      CALENDAR_TOP_PADDING +
-      (startMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE,
-
-    height: (endMinutes - startMinutes) * PIXELS_PER_MINUTE,
-  };
-};
-
-const isSlotBlockedByLesson = (
-  date,
-  slot,
-  lessons,
-  timezone,
-  lessonDurationMinutes,
-) => {
-  const slotStart = timeToMinutes(slot);
-
-  const slotEnd = slotStart + lessonDurationMinutes;
-
-  return lessons.some((lesson) => {
-    if (lesson.status === "cancelled") {
-      return false;
-    }
-
-    const lessonStart = getDatePartsInTimezone(lesson.starts_at, timezone);
-
-    const lessonEnd = getDatePartsInTimezone(lesson.ends_at, timezone);
-
-    const lessonDate = `${lessonStart.year}-${pad(lessonStart.month)}-${pad(
-      lessonStart.day,
-    )}`;
-
-    if (lessonDate !== formatDateForInput(date)) {
-      return false;
-    }
-
-    const lessonStartMinutes = lessonStart.hour * 60 + lessonStart.minute;
-
-    const lessonEndMinutes = lessonEnd.hour * 60 + lessonEnd.minute;
-
-    return slotStart < lessonEndMinutes && slotEnd > lessonStartMinutes;
-  });
-};
-
-const formatLessonTime = (value, locale, timezone) => {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
-};
-
-const formatFullDate = (value, locale, timezone) => {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: timezone,
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(value));
-};
-
-const getCreateLessonError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("WEEKEND_NOT_ALLOWED")) {
-    return t("teacherSchedule.errors.weekend");
-  }
-
-  if (message.includes("OUTSIDE_WORKING_HOURS")) {
-    return t("teacherSchedule.errors.workingHours");
-  }
-
-  if (message.includes("INVALID_TIME_SLOT")) {
-    return t("teacherSchedule.errors.invalidSlot");
-  }
-
-  if (message.includes("LESSON_TIME_CONFLICT")) {
-    return t("teacherSchedule.errors.conflict");
-  }
-
-  if (message.includes("LESSON_IN_PAST")) {
-    return t("teacherSchedule.errors.past");
-  }
-
-  if (message.includes("STUDENT_NOT_FOUND")) {
-    return t("teacherSchedule.errors.studentNotFound");
-  }
-
-  return t("teacherSchedule.errors.create");
-};
-
-
-const getCreateRecurringLessonError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("INVALID_WEEKDAY")) {
-    return t("teacherSchedule.recurring.errors.weekday");
-  }
-
-  if (message.includes("INVALID_INTERVAL_WEEKS")) {
-    return t("teacherSchedule.recurring.errors.interval");
-  }
-
-  if (message.includes("VALID_FROM_IN_PAST")) {
-    return t("teacherSchedule.recurring.errors.past");
-  }
-
-  if (message.includes("INVALID_DATE_RANGE")) {
-    return t("teacherSchedule.recurring.errors.dateRange");
-  }
-
-  if (message.includes("NO_OCCURRENCE_IN_DATE_RANGE")) {
-    return t("teacherSchedule.recurring.errors.noOccurrence");
-  }
-
-  if (message.includes("OUTSIDE_WORKING_HOURS")) {
-    return t("teacherSchedule.errors.workingHours");
-  }
-
-  if (message.includes("INVALID_TIME_SLOT")) {
-    return t("teacherSchedule.errors.invalidSlot");
-  }
-
-  if (message.includes("RECURRING_TEACHER_CONFLICT")) {
-    return t("teacherSchedule.recurring.errors.teacherConflict");
-  }
-
-  if (message.includes("RECURRING_STUDENT_CONFLICT")) {
-    return t("teacherSchedule.recurring.errors.studentConflict");
-  }
-
-  if (message.includes("STUDENT_NOT_FOUND")) {
-    return t("teacherSchedule.errors.studentNotFound");
-  }
-
-  return t("teacherSchedule.recurring.errors.create");
-};
-
-const isLessonStarted = (lesson) => {
-  return new Date(lesson.starts_at).getTime() <= Date.now();
-};
-
-const getUpdateLessonZoomError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("LESSON_CANCELLED")) {
-    return t("teacherSchedule.zoomEdit.errors.cancelled");
-  }
-
-  if (message.includes("LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.zoomEdit.errors.notFound");
-  }
-
-  return t("teacherSchedule.zoomEdit.errors.generic");
-};
-
-const getLessonOutcomeError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("LESSON_NOT_STARTED")) {
-    return t("teacherSchedule.outcome.errors.notStarted");
-  }
-
-  if (message.includes("LESSON_CANCELLED")) {
-    return t("teacherSchedule.outcome.errors.cancelled");
-  }
-
-  if (message.includes("LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.outcome.errors.notFound");
-  }
-
-  return t("teacherSchedule.outcome.errors.generic");
-};
-
-const getEditRecurringSeriesError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("NOT_RECURRING_LESSON")) {
-    return t("teacherSchedule.recurring.editFromHere.errors.notRecurring");
-  }
-
-  if (message.includes("LESSON_NOT_SCHEDULED")) {
-    return t("teacherSchedule.recurring.editFromHere.errors.notScheduled");
-  }
-
-  if (message.includes("PAST_LESSON_CANNOT_BE_EDITED")) {
-    return t("teacherSchedule.recurring.editFromHere.errors.past");
-  }
-
-  if (message.includes("LESSON_NOT_FOUND") ||
-      message.includes("RECURRING_LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.recurring.editFromHere.errors.notFound");
-  }
-
-  if (message.includes("INVALID_WEEKDAY")) {
-    return t("teacherSchedule.recurring.errors.weekday");
-  }
-
-  if (message.includes("INVALID_INTERVAL_WEEKS")) {
-    return t("teacherSchedule.recurring.errors.interval");
-  }
-
-  if (message.includes("INVALID_DATE_RANGE")) {
-    return t("teacherSchedule.recurring.errors.dateRange");
-  }
-
-  if (message.includes("NO_OCCURRENCE_IN_DATE_RANGE")) {
-    return t("teacherSchedule.recurring.errors.noOccurrence");
-  }
-
-  if (message.includes("OUTSIDE_WORKING_HOURS")) {
-    return t("teacherSchedule.errors.workingHours");
-  }
-
-  if (message.includes("INVALID_TIME_SLOT")) {
-    return t("teacherSchedule.errors.invalidSlot");
-  }
-
-  if (message.includes("RECURRING_TEACHER_CONFLICT")) {
-    return t("teacherSchedule.recurring.errors.teacherConflict");
-  }
-
-  if (message.includes("RECURRING_STUDENT_CONFLICT")) {
-    return t("teacherSchedule.recurring.errors.studentConflict");
-  }
-
-  return t("teacherSchedule.recurring.editFromHere.errors.generic");
-};
-
-const getCancelRecurringSeriesError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("NOT_RECURRING_LESSON")) {
-    return t("teacherSchedule.recurring.cancelFromHere.errors.notRecurring");
-  }
-
-  if (message.includes("LESSON_NOT_SCHEDULED")) {
-    return t("teacherSchedule.recurring.cancelFromHere.errors.notScheduled");
-  }
-
-  if (message.includes("PAST_LESSON_CANNOT_BE_CANCELLED")) {
-    return t("teacherSchedule.recurring.cancelFromHere.errors.past");
-  }
-
-  if (message.includes("LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.recurring.cancelFromHere.errors.notFound");
-  }
-
-  return t("teacherSchedule.recurring.cancelFromHere.errors.generic");
-};
-
-const getCancelLessonError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("LESSON_ALREADY_CANCELLED")) {
-    return t("teacherSchedule.cancel.errors.alreadyCancelled");
-  }
-
-  if (message.includes("COMPLETED_LESSON_CANNOT_BE_CANCELLED")) {
-    return t("teacherSchedule.cancel.errors.completed");
-  }
-
-  if (message.includes("PAST_LESSON_CANNOT_BE_CANCELLED")) {
-    return t("teacherSchedule.cancel.errors.past");
-  }
-
-  if (message.includes("LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.cancel.errors.notFound");
-  }
-
-  return t("teacherSchedule.cancel.errors.generic");
 };
 
 export default TeacherSchedule;

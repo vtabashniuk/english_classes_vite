@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Button from "../../components/common/ui/Button/Button";
-import { supabase } from "../../lib/supabase";
+import {
+  completeAssignment,
+  listStudentAssignments,
+} from "../../features/assignments/api/assignmentsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import styles from "./StudentAssignments.module.css";
 
@@ -14,7 +17,7 @@ const StudentAssignments = () => {
   const locale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const load = async () => {
-    const { data, error } = await supabase.from("assignments").select("id, title, description, due_date, status, completed_at, created_at, assignment_materials(materials(id,title,url,category))").order("created_at", { ascending: false });
+    const { data, error } = await listStudentAssignments();
     if (error) throw error;
     setAssignments(data ?? []);
   };
@@ -22,7 +25,7 @@ const StudentAssignments = () => {
   useEffect(() => { const init=async()=>{try{setLoading(true);await load();}catch(error){console.error("Student assignments load error:",error);setErrorMessage(t("studentAssignments.errors.load"));}finally{setLoading(false);}};init(); },[t]);
 
   const markCompleted = async (id) => {
-    try { setProcessingId(id); setErrorMessage(""); const { error }=await supabase.rpc("complete_assignment",{p_assignment_id:id}); if(error)throw error; await load(); }
+    try { setProcessingId(id); setErrorMessage(""); const { error }=await completeAssignment(id); if(error)throw error; await load(); }
     catch(error){console.error("Complete assignment error:",error);setErrorMessage(t("studentAssignments.errors.complete"));}
     finally{setProcessingId(null);}
   };

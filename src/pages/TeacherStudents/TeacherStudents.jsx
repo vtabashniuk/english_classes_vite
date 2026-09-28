@@ -2,10 +2,21 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { supabase } from "../../lib/supabase";
+import { listStudents } from "../../features/profiles/api/profilesApi";
+import { inviteStudent } from "../../features/students/api/studentInvitesApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherStudents.module.css";
+
+const fetchStudents = async () => {
+  const { data, error } = await listStudents();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
 
 const TeacherStudents = () => {
   const { t, i18n } = useTranslation();
@@ -21,30 +32,35 @@ const TeacherStudents = () => {
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteError, setInviteError] = useState("");
 
-  const loadStudents = async () => {
-    try {
-      setLoading(true);
-      setErrorMessage("");
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, phone, is_active, created_at")
-        .eq("role", "student")
-        .order("full_name", { ascending: true });
-
-      if (error) throw error;
-      setStudents(data ?? []);
-    } catch (error) {
-      console.error("Students load error:", error);
-      setErrorMessage(t("teacherStudents.errors.load"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadStudents();
-  }, []);
+    let cancelled = false;
+
+    const initialize = async () => {
+      try {
+        const nextStudents = await fetchStudents();
+
+        if (!cancelled) {
+          setStudents(nextStudents);
+        }
+      } catch (error) {
+        console.error("Students load error:", error);
+
+        if (!cancelled) {
+          setErrorMessage(t("teacherStudents.errors.load"));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initialize();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const handleInvite = async (event) => {
     event.preventDefault();
@@ -53,9 +69,7 @@ const TeacherStudents = () => {
     setIsInviting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("invite-student", {
-        body: { email, fullName },
-      });
+      const { data, error } = await inviteStudent({ email, fullName });
 
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "INVITE_FAILED");
@@ -63,7 +77,8 @@ const TeacherStudents = () => {
       setInviteMessage(t("teacherStudents.invite.success"));
       setFullName("");
       setEmail("");
-      await loadStudents();
+      const nextStudents = await fetchStudents();
+      setStudents(nextStudents);
     } catch (error) {
       console.error("Student invite error:", error);
       setInviteError(t("teacherStudents.errors.invite"));

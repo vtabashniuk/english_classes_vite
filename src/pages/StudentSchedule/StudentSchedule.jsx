@@ -2,11 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getTimezone } from "../../constants/timezones";
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/useAuth";
+import {
+  cancelExtraLessonRequest,
+  createExtraLessonRequest,
+  getExtraLessonAvailability,
+  listStudentLessonRequests,
+} from "../../features/lessonRequests/api/lessonRequestsApi";
+import { cancelLesson, listStudentLessons } from "../../features/lessons/api/lessonsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./StudentSchedule.module.css";
+
+
+const fetchStudentLessons = async () => {
+  const { data, error } = await listStudentLessons();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
+
+const fetchStudentRequests = async () => {
+  const { data, error } = await listStudentLessonRequests();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
 
 const getTodayValue = () => {
   const now = new Date();
@@ -44,56 +71,48 @@ const StudentSchedule = () => {
   const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const loadLessons = async () => {
-    const { data, error } = await supabase
-      .from("lessons")
-      .select(
-        "id, starts_at, ends_at, duration_minutes, status, zoom_url, cancelled_by, cancelled_at, cancellation_reason",
-      )
-      .order("starts_at", { ascending: true });
-
-    if (error) {
-      throw error;
-    }
-
-    setLessons(data ?? []);
+    const nextLessons = await fetchStudentLessons();
+    setLessons(nextLessons);
   };
 
   const loadRequests = async () => {
-    const { data, error } = await supabase
-      .from("lesson_requests")
-      .select(
-        "id, request_type, requested_starts_at, duration_minutes, message, status, created_at",
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    setRequests(data ?? []);
-  };
-
-  const loadAll = async () => {
-    try {
-      setErrorMessage("");
-      await Promise.all([loadLessons(), loadRequests()]);
-    } catch (error) {
-      console.error("Student schedule load error:", error);
-      setErrorMessage(t("studentSchedule.loadError"));
-    }
+    const nextRequests = await fetchStudentRequests();
+    setRequests(nextRequests);
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const initialize = async () => {
       try {
-        setLoading(true);
-        await loadAll();
+        const [nextLessons, nextRequests] = await Promise.all([
+          fetchStudentLessons(),
+          fetchStudentRequests(),
+        ]);
+
+        if (!cancelled) {
+          setErrorMessage("");
+          setLessons(nextLessons);
+          setRequests(nextRequests);
+        }
+      } catch (error) {
+        console.error("Student schedule load error:", error);
+
+        if (!cancelled) {
+          setErrorMessage(t("studentSchedule.loadError"));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   const upcomingLessons = useMemo(() => {
@@ -169,9 +188,8 @@ const StudentSchedule = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("cancel_lesson", {
-        p_lesson_id: lesson.id,
-        p_reason: null,
+      const { error } = await cancelLesson({
+        lessonId: lesson.id,
       });
 
       if (error) {
@@ -200,10 +218,7 @@ const StudentSchedule = () => {
       setRequestError("");
       setSelectedSlot("");
 
-      const { data, error } = await supabase.rpc(
-        "get_extra_lesson_availability",
-        { p_date: dateValue },
-      );
+      const { data, error } = await getExtraLessonAvailability(dateValue);
 
       if (error) {
         throw error;
@@ -250,9 +265,7 @@ const StudentSchedule = () => {
       setRequestError("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("cancel_extra_lesson_request", {
-        p_request_id: request.id,
-      });
+      const { error } = await cancelExtraLessonRequest(request.id);
 
       if (error) {
         throw error;
@@ -281,9 +294,9 @@ const StudentSchedule = () => {
       setRequestError("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("create_extra_lesson_request", {
-        p_requested_starts_at: selectedSlot,
-        p_message: requestMessage.trim() || null,
+      const { error } = await createExtraLessonRequest({
+        startsAt: selectedSlot,
+        message: requestMessage.trim() || null,
       });
 
       if (error) {

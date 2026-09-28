@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { supabase } from "../../lib/supabase";
+import { listStudentMaterials } from "../../features/materials/api/materialsApi";
 import styles from "./StudentMaterials.module.css";
 
 const StudentMaterials = () => {
@@ -14,10 +14,7 @@ const StudentMaterials = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from("student_materials")
-          .select("id, assigned_at, materials(id, title, description, url, category)")
-          .order("assigned_at", { ascending: false });
+        const { data, error } = await listStudentMaterials();
         if (error) throw error;
         setItems(data ?? []);
       } catch (error) {

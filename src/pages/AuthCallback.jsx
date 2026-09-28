@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { supabase } from "../lib/supabase";
+import { exchangeCodeForSession } from "../features/auth/api/authApi";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -18,7 +18,7 @@ const AuthCallback = () => {
         return;
       }
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      const { error } = await exchangeCodeForSession(code);
 
       if (error) {
         console.error("Auth callback error:", error);

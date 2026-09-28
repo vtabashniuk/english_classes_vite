@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { NavLink, useLocation } from "react-router-dom";
 
-import { useAuth } from "../../../context/AuthContext";
-import { supabase } from "../../../lib/supabase";
+import { useAuth } from "../../../context/useAuth";
+import { useDashboardIndicators } from "../../../features/dashboard/hooks/useDashboardIndicators";
 
 import styles from "./DashboardSidebar.module.css";
 
@@ -12,10 +12,11 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
   const { profile } = useAuth();
   const location = useLocation();
 
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
-  const [hasPendingRequests, setHasPendingRequests] = useState(false);
-
-  const isTeacher = profile?.role === "teacher";
+  const { isTeacher, hasUnreadNotifications, hasPendingRequests } =
+    useDashboardIndicators({
+      profile,
+      pathname: location.pathname,
+    });
 
   useEffect(() => {
     if (!isOpen) {
@@ -39,79 +40,6 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
     };
   }, [isOpen, onClose]);
 
-
-  useEffect(() => {
-    if (!profile?.id) {
-      setHasUnreadNotifications(false);
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const loadUnreadState = async () => {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("id")
-        .eq("is_read", false)
-        .limit(1);
-
-      if (!cancelled && !error) {
-        setHasUnreadNotifications((data?.length ?? 0) > 0);
-      }
-    };
-
-    const handleNotificationsChanged = () => {
-      loadUnreadState();
-    };
-
-    loadUnreadState();
-    window.addEventListener("notifications-changed", handleNotificationsChanged);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener(
-        "notifications-changed",
-        handleNotificationsChanged,
-      );
-    };
-  }, [profile?.id, location.pathname]);
-
-  useEffect(() => {
-    if (!profile?.id || !isTeacher) {
-      setHasPendingRequests(false);
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const loadPendingRequestsState = async () => {
-      const { data, error } = await supabase
-        .from("lesson_requests")
-        .select("id")
-        .eq("teacher_id", profile.id)
-        .eq("status", "pending")
-        .limit(1);
-
-      if (!cancelled && !error) {
-        setHasPendingRequests((data?.length ?? 0) > 0);
-      }
-    };
-
-    const handleRequestsChanged = () => {
-      loadPendingRequestsState();
-    };
-
-    loadPendingRequestsState();
-    window.addEventListener("lesson-requests-changed", handleRequestsChanged);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener(
-        "lesson-requests-changed",
-        handleRequestsChanged,
-      );
-    };
-  }, [profile?.id, isTeacher, location.pathname]);
 
   const teacherLinks = [
     {

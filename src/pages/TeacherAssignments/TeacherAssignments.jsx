@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "../../components/common/ui/Button/Button";
-import { supabase } from "../../lib/supabase";
+import {
+  listTeacherAssignments,
+  saveAssignment,
+} from "../../features/assignments/api/assignmentsApi";
+import { listStudentLessonsForAssignment } from "../../features/lessons/api/lessonsApi";
+import { listMaterialsForAssignment } from "../../features/materials/api/materialsApi";
+import { listActiveStudents } from "../../features/profiles/api/profilesApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherAssignments.module.css";
@@ -30,19 +36,9 @@ const TeacherAssignments = () => {
 
   const loadBase = async () => {
     const [studentsResult, materialsResult, assignmentsResult] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("role", "student")
-        .eq("is_active", true)
-        .order("full_name"),
-      supabase.from("materials").select("id, title, category").order("title"),
-      supabase
-        .from("assignments")
-        .select(
-          "id, student_id, lesson_id, title, description, due_date, status, created_at, profiles:student_id(full_name,email), assignment_materials(materials(id,title,url))",
-        )
-        .order("created_at", { ascending: false }),
+      listActiveStudents(),
+      listMaterialsForAssignment(),
+      listTeacherAssignments(),
     ]);
 
     if (studentsResult.error) throw studentsResult.error;
@@ -84,14 +80,11 @@ const TeacherAssignments = () => {
       const to = new Date();
       to.setDate(to.getDate() + 90);
 
-      const { data, error } = await supabase
-        .from("lessons")
-        .select("id, starts_at, status")
-        .eq("student_id", studentId)
-        .gte("starts_at", from.toISOString())
-        .lte("starts_at", to.toISOString())
-        .neq("status", "cancelled")
-        .order("starts_at");
+      const { data, error } = await listStudentLessonsForAssignment({
+        studentId,
+        fromIso: from.toISOString(),
+        toIso: to.toISOString(),
+      });
 
       if (error) {
         return;
@@ -158,21 +151,17 @@ const TeacherAssignments = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const rpcName = editingId ? "update_assignment" : "create_assignment";
-      const rpcPayload = {
-        p_student_id: studentId,
-        p_title: title.trim(),
-        p_description: description.trim() || null,
-        p_due_date: dueDate || null,
-        p_lesson_id: lessonId || null,
-        p_material_ids: materialIds,
-      };
-
-      if (editingId) {
-        rpcPayload.p_assignment_id = editingId;
-      }
-
-      const { error } = await supabase.rpc(rpcName, rpcPayload);
+      const { error } = await saveAssignment({
+        editingId,
+        payload: {
+          p_student_id: studentId,
+          p_title: title.trim(),
+          p_description: description.trim() || null,
+          p_due_date: dueDate || null,
+          p_lesson_id: lessonId || null,
+          p_material_ids: materialIds,
+        },
+      });
 
       if (error) {
         throw error;

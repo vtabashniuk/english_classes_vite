@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/useAuth";
+import { updateCurrentUser } from "../../features/auth/api/authApi";
 
 import styles from "./SetPasswordPage.module.css";
 
@@ -34,7 +34,7 @@ const SetPasswordPage = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await updateCurrentUser({ password });
 
       if (error) {
         throw error;

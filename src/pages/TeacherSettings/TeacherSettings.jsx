@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { supabase } from "../../lib/supabase";
+import {
+  getMyTeacherScheduleSettings,
+  updateMyTeacherSettings,
+} from "../../features/settings/api/teacherSettingsApi";
 
 import { TIMEZONES } from "../../constants/timezones";
 
@@ -45,18 +48,7 @@ const TeacherSettings = () => {
         setLoading(true);
         setErrorMessage("");
 
-        const { data, error } = await supabase
-          .from("teacher_settings")
-          .select(
-            `
-              schedule_timezone,
-              workday_start,
-              workday_end,
-              lesson_duration_minutes,
-              slot_interval_minutes
-            `,
-          )
-          .single();
+        const { data, error } = await getMyTeacherScheduleSettings();
 
         if (error) {
           throw error;
@@ -107,11 +99,11 @@ const TeacherSettings = () => {
     try {
       setSaving(true);
 
-      const { error } = await supabase.rpc("update_my_teacher_settings", {
-        p_schedule_timezone: timezone,
-        p_workday_start: workdayStart,
-        p_workday_end: workdayEnd,
-        p_lesson_duration_minutes: Number(lessonDurationMinutes),
+      const { error } = await updateMyTeacherSettings({
+        timezone,
+        workdayStart,
+        workdayEnd,
+        lessonDurationMinutes: Number(lessonDurationMinutes),
       });
 
       if (error) {

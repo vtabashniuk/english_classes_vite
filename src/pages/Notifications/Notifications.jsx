@@ -2,11 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getTimezone } from "../../constants/timezones";
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/useAuth";
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "../../features/notifications/api/notificationsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./Notifications.module.css";
+
+const fetchNotifications = async () => {
+  const { data, error } = await listNotifications();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
 
 const Notifications = () => {
   const { t, i18n } = useTranslation();
@@ -28,39 +42,35 @@ const Notifications = () => {
     [notifications],
   );
 
-  const loadNotifications = async () => {
-    try {
-      setErrorMessage("");
-
-      const { data, error } = await supabase
-        .from("notifications")
-        .select(
-          "id, type, lesson_id, title_key, body_key, data, is_read, created_at",
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setNotifications(data ?? []);
-    } catch (error) {
-      console.error("Notification load error:", error);
-      setErrorMessage(t("notifications.errors.load"));
-    }
-  };
-
   useEffect(() => {
+    let cancelled = false;
+
     const initialize = async () => {
       try {
-        setLoading(true);
-        await loadNotifications();
+        const nextNotifications = await fetchNotifications();
+
+        if (!cancelled) {
+          setErrorMessage("");
+          setNotifications(nextNotifications);
+        }
+      } catch (error) {
+        console.error("Notification load error:", error);
+
+        if (!cancelled) {
+          setErrorMessage(t("notifications.errors.load"));
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     initialize();
+
+    return () => {
+      cancelled = true;
+    };
   }, [t]);
 
   const formatDate = (value) =>
@@ -107,9 +117,7 @@ const Notifications = () => {
       setProcessingId(notificationId);
       setErrorMessage("");
 
-      const { error } = await supabase.rpc("mark_notification_read", {
-        p_notification_id: notificationId,
-      });
+      const { error } = await markNotificationRead(notificationId);
 
       if (error) {
         throw error;
@@ -135,7 +143,7 @@ const Notifications = () => {
       setMarkingAll(true);
       setErrorMessage("");
 
-      const { error } = await supabase.rpc("mark_all_notifications_read");
+      const { error } = await markAllNotificationsRead();
 
       if (error) {
         throw error;

@@ -1,29 +1,28 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { supabase } from "../lib/supabase";
+import {
+  getSession,
+  onAuthStateChange,
+  signOut as signOutUser,
+} from "../features/auth/api/authApi";
+import { getProfileById } from "../features/profiles/api/profilesApi";
+import { AuthContext } from "./authContext";
 
-const AuthContext = createContext(null);
+const loadProfile = async (userId) => {
+  const { data, error } = await getProfileById(userId);
+
+  if (error) {
+    console.error("Не вдалося завантажити профіль:", error);
+    return null;
+  }
+
+  return data;
+};
 
 export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  const loadProfile = async (userId) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, email, full_name, role, phone, timezone, is_active")
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      console.error("Не вдалося завантажити профіль:", error);
-
-      return null;
-    }
-
-    return data;
-  };
 
   useEffect(() => {
     let isMounted = true;
@@ -33,7 +32,7 @@ export const AuthProvider = ({ children }) => {
         const {
           data: { session: currentSession },
           error,
-        } = await supabase.auth.getSession();
+        } = await getSession();
 
         if (error) {
           throw error;
@@ -72,7 +71,7 @@ export const AuthProvider = ({ children }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = onAuthStateChange((_event, newSession) => {
       setSession(newSession);
 
       if (!newSession?.user) {
@@ -99,26 +98,25 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (!session?.user) {
       setProfile(null);
       return null;
     }
 
     const currentProfile = await loadProfile(session.user.id);
-
     setProfile(currentProfile);
 
     return currentProfile;
-  };
+  }, [session]);
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+  const signOut = useCallback(async () => {
+    const { error } = await signOutUser();
 
     if (error) {
       throw error;
     }
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -129,20 +127,10 @@ export const AuthProvider = ({ children }) => {
       refreshProfile,
       signOut,
     }),
-    [session, profile, loading],
+    [session, profile, loading, refreshProfile, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-
-  return context;
-};
-
-export default AuthContext;
+export default AuthProvider;

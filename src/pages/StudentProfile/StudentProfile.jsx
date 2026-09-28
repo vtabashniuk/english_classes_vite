@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TIMEZONES } from "../../constants/timezones";
-import { supabase } from "../../lib/supabase";
-import { useAuth } from "../../context/AuthContext";
+import { updateCurrentUser } from "../../features/auth/api/authApi";
+import { updateMyProfile } from "../../features/profiles/api/profilesApi";
+import { useAuth } from "../../context/useAuth";
 
 import styles from "./StudentProfile.module.css";
 
@@ -11,25 +12,18 @@ const StudentProfile = () => {
   const { t } = useTranslation();
   const { profile, refreshProfile } = useAuth();
 
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [timezone, setTimezone] = useState("Europe/Kyiv");
-  const [newEmail, setNewEmail] = useState("");
+  const [fullName, setFullName] = useState(profile?.full_name ?? "");
+  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [timezone, setTimezone] = useState(
+    profile?.timezone ?? "Europe/Kyiv",
+  );
+  const [newEmail, setNewEmail] = useState(profile?.email ?? "");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [profileMessage, setProfileMessage] = useState("");
   const [profileError, setProfileError] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
   const [emailError, setEmailError] = useState("");
-
-  useEffect(() => {
-    if (!profile) return;
-
-    setFullName(profile.full_name ?? "");
-    setPhone(profile.phone ?? "");
-    setTimezone(profile.timezone ?? "Europe/Kyiv");
-    setNewEmail(profile.email ?? "");
-  }, [profile]);
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
@@ -38,10 +32,10 @@ const StudentProfile = () => {
     setIsSavingProfile(true);
 
     try {
-      const { error } = await supabase.rpc("update_my_profile", {
-        new_full_name: fullName,
-        new_phone: phone,
-        new_timezone: timezone,
+      const { error } = await updateMyProfile({
+        fullName,
+        phone,
+        timezone,
       });
 
       if (error) throw error;
@@ -82,7 +76,7 @@ const StudentProfile = () => {
     setIsSavingEmail(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      const { error } = await updateCurrentUser({
         email: normalizedEmail,
       });
 

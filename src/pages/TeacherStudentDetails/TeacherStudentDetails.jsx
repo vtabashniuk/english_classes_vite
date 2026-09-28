@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
-import { supabase } from "../../lib/supabase";
+import { getStudentById } from "../../features/profiles/api/profilesApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherStudentDetails.module.css";
@@ -22,12 +22,7 @@ const TeacherStudentDetails = () => {
         setLoading(true);
         setErrorMessage("");
 
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, email, full_name, phone, role, is_active, created_at")
-          .eq("id", studentId)
-          .eq("role", "student")
-          .maybeSingle();
+        const { data, error } = await getStudentById(studentId);
 
         if (error) throw error;
 

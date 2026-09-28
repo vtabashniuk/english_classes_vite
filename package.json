@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:architecture": "node scripts/check-architecture.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

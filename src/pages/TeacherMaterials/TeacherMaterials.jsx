@@ -2,8 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import Button from "../../components/common/ui/Button/Button";
-import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/useAuth";
+import {
+  createMaterial,
+  deleteMaterial,
+  listTeacherMaterialsWithAssignments,
+  shareMaterialWithStudent,
+  updateMaterial,
+} from "../../features/materials/api/materialsApi";
+import { listActiveStudents } from "../../features/profiles/api/profilesApi";
 
 import styles from "./TeacherMaterials.module.css";
 
@@ -34,18 +41,8 @@ const TeacherMaterials = () => {
       { data: materialRows, error: materialsError },
       { data: studentRows, error: studentsError },
     ] = await Promise.all([
-      supabase
-        .from("materials")
-        .select(
-          "id, title, description, url, category, created_at, student_materials(student_id)",
-        )
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .eq("role", "student")
-        .eq("is_active", true)
-        .order("full_name"),
+      listTeacherMaterialsWithAssignments(),
+      listActiveStudents(),
     ]);
 
     if (materialsError) throw materialsError;
@@ -119,13 +116,8 @@ const TeacherMaterials = () => {
       };
 
       const { error } = editingId
-        ? await supabase
-            .from("materials")
-            .update({ ...payload, updated_at: new Date().toISOString() })
-            .eq("id", editingId)
-        : await supabase
-            .from("materials")
-            .insert({ ...payload, teacher_id: profile.id });
+        ? await updateMaterial({ materialId: editingId, payload })
+        : await createMaterial({ teacherId: profile.id, payload });
 
       if (error) {
         throw error;
@@ -180,7 +172,7 @@ const TeacherMaterials = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.from("materials").delete().eq("id", material.id);
+      const { error } = await deleteMaterial(material.id);
 
       if (error) {
         throw error;
@@ -212,9 +204,9 @@ const TeacherMaterials = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await supabase.rpc("share_material_with_student", {
-        p_material_id: material.id,
-        p_student_id: studentId,
+      const { error } = await shareMaterialWithStudent({
+        materialId: material.id,
+        studentId,
       });
 
       if (error) {
