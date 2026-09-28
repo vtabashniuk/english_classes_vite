@@ -81,7 +81,7 @@ const TeacherStudents = () => {
       setStudents(nextStudents);
     } catch (error) {
       console.error("Student invite error:", error);
-      setInviteError(t("teacherStudents.errors.invite"));
+      setInviteError(error?.message || t("teacherStudents.errors.invite"));
     } finally {
       setIsInviting(false);
     }
