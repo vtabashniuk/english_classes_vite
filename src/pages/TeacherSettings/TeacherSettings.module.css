@@ -8,62 +8,58 @@
 
 .header h1 {
   margin: 0 0 0.4rem;
-
   color: var(--color-text-primary);
-
   font-size: clamp(1.8rem, 3vw, 2.4rem);
 }
 
 .header p {
   margin: 0;
-
   color: var(--color-text-secondary);
 }
 
 .content {
-  max-width: 760px;
+  display: grid;
+  gap: 1.25rem;
+  max-width: 920px;
 }
 
 .card {
   display: grid;
   gap: 1.25rem;
-
+  scroll-margin-top: 1.25rem;
   padding: 1.5rem;
-
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-
   background: var(--color-surface);
-
   box-shadow: var(--shadow-soft);
 }
 
 .cardHeader {
   padding-bottom: 1rem;
-
   border-bottom: 1px solid var(--color-divider);
 }
 
 .cardHeader h2 {
   margin: 0 0 0.35rem;
-
   color: var(--color-text-primary);
-
   font-size: 1.25rem;
 }
 
 .cardHeader p {
   margin: 0;
-
   color: var(--color-text-secondary);
-
   font-size: 0.9rem;
 }
 
-.row {
+.row,
+.referenceGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.fullField {
+  grid-column: 1 / -1;
 }
 
 .field {
@@ -74,7 +70,6 @@
 .field > span,
 .readOnlyField > span {
   color: var(--color-text-primary);
-
   font-size: 0.88rem;
   font-weight: 600;
 }
@@ -83,31 +78,27 @@
 .field select {
   width: 100%;
   min-height: 46px;
-
   box-sizing: border-box;
-
   padding: 0.7rem 0.8rem;
-
   border: 1px solid var(--color-border-strong);
   border-radius: var(--border-radius);
-
   color: var(--color-text-primary);
   background: var(--color-surface);
-
   font: inherit;
 }
 
 .field input:focus,
 .field select:focus {
   border-color: var(--color-primary-blue);
-
   outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.12);
 }
 
 .field small,
-.readOnlyField small {
+.readOnlyField small,
+.hint,
+.accountItem small,
+.scheduledItem small {
   color: var(--color-text-secondary);
-
   font-size: 0.78rem;
   line-height: 1.4;
 }
@@ -115,12 +106,9 @@
 .readOnlyField {
   display: grid;
   gap: 0.35rem;
-
   padding: 0.9rem 1rem;
-
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-
   background: var(--color-surface-muted);
 }
 
@@ -128,37 +116,113 @@
   color: var(--color-text-primary);
 }
 
-.actions {
+.hint {
+  margin: 0;
+}
+
+.inlineForm {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.savedTaxProfile {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.savedTaxProfile > span,
+.scheduledList > strong {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.savedTaxProfile strong {
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+}
+
+.sectionBadge {
+  width: fit-content;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  color: var(--color-primary-blue);
+  background: var(--color-surface-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.scheduledList,
+.accountList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.scheduledItem,
+.accountItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.scheduledText,
+.accountItem > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.scheduledText span {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.actions,
+.actionsSplit {
   display: flex;
   justify-content: flex-end;
-
+  gap: 0.75rem;
   padding-top: 0.5rem;
 }
 
-.primaryButton {
+.primaryButton,
+.secondaryButton {
   min-height: 46px;
-
   padding: 0.7rem 1.25rem;
-
-  border: 0;
   border-radius: var(--border-radius);
-
-  color: var(--color-on-primary);
-  background: var(--color-primary-blue);
-
   cursor: pointer;
-
   font: inherit;
   font-weight: 600;
-
   transition: var(--transition);
 }
 
-.primaryButton:hover:not(:disabled) {
+.primaryButton {
+  border: 0;
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.secondaryButton {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.primaryButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.primaryButton:disabled {
+.primaryButton:disabled,
+.secondaryButton:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
@@ -166,11 +230,8 @@
 .error,
 .success {
   margin: 0;
-
   padding: 0.8rem 0.9rem;
-
   border-radius: var(--border-radius);
-
   font-size: 0.9rem;
 }
 
@@ -186,26 +247,38 @@
 
 .state {
   padding: 3rem 1rem;
-
   color: var(--color-text-secondary);
-
   text-align: center;
 }
 
-@media (max-width: 650px) {
-  .row {
+@media (max-width: 700px) {
+  .row,
+  .referenceGrid {
     grid-template-columns: 1fr;
+  }
+
+  .fullField {
+    grid-column: auto;
   }
 
   .card {
     padding: 1rem;
   }
 
-  .actions {
+  .scheduledItem,
+  .accountItem,
+  .actionsSplit {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actions,
+  .actionsSplit {
     justify-content: stretch;
   }
 
-  .primaryButton {
+  .primaryButton,
+  .secondaryButton {
     width: 100%;
   }
 }

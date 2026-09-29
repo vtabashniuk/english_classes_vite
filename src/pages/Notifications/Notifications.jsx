@@ -99,6 +99,27 @@ const Notifications = () => {
       hour12: false,
     }).format(new Date(value));
 
+  const formatCalendarDate = (value) => {
+    if (!value) return "—";
+
+    const [year, month, day] = value.split("-").map(Number);
+
+    return new Intl.DateTimeFormat(intlLocale, {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(year, month - 1, day));
+  };
+
+  const formatRateAmount = (amountMinor) => {
+    if (amountMinor === null || amountMinor === undefined) return "—";
+
+    return new Intl.NumberFormat(intlLocale, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(Number(amountMinor) / 100);
+  };
+
   const getBody = (notification) => {
     const startsAt = notification.data?.startsAt;
 
@@ -109,6 +130,9 @@ const Notifications = () => {
       duration: notification.data?.durationMinutes,
       assignmentTitle: notification.data?.assignmentTitle || "—",
       materialTitle: notification.data?.materialTitle || "—",
+      rateAmount: formatRateAmount(notification.data?.newAmountMinor),
+      rateCurrency: notification.data?.newCurrency || "—",
+      effectiveDate: formatCalendarDate(notification.data?.effectiveFrom),
     });
   };
 

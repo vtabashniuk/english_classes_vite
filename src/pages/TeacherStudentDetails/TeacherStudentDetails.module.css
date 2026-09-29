@@ -182,3 +182,494 @@
     height: 50px;
   }
 }
+
+.balanceSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.balanceValue {
+  color: var(--color-text-primary);
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  line-height: 1.1;
+}
+
+.balancePositive {
+  color: var(--color-success-text);
+}
+
+.balanceNegative {
+  color: var(--color-error-text);
+}
+
+.balanceCaption,
+.rateMeta,
+.currencyBalancesTitle {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.rateStatusList {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rateStatus {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.rateStatus > span,
+.rateStatus small {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.rateStatus > strong {
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.scheduledRate {
+  border-style: dashed;
+}
+
+.scheduledRatesGroup {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.scheduledRatesTitle {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.scheduledRatesList {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.rateEditorTitle {
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.dateField {
+  grid-column: 1 / -1;
+}
+
+.rateHint {
+  margin: -0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.financeForm {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.financeFields {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 0.85rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field > span {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.field select,
+.field input {
+  width: 100%;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.field select:focus,
+.field input:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary-blue) 25%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-primary-blue);
+}
+
+.moneyInputWrap {
+  position: relative;
+}
+
+.moneyInputWrap input {
+  padding-right: 3.6rem;
+}
+
+.moneyInputWrap > span {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.rateMeta {
+  margin: -0.2rem 0 0;
+}
+
+.financeActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.primaryButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.primaryButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.success {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--border-radius);
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+}
+
+.financeForm .error {
+  margin: 0;
+}
+
+.currencyBalances {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.currencyBalanceList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.currencyBalanceItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  font-size: 0.78rem;
+}
+
+.currencyBalanceItem strong {
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 500px) {
+  .financeFields {
+    grid-template-columns: 1fr;
+  }
+
+  .financeActions {
+    justify-content: stretch;
+  }
+
+  .primaryButton {
+    width: 100%;
+  }
+}
+
+.financeActivityCard {
+  grid-column: 1 / -1;
+}
+
+.financeActivityGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.financeActivityColumn {
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+}
+
+.financeSubsection {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.subsectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.subsectionHeader h3 {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.subsectionHeader p {
+  margin: 0.3rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.paymentForm,
+.accountForm {
+  display: grid;
+  gap: 1rem;
+}
+
+.fullField {
+  grid-column: 1 / -1;
+}
+
+.field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  resize: vertical;
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.field textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--color-primary-blue) 25%, transparent);
+  outline-offset: 1px;
+  border-color: var(--color-primary-blue);
+}
+
+.readOnlyValue {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+}
+
+.secondaryButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-primary-blue);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--color-primary-blue);
+  background: var(--color-surface);
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.secondaryButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.accountList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1rem;
+}
+
+.accountChip {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+
+.accountChip strong {
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+}
+
+.accountChip small {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.historySection {
+  align-self: start;
+}
+
+.transactionList {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.transactionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.transactionRow:first-child {
+  padding-top: 0;
+}
+
+.transactionRow:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.transactionInfo {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.transactionInfo strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.transactionInfo span,
+.transactionInfo small {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.transactionInfo small {
+  overflow-wrap: anywhere;
+}
+
+.transactionAmount {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .financeActivityGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 800px) {
+  .financeActivityCard {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 500px) {
+  .transactionRow {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .transactionAmount {
+    text-align: left;
+  }
+}
+
+.taxBreakdown {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+
+.taxBreakdown > strong {
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+}
+
+.taxBreakdown > span {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+}
+
+.inlineButton {
+  width: fit-content;
+  min-height: 32px;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--color-primary-blue);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--color-primary-blue);
+  background: transparent;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.inlineButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

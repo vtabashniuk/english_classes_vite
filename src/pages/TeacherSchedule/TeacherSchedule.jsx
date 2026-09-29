@@ -1332,6 +1332,33 @@ const TeacherSchedule = () => {
                 </strong>
               </div>
 
+              {selectedLesson.price_amount_minor != null &&
+                selectedLesson.price_currency && (
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.lessonPrice")}</span>
+                    <strong>
+                      {new Intl.NumberFormat(locale, {
+                        style: "currency",
+                        currency: selectedLesson.price_currency,
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(Number(selectedLesson.price_amount_minor) / 100)}
+                    </strong>
+                  </div>
+                )}
+
+              {selectedLesson.pricing_date &&
+                selectedLesson.pricing_date !==
+                  formatZonedDateForInput(
+                    selectedLesson.starts_at,
+                    scheduleTimezone,
+                  ) && (
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.pricingDate")}</span>
+                    <strong>{selectedLesson.pricing_date}</strong>
+                  </div>
+                )}
+
               {selectedLesson.recurring_lesson_id && (
                 <div className={styles.detailItem}>
                   <span>{t("teacherSchedule.recurring.series")}</span>

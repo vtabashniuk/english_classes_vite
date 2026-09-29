@@ -17,6 +17,7 @@ import StudentMaterials from "./pages/StudentMaterials/StudentMaterials";
 
 import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
 import TeacherSettings from "./pages/TeacherSettings/TeacherSettings";
+import TeacherFinance from "./pages/TeacherFinance/TeacherFinance";
 import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
 import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
@@ -138,6 +139,10 @@ const router = createBrowserRouter([
       {
         path: "materials",
         element: <TeacherMaterials />,
+      },
+      {
+        path: "finance",
+        element: <TeacherFinance />,
       },
     ],
   },

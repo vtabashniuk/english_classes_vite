@@ -1,0 +1,660 @@
+.page {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.header h1 {
+  margin: 0 0 0.4rem;
+  color: var(--color-text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+}
+
+.header p,
+.cardHeader p,
+.muted,
+.summaryCard small,
+.receiptGroup small,
+.receiptItem small,
+.profileValue small,
+.scheduledItem small {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.summaryCard > span,
+.taxMetric span {
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.largeMetric {
+  color: var(--color-text-primary);
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+}
+
+.moneyStack,
+.inlineMoney {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  color: var(--color-text-primary);
+}
+
+.moneyStack {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.zeroMoney {
+  color: var(--color-text-secondary);
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.25rem;
+}
+
+.card {
+  display: grid;
+  align-content: start;
+  gap: 1.1rem;
+  min-width: 0;
+  padding: 1.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.fullWidthCard {
+  grid-column: 1 / -1;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.cardHeader h2,
+.scheduledBlock h3 {
+  margin: 0 0 0.3rem;
+  color: var(--color-text-primary);
+}
+
+.cardHeader h2 {
+  font-size: 1.2rem;
+}
+
+.scheduledBlock h3 {
+  font-size: 0.98rem;
+}
+
+.linkButton,
+.inlineLink {
+  color: var(--color-primary-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.linkButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  white-space: nowrap;
+}
+
+.inlineLink {
+  margin-top: 0.2rem;
+  font-size: 0.88rem;
+}
+
+.periodToolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.presetButtons,
+.segmentedControl,
+.periodNavigation {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.ghostButton,
+.segmentedControl button,
+.iconButton {
+  min-height: 38px;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.segmentedControl {
+  width: fit-content;
+  padding: 0.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.segmentedControl button {
+  border: 0;
+  background: transparent;
+}
+
+.segmentedControl .segmentActive {
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.iconButton {
+  min-width: 38px;
+  padding-inline: 0.55rem;
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dateRange {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.dateRange label {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.dateRange span {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.dateRange input {
+  min-height: 40px;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.receiptGroups {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.receiptGroup {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.receiptGroup summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.receiptGroup summary::-webkit-details-marker {
+  display: none;
+}
+
+.receiptGroup summary > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.receiptGroup summary strong {
+  color: var(--color-text-primary);
+}
+
+.receiptDetails {
+  display: grid;
+  border-top: 1px solid var(--color-divider);
+  background: var(--color-surface-muted);
+}
+
+.receiptItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.receiptItem:last-child {
+  border-bottom: 0;
+}
+
+.receiptItem > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.profileValue {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.profileValue strong {
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+}
+
+.parameterSnapshot {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.parameterRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.parameterRow span {
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+}
+
+.parameterRow strong {
+  color: var(--color-text-primary);
+}
+
+.scheduledBlock {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.scheduledList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.scheduledItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.scheduledItem > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.scheduledItem span {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.taxControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.periodNavigation strong {
+  min-width: 150px;
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.taxTotalsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.taxMetric {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.taxMetric strong {
+  color: var(--color-text-primary);
+}
+
+.taxMetricEmphasized {
+  grid-column: 1 / -1;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.table th,
+.table td {
+  padding: 0.75rem 0.7rem;
+  border-bottom: 1px solid var(--color-divider);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  text-align: left;
+}
+
+.table th {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.info,
+.warning,
+.error,
+.success {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  border-radius: var(--border-radius);
+  font-size: 0.9rem;
+}
+
+.info {
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+}
+
+.warning {
+  color: var(--color-warning-text, var(--color-text-primary));
+  background: var(--color-warning-bg, var(--color-surface-muted));
+}
+
+.error {
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
+.success {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+}
+
+.state {
+  padding: 3rem 1rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidthCard {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 650px) {
+  .card,
+  .summaryCard {
+    padding: 1rem;
+  }
+
+  .cardHeader,
+  .receiptGroup summary,
+  .receiptItem,
+  .scheduledItem,
+  .taxControls,
+  .periodToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .linkButton,
+  .ghostButton,
+  .dateRange,
+  .dateRange label {
+    width: 100%;
+  }
+
+  .dateRange {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .dateRange input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .taxTotalsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .taxMetricEmphasized {
+    grid-column: auto;
+  }
+
+  .inlineMoney {
+    justify-content: flex-start;
+  }
+}
+
+/* Finance attention + profitability additions */
+.attentionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.attentionCard {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.attentionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.attentionHeader h2 {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-primary);
+  font-size: 1.05rem;
+}
+
+.attentionHeader p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.attentionHeader > strong {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted);
+  color: var(--color-text-primary);
+}
+
+.attentionList {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.attentionItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: inherit;
+  text-decoration: none;
+  background: var(--color-surface-muted);
+}
+
+.attentionItem:hover {
+  border-color: var(--color-border-strong);
+}
+
+.attentionItem > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.attentionItem strong {
+  color: var(--color-text-primary);
+}
+
+.attentionItem small {
+  color: var(--color-text-secondary);
+}
+
+.debtValue {
+  color: var(--color-error-text) !important;
+  white-space: nowrap;
+}
+
+.analyticsNote {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--border-radius);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-muted);
+  font-size: 0.82rem;
+}
+
+.groupSummaryMetrics,
+.receiptAmountBlock {
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+}
+
+.netIncomeLabel {
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+@media (min-width: 981px) {
+  .summaryGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .attentionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .attentionItem,
+  .attentionHeader {
+    align-items: stretch;
+  }
+
+  .attentionItem {
+    flex-direction: column;
+  }
+
+  .groupSummaryMetrics,
+  .receiptAmountBlock {
+    justify-items: start;
+  }
+
+  .netIncomeLabel {
+    text-align: left;
+  }
+}
