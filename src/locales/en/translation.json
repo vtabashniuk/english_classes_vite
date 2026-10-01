@@ -92,17 +92,25 @@
     "emptyDescription": "When your teacher adds a lesson, it will appear here.",
     "duration": "{{count}} min",
     "cancel": {
-      "button": "Cancel lesson",
-      "cancelling": "Cancelling...",
-      "confirm": "Cancel this lesson? Your teacher will be notified.",
-      "success": "The lesson was cancelled. Your teacher has been notified.",
+      "button": "Request cancellation",
+      "cancelling": "Sending...",
+      "confirm": "Send a cancellation request for this lesson to your teacher?",
+      "success": "Cancellation request sent to your teacher.",
       "errors": {
         "alreadyCancelled": "This lesson has already been cancelled.",
         "completed": "A completed lesson cannot be cancelled.",
         "past": "A past lesson cannot be cancelled.",
         "notFound": "Lesson not found.",
-        "generic": "Could not cancel the lesson."
-      }
+        "generic": "Could not send the cancellation request.",
+        "alreadyPending": "A cancellation request for this lesson is already awaiting the teacher’s decision.",
+        "notScheduled": "Cancellation can only be requested for a scheduled lesson."
+      },
+      "pending": "Cancellation requested",
+      "leadTime": "{{hours}} h {{minutes}} min",
+      "lateConfirm": "The lesson starts in {{time}}.\nThis is a late cancellation. Under the policy, {{amount}} will be charged if the lesson is cancelled.\nSend the request?",
+      "lateConfirmNoPrice": "The lesson starts in {{time}}.\nThis is a late cancellation. Under the policy, the full lesson price is chargeable.\nSend the request?",
+      "lateSuccess": "Late cancellation request sent to your teacher. Under the policy, this cancellation is chargeable for {{amount}}",
+      "lateSuccessNoPrice": "Late cancellation request sent to your teacher. Under the policy, the full lesson price is chargeable."
     },
     "extraLesson": {
       "title": "Extra lesson",
@@ -454,7 +462,9 @@
         "notStarted": "A future lesson cannot have an outcome yet.",
         "cancelled": "A cancelled lesson cannot have its outcome changed.",
         "notFound": "Lesson not found.",
-        "generic": "Could not change the lesson status."
+        "generic": "Could not change the lesson status.",
+        "priceNotSet": "This lesson has no price snapshot. Set the student tariff first.",
+        "cancellationPending": "Resolve the student cancellation request for this lesson first."
       }
     },
     "lessonPrice": "Lesson price",
@@ -598,8 +608,11 @@
       },
       "errors": {
         "invalidThreshold": "Enter a whole number of lessons from 1 to 20.",
-        "save": "Could not save financial control settings."
-      }
+        "save": "Could not save financial control settings.",
+        "invalidCancellationHours": "Enter a whole number of hours from 1 to 168."
+      },
+      "freeCancellationHours": "Free cancellation window, hours before lesson",
+      "freeCancellationHint": "A student request sent at least this long before the lesson is cancelled without a charge. A later request is charged in full by default."
     }
   },
   "teacherStudentDetails": {
@@ -781,7 +794,10 @@
     "lessonCancelled": {
       "title": "Lesson cancelled",
       "byStudent": "{{studentName}} cancelled the lesson on {{date}} at {{time}}.",
-      "byTeacher": "The teacher cancelled the lesson on {{date}} at {{time}}."
+      "byTeacher": "The teacher cancelled the lesson on {{date}} at {{time}}. No funds are charged.",
+      "studentEarly": "Your cancellation request for {{date}} at {{time}} was approved. No funds are charged.",
+      "studentLateCharged": "The lesson on {{date}} at {{time}} was cancelled. Because it was a late cancellation, {{amount}} was charged from your balance.",
+      "studentLateWaived": "Your cancellation request for {{date}} at {{time}} was approved as an exception. No funds are charged."
     },
     "errors": {
       "load": "Could not load notifications.",
@@ -800,7 +816,7 @@
     "lessonStatusChanged": {
       "missed": {
         "title": "Lesson missed",
-        "body": "The lesson on {{date}} at {{time}} was marked as missed."
+        "body": "The lesson on {{date}} at {{time}} was marked as missed. The full lesson price was charged."
       },
       "completed": {
         "title": "Lesson status corrected",
@@ -826,15 +842,67 @@
     "lessonRateChanged": {
       "title": "New lesson rate",
       "body": "The teacher set the lesson price to {{rateAmount}} {{rateCurrency}}. The rate takes effect on {{effectiveDate}}."
+    },
+    "lessonCancellationRequest": {
+      "title": "Lesson cancellation request",
+      "body": "{{studentName}} wants to cancel the lesson on {{date}} at {{time}}. Review the request on the Requests page.",
+      "leadTime": "{{hours}}h {{minutes}}m",
+      "earlyRule": "The request was sent {{time}} before the lesson. No charge applies.",
+      "lateRule": "The lesson starts in {{time}}.\nUnder the cancellation policy, {{amount}} will be charged.",
+      "studentReason": "Student reason",
+      "priceMissing": "This lesson has no price snapshot. Cancellation with a charge is unavailable until a price is set.",
+      "waiverReason": "Exception reason (required)",
+      "confirmWaive": "Confirm without charge",
+      "cancelWithCharge": "Cancel with charge",
+      "cancelWithoutCharge": "Cancel without charge",
+      "cancelLesson": "Cancel",
+      "reject": "Reject request",
+      "status": {
+        "approved": "Request resolved: lesson cancelled.",
+        "rejected": "Request resolved: cancellation rejected."
+      },
+      "errors": {
+        "waiverReason": "Enter the reason for the exception.",
+        "priceMissing": "This lesson has no price set.",
+        "notPending": "This request has already been resolved.",
+        "alreadyCancelled": "The lesson is already cancelled.",
+        "generic": "Could not resolve the cancellation request."
+      }
+    },
+    "lessonCancellationRejected": {
+      "title": "Lesson cancellation not approved",
+      "body": "The teacher rejected the cancellation request for {{date}} at {{time}}."
+    },
+    "lessonOutcomeRequired": {
+      "title": "Lesson status needs updating",
+      "body": "The lesson on {{date}} at {{time}} has ended. Mark it as “Completed” or “Missed”. If the status is not changed within {{graceHours}} hours after the lesson ends, it will automatically be marked as missed."
+    },
+    "lessonAutoMissed": {
+      "title": "Lesson automatically marked as missed",
+      "body": "The lesson on {{date}} at {{time}} was not updated within {{graceHours}} hours after it ended. The system marked it as missed and charged the full lesson price of {{amount}}."
+    },
+    "lessonCancellationExpired": {
+      "title": "Cancellation request expired",
+      "body": "The cancellation request was not approved before the lesson on {{date}} at {{time}} started. A lesson cannot be cancelled after its start time; the teacher will set the lesson outcome."
+    },
+    "lessonCancellationAuto": {
+      "teacherEarlyTitle": "Lesson cancelled automatically",
+      "teacherEarlyBody": "The early cancellation request for the lesson on {{date}} at {{time}} was not processed before the start. The system cancelled the lesson without charge.",
+      "studentEarlyTitle": "Lesson cancelled without charge",
+      "studentEarlyBody": "Your lesson on {{date}} at {{time}} was automatically cancelled based on your early request. You will not be charged.",
+      "teacherLateTitle": "Payment decision required",
+      "teacherLateBody": "The late cancellation request for the lesson on {{date}} at {{time}} automatically cancelled the lesson. In Requests, decide whether to charge {{amount}} or make an exception.",
+      "studentLateTitle": "Lesson cancelled",
+      "studentLateBody": "Your lesson on {{date}} at {{time}} was cancelled based on your late request. The teacher will confirm separately whether {{amount}} will be charged."
     }
   },
   "teacherRequests": {
-    "title": "Lesson requests",
-    "description": "Student requests for extra lessons awaiting your decision.",
+    "title": "Requests",
+    "description": "Student requests for extra lessons and lesson cancellations that need your decision.",
     "timezone": "Schedule time",
     "loading": "Loading requests...",
     "emptyTitle": "No new requests",
-    "emptyDescription": "When a student requests an extra lesson, it will appear here.",
+    "emptyDescription": "Extra-lesson and cancellation requests from students will appear here.",
     "student": "Student",
     "unknownStudent": "Unknown student",
     "date": "Date",
@@ -861,6 +929,43 @@
       "notFound": "Request not found.",
       "commentTooLong": "The comment cannot exceed 500 characters.",
       "generic": "Could not process the request."
+    },
+    "extraLessonSectionTitle": "Extra lesson requests",
+    "extraLessonSectionDescription": "Student requests to schedule additional lessons.",
+    "cancellation": {
+      "sectionTitle": "Cancellation requests",
+      "sectionDescription": "Approve or reject student requests to cancel scheduled lessons.",
+      "early": "Early cancellation",
+      "late": "Late cancellation",
+      "leadTime": "{{hours}} h {{minutes}} min",
+      "earlyRule": "The request was sent {{time}} before the lesson. No charge applies.",
+      "lateRule": "The lesson starts in {{time}}.\nAccording to the policy, {{amount}} will be charged",
+      "studentReason": "Student reason",
+      "priceMissing": "No price is saved for this lesson. Charged cancellation is unavailable.",
+      "waiverReason": "Exception reason (required)",
+      "confirmWaive": "Confirm without charge",
+      "cancelWithCharge": "Cancel and charge",
+      "cancelWithoutCharge": "Cancel without charge",
+      "cancelLesson": "Cancel lesson",
+      "reject": "Reject request",
+      "cancelSuccess": "Lesson cancelled without charge. The student was notified.",
+      "chargeSuccess": "Lesson cancelled and charged. The student was notified.",
+      "waiveSuccess": "Lesson cancelled without charge as an exception. The student was notified.",
+      "rejectSuccess": "Cancellation request rejected. The student was notified.",
+      "errors": {
+        "waiverReason": "Enter the reason for the exception.",
+        "priceMissing": "This lesson does not have a saved price.",
+        "notPending": "This request has already been resolved.",
+        "alreadyCancelled": "The lesson is already cancelled.",
+        "generic": "Could not resolve the cancellation request.",
+        "started": "The lesson start time has already passed. Cancellation is no longer possible."
+      },
+      "startedNoCancellation": "The lesson start time has already passed. Cancellation is no longer possible; after the lesson, set it to “Completed” or “Missed”.",
+      "earlyAutoCancellation": "The lesson start time has passed. The early cancellation request automatically cancels the lesson without charge.",
+      "lateAutoCancellation": "The lesson start time has passed. The lesson is cancelled automatically; you still need to decide whether to charge or make an exception.",
+      "paymentDecisionPending": "The lesson has already been cancelled automatically. Choose the financial decision: charge the lesson or waive the charge as an exception.",
+      "chargeAfterAutoCancellation": "Charge lesson",
+      "waiveAfterAutoCancellation": "Waive charge"
     }
   },
   "teacherMaterials": {

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
 import {
-  FINANCE_CURRENCIES,
   createPaymentAccount,
   getStudentFinanceOverview,
   getStudentFinanceTransactions,
@@ -13,6 +12,7 @@ import {
   resolvePaymentTax,
   setStudentLessonRate,
 } from "../../features/finance/api/financeApi";
+import { FINANCE_CURRENCIES } from "../../constants/finance";
 import { getStudentById } from "../../features/profiles/api/profilesApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";

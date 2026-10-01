@@ -9,7 +9,13 @@ import {
   getExtraLessonAvailability,
   listStudentLessonRequests,
 } from "../../features/lessonRequests/api/lessonRequestsApi";
-import { cancelLesson, listStudentLessons } from "../../features/lessons/api/lessonsApi";
+import {
+  listMyLessonCancellationRequests,
+  listStudentLessons,
+  previewLessonCancellation,
+  requestLessonCancellation,
+} from "../../features/lessons/api/lessonsApi";
+import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./StudentSchedule.module.css";
@@ -35,6 +41,16 @@ const fetchStudentRequests = async () => {
   return data ?? [];
 };
 
+const fetchCancellationRequests = async () => {
+  const { data, error } = await listMyLessonCancellationRequests();
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
+
 const getTodayValue = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -50,10 +66,12 @@ const StudentSchedule = () => {
 
   const [lessons, setLessons] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [cancellationRequests, setCancellationRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [cancellingLessonId, setCancellingLessonId] = useState(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState(null);
 
   const [requestFormOpen, setRequestFormOpen] = useState(false);
   const [requestDate, setRequestDate] = useState(getTodayValue());
@@ -68,32 +86,49 @@ const StudentSchedule = () => {
   const timezone = profile?.timezone || "Europe/Kyiv";
   const timezoneConfig = getTimezone(timezone);
   const timezoneLabel = timezoneConfig ? t(timezoneConfig.labelKey) : timezone;
-  const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
-
-  const loadLessons = async () => {
-    const nextLessons = await fetchStudentLessons();
-    setLessons(nextLessons);
-  };
+  const language = i18n.resolvedLanguage || i18n.language;
+  const intlLocale = getIntlLocale(language);
 
   const loadRequests = async () => {
     const nextRequests = await fetchStudentRequests();
     setRequests(nextRequests);
   };
 
+  const loadCancellationRequests = async () => {
+    const nextRequests = await fetchCancellationRequests();
+    setCancellationRequests(nextRequests);
+  };
+
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      setCurrentTimeMs(Date.now());
+    };
+
+    const initialTimerId = window.setTimeout(updateCurrentTime, 0);
+    const intervalId = window.setInterval(updateCurrentTime, 30_000);
+
+    return () => {
+      window.clearTimeout(initialTimerId);
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
     const initialize = async () => {
       try {
-        const [nextLessons, nextRequests] = await Promise.all([
+        const [nextLessons, nextRequests, nextCancellationRequests] = await Promise.all([
           fetchStudentLessons(),
           fetchStudentRequests(),
+          fetchCancellationRequests(),
         ]);
 
         if (!cancelled) {
           setErrorMessage("");
           setLessons(nextLessons);
           setRequests(nextRequests);
+          setCancellationRequests(nextCancellationRequests);
         }
       } catch (error) {
         console.error("Student schedule load error:", error);
@@ -140,6 +175,16 @@ const StudentSchedule = () => {
     [requests],
   );
 
+  const pendingCancellationLessonIds = useMemo(
+    () =>
+      new Set(
+        cancellationRequests
+          .filter((request) => request.status === "pending")
+          .map((request) => request.lesson_id),
+      ),
+    [cancellationRequests],
+  );
+
   const formatDate = (value) =>
     new Intl.DateTimeFormat(intlLocale, {
       timeZone: timezone,
@@ -176,19 +221,55 @@ const StudentSchedule = () => {
       defaultValue: status,
     });
 
+  const formatCancellationLeadTime = (minutesValue) => {
+    const totalMinutes = Math.max(0, Number(minutesValue) || 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return t("studentSchedule.cancel.leadTime", {
+      hours,
+      minutes: String(minutes).padStart(2, "0"),
+    });
+  };
+
   const handleCancelLesson = async (lesson) => {
-    const confirmed = window.confirm(t("studentSchedule.cancel.confirm"));
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       setCancellingLessonId(lesson.id);
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await cancelLesson({
+      const { data: preview, error: previewError } =
+        await previewLessonCancellation({ lessonId: lesson.id });
+
+      if (previewError) {
+        throw previewError;
+      }
+
+      const amount =
+        preview?.priceAmountMinor != null && preview?.priceCurrency
+          ? formatFinanceMoney(
+              Number(preview.priceAmountMinor),
+              preview.priceCurrency,
+              language,
+            )
+          : null;
+
+      const confirmMessage = preview?.isLate
+        ? amount
+          ? t("studentSchedule.cancel.lateConfirm", {
+              time: formatCancellationLeadTime(preview.minutesBeforeStart),
+              amount,
+            })
+          : t("studentSchedule.cancel.lateConfirmNoPrice", {
+              time: formatCancellationLeadTime(preview.minutesBeforeStart),
+            })
+        : t("studentSchedule.cancel.confirm");
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
+      const { error } = await requestLessonCancellation({
         lessonId: lesson.id,
       });
 
@@ -196,10 +277,17 @@ const StudentSchedule = () => {
         throw error;
       }
 
-      setSuccessMessage(t("studentSchedule.cancel.success"));
-      await loadLessons();
+      setSuccessMessage(
+        preview?.isLate
+          ? amount
+            ? t("studentSchedule.cancel.lateSuccess", { amount })
+            : t("studentSchedule.cancel.lateSuccessNoPrice")
+          : t("studentSchedule.cancel.success"),
+      );
+      await loadCancellationRequests();
+      window.dispatchEvent(new Event("lesson-requests-changed"));
     } catch (error) {
-      console.error("Cancel lesson error:", error);
+      console.error("Request lesson cancellation error:", error);
       setErrorMessage(getCancelLessonError(error, t));
     } finally {
       setCancellingLessonId(null);
@@ -540,16 +628,24 @@ const StudentSchedule = () => {
                       </span>
                     )}
 
-                    <button
-                      type="button"
-                      className={styles.cancelButton}
-                      onClick={() => handleCancelLesson(lesson)}
-                      disabled={cancellingLessonId === lesson.id}
-                    >
-                      {cancellingLessonId === lesson.id
-                        ? t("studentSchedule.cancel.cancelling")
-                        : t("studentSchedule.cancel.button")}
-                    </button>
+                    {currentTimeMs !== null &&
+                      new Date(lesson.starts_at).getTime() > currentTimeMs && (
+                      <button
+                        type="button"
+                        className={styles.cancelButton}
+                        onClick={() => handleCancelLesson(lesson)}
+                        disabled={
+                          cancellingLessonId === lesson.id ||
+                          pendingCancellationLessonIds.has(lesson.id)
+                        }
+                      >
+                        {cancellingLessonId === lesson.id
+                          ? t("studentSchedule.cancel.cancelling")
+                          : pendingCancellationLessonIds.has(lesson.id)
+                            ? t("studentSchedule.cancel.pending")
+                            : t("studentSchedule.cancel.button")}
+                      </button>
+                    )}
                   </div>
                 </div>
               </article>
@@ -603,6 +699,14 @@ const getCancelLessonError = (error, t) => {
 
   if (message.includes("PAST_LESSON_CANNOT_BE_CANCELLED")) {
     return t("studentSchedule.cancel.errors.past");
+  }
+
+  if (message.includes("CANCELLATION_REQUEST_ALREADY_PENDING")) {
+    return t("studentSchedule.cancel.errors.alreadyPending");
+  }
+
+  if (message.includes("LESSON_NOT_SCHEDULED")) {
+    return t("studentSchedule.cancel.errors.notScheduled");
   }
 
   if (message.includes("LESSON_NOT_FOUND")) {

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import {
-  FINANCE_CURRENCIES,
   getMyCurrentTaxProfile,
   getMyTaxParameterOverrides,
   getMyTaxParameters,
@@ -13,6 +12,10 @@ import {
   getTeacherStudentFinanceHealth,
 } from "../../features/finance/api/financeApi";
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
+import {
+  DEFAULT_FINANCE_SETTINGS,
+  FINANCE_CURRENCIES,
+} from "../../constants/finance";
 import { formatFinanceMoney, formatPercentValue } from "../../utils/formatFinanceMoney";
 
 import styles from "./TeacherFinance.module.css";
@@ -27,7 +30,9 @@ const TeacherFinance = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [teacherToday, setTeacherToday] = useState(initialToday);
-  const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(2);
+  const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(
+    DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
+  );
 
   const [currentTaxProfile, setCurrentTaxProfile] = useState(null);
   const [taxProfiles, setTaxProfiles] = useState([]);
@@ -93,7 +98,10 @@ const TeacherFinance = () => {
 
         setTeacherToday(today);
         setLowBalanceThresholdLessons(
-          Number(scheduleResult.data?.low_balance_threshold_lessons ?? 2),
+          Number(
+            scheduleResult.data?.low_balance_threshold_lessons ??
+              DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
+          ),
         );
         setReceiptFrom(monthRange.start);
         setReceiptTo(monthRange.end);

@@ -8,8 +8,13 @@ import {
   listPendingTeacherLessonRequests,
   rejectLessonRequest,
 } from "../../features/lessonRequests/api/lessonRequestsApi";
+import {
+  listPendingTeacherLessonCancellationRequests,
+  resolveLessonCancellationRequest,
+} from "../../features/lessons/api/lessonsApi";
 import { getStudentsByIds } from "../../features/profiles/api/profilesApi";
 import { getTeacherTimezone } from "../../features/settings/api/teacherSettingsApi";
+import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherRequests.module.css";
@@ -30,17 +35,38 @@ const fetchTeacherScheduleTimezone = async (teacherId) => {
 };
 
 const fetchPendingRequestsWithStudents = async () => {
-  const { data, error } = await listPendingTeacherLessonRequests();
+  const [
+    { data: lessonRequestRows, error: lessonRequestsError },
+    { data: cancellationRows, error: cancellationError },
+  ] = await Promise.all([
+    listPendingTeacherLessonRequests(),
+    listPendingTeacherLessonCancellationRequests(),
+  ]);
 
-  if (error) {
-    throw error;
+  if (lessonRequestsError) {
+    throw lessonRequestsError;
   }
 
-  const nextRequests = data ?? [];
-  const studentIds = [...new Set(nextRequests.map((item) => item.student_id))];
+  if (cancellationError) {
+    throw cancellationError;
+  }
+
+  const lessonRequests = lessonRequestRows ?? [];
+  const cancellationRequests = cancellationRows ?? [];
+  const studentIds = [
+    ...new Set(
+      [...lessonRequests, ...cancellationRequests].map(
+        (item) => item.student_id,
+      ),
+    ),
+  ];
 
   if (studentIds.length === 0) {
-    return { requests: nextRequests, students: {} };
+    return {
+      lessonRequests,
+      cancellationRequests,
+      students: {},
+    };
   }
 
   const { data: studentRows, error: studentsError } =
@@ -51,7 +77,8 @@ const fetchPendingRequestsWithStudents = async () => {
   }
 
   return {
-    requests: nextRequests,
+    lessonRequests,
+    cancellationRequests,
     students: Object.fromEntries(
       (studentRows ?? []).map((student) => [student.id, student]),
     ),
@@ -63,6 +90,7 @@ const TeacherRequests = () => {
   const { profile } = useAuth();
 
   const [requests, setRequests] = useState([]);
+  const [cancellationRequests, setCancellationRequests] = useState([]);
   const [students, setStudents] = useState({});
   const [scheduleTimezone, setScheduleTimezone] = useState(
     profile?.timezone || "Europe/Kyiv",
@@ -73,8 +101,13 @@ const TeacherRequests = () => {
   const [processingId, setProcessingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectionComment, setRejectionComment] = useState("");
+  const [resolvingCancellationId, setResolvingCancellationId] = useState(null);
+  const [waiverRequestId, setWaiverRequestId] = useState(null);
+  const [waiverReason, setWaiverReason] = useState("");
+  const [currentTimeMs, setCurrentTimeMs] = useState(null);
 
-  const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
+  const language = i18n.resolvedLanguage || i18n.language;
+  const intlLocale = getIntlLocale(language);
 
   const timezoneConfig = getTimezone(scheduleTimezone);
   const timezoneLabel = timezoneConfig
@@ -86,11 +119,32 @@ const TeacherRequests = () => {
     [requests],
   );
 
+  const pendingCancellationRequests = useMemo(
+    () =>
+      cancellationRequests.filter((request) => request.status === "pending"),
+    [cancellationRequests],
+  );
+
   const loadRequests = async () => {
     const next = await fetchPendingRequestsWithStudents();
-    setRequests(next.requests);
+    setRequests(next.lessonRequests);
+    setCancellationRequests(next.cancellationRequests);
     setStudents(next.students);
   };
+
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      setCurrentTimeMs(Date.now());
+    };
+
+    const initialTimerId = window.setTimeout(updateCurrentTime, 0);
+    const intervalId = window.setInterval(updateCurrentTime, 30_000);
+
+    return () => {
+      window.clearTimeout(initialTimerId);
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,7 +163,8 @@ const TeacherRequests = () => {
             setScheduleTimezone(nextTimezone);
           }
 
-          setRequests(next.requests);
+          setRequests(next.lessonRequests);
+          setCancellationRequests(next.cancellationRequests);
           setStudents(next.students);
         }
       } catch (error) {
@@ -132,6 +187,31 @@ const TeacherRequests = () => {
     };
   }, [profile?.id, t]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleFocus = async () => {
+      try {
+        const next = await fetchPendingRequestsWithStudents();
+
+        if (!cancelled) {
+          setRequests(next.lessonRequests);
+          setCancellationRequests(next.cancellationRequests);
+          setStudents(next.students);
+        }
+      } catch (error) {
+        console.error("Teacher requests refresh error:", error);
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
   const formatDate = (value) =>
     new Intl.DateTimeFormat(intlLocale, {
       timeZone: scheduleTimezone,
@@ -148,6 +228,17 @@ const TeacherRequests = () => {
       minute: "2-digit",
       hour12: false,
     }).format(new Date(value));
+
+  const formatLeadTime = (minutesValue) => {
+    const totalMinutes = Math.max(0, Number(minutesValue) || 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return t("teacherRequests.cancellation.leadTime", {
+      hours,
+      minutes: String(minutes).padStart(2, "0"),
+    });
+  };
 
   const getStudentName = (request) => {
     const student = students[request.student_id];
@@ -179,6 +270,32 @@ const TeacherRequests = () => {
     }
 
     return t("teacherRequests.errors.generic");
+  };
+
+  const getCancellationError = (error) => {
+    const message = error?.message || "";
+
+    if (message.includes("WAIVER_REASON_REQUIRED")) {
+      return t("teacherRequests.cancellation.errors.waiverReason");
+    }
+
+    if (message.includes("LESSON_PRICE_NOT_SET")) {
+      return t("teacherRequests.cancellation.errors.priceMissing");
+    }
+
+    if (message.includes("CANCELLATION_REQUEST_NOT_PENDING")) {
+      return t("teacherRequests.cancellation.errors.notPending");
+    }
+
+    if (message.includes("LESSON_ALREADY_CANCELLED")) {
+      return t("teacherRequests.cancellation.errors.alreadyCancelled");
+    }
+
+    if (message.includes("LESSON_ALREADY_STARTED_CANNOT_BE_CANCELLED")) {
+      return t("teacherRequests.cancellation.errors.started");
+    }
+
+    return t("teacherRequests.cancellation.errors.generic");
   };
 
   const handleApprove = async (request) => {
@@ -262,6 +379,49 @@ const TeacherRequests = () => {
     }
   };
 
+  const handleResolveCancellation = async ({
+    request,
+    action,
+    waiverReasonValue = null,
+  }) => {
+    try {
+      setResolvingCancellationId(request.id);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { error } = await resolveLessonCancellationRequest({
+        requestId: request.id,
+        action,
+        waiverReason: waiverReasonValue,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const successKey =
+        action === "reject"
+          ? "teacherRequests.cancellation.rejectSuccess"
+          : action === "cancel_charge"
+            ? "teacherRequests.cancellation.chargeSuccess"
+            : action === "cancel_waive"
+              ? "teacherRequests.cancellation.waiveSuccess"
+              : "teacherRequests.cancellation.cancelSuccess";
+
+      setSuccessMessage(t(successKey));
+      setWaiverRequestId(null);
+      setWaiverReason("");
+      await loadRequests();
+      window.dispatchEvent(new Event("lesson-requests-changed"));
+      window.dispatchEvent(new Event("notifications-changed"));
+    } catch (error) {
+      console.error("Resolve cancellation request error:", error);
+      setErrorMessage(getCancellationError(error));
+    } finally {
+      setResolvingCancellationId(null);
+    }
+  };
+
   if (loading) {
     return (
       <section className={styles.page}>
@@ -269,6 +429,9 @@ const TeacherRequests = () => {
       </section>
     );
   }
+
+  const hasAnyRequests =
+    pendingRequests.length > 0 || pendingCancellationRequests.length > 0;
 
   return (
     <section className={styles.page}>
@@ -287,133 +450,425 @@ const TeacherRequests = () => {
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
       {successMessage && <div className={styles.success}>{successMessage}</div>}
 
-      {pendingRequests.length === 0 ? (
+      {!hasAnyRequests && (
         <div className={styles.emptyState}>
           <h2>{t("teacherRequests.emptyTitle")}</h2>
           <p>{t("teacherRequests.emptyDescription")}</p>
         </div>
-      ) : (
-        <div className={styles.list}>
-          {pendingRequests.map((request) => {
-            const isProcessing = processingId === request.id;
-            const isRejecting = rejectingId === request.id;
+      )}
 
-            return (
-              <article key={request.id} className={styles.card}>
-                <div className={styles.cardMain}>
-                  <div className={styles.studentRow}>
-                    <div>
-                      <span className={styles.eyebrow}>
-                        {t("teacherRequests.student")}
+      {pendingCancellationRequests.length > 0 && (
+        <section className={styles.requestSection}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2>{t("teacherRequests.cancellation.sectionTitle")}</h2>
+              <p>{t("teacherRequests.cancellation.sectionDescription")}</p>
+            </div>
+            <span className={styles.sectionCount}>
+              {pendingCancellationRequests.length}
+            </span>
+          </div>
+
+          <div className={styles.list}>
+            {pendingCancellationRequests.map((request) => {
+              const lesson = request.lessons;
+              const isResolving = resolvingCancellationId === request.id;
+              const isWaiverOpen = waiverRequestId === request.id;
+              const priceAmountMinor = Number(lesson?.price_amount_minor);
+              const priceCurrency = lesson?.price_currency;
+              const hasPrice =
+                Number.isFinite(priceAmountMinor) && Boolean(priceCurrency);
+              const amount = hasPrice
+                ? formatFinanceMoney(
+                    priceAmountMinor,
+                    priceCurrency,
+                    language,
+                  )
+                : "—";
+              const lessonAlreadyStarted =
+                currentTimeMs !== null && lesson?.starts_at
+                  ? new Date(lesson.starts_at).getTime() <= currentTimeMs
+                  : false;
+              const paymentDecisionPending =
+                request.is_late &&
+                lesson?.status === "cancelled" &&
+                lesson?.cancelled_by === "student" &&
+                lesson?.cancellation_request_id === request.id &&
+                lesson?.cancellation_charge_mode == null;
+
+              return (
+                <article key={request.id} className={styles.card}>
+                  <div className={styles.cardMain}>
+                    <div className={styles.studentRow}>
+                      <div>
+                        <span className={styles.eyebrow}>
+                          {t("teacherRequests.student")}
+                        </span>
+                        <h2>{getStudentName(request)}</h2>
+                      </div>
+
+                      <span
+                        className={`${styles.status} ${
+                          request.is_late ? styles.lateStatus : ""
+                        }`}
+                      >
+                        {request.is_late
+                          ? t("teacherRequests.cancellation.late")
+                          : t("teacherRequests.cancellation.early")}
                       </span>
-                      <h2>{getStudentName(request)}</h2>
                     </div>
 
-                    <span className={styles.status}>
-                      {t("teacherRequests.pending")}
-                    </span>
-                  </div>
-
-                  <div className={styles.lessonMeta}>
-                    <div>
-                      <span>{t("teacherRequests.date")}</span>
-                      <strong>{formatDate(request.requested_starts_at)}</strong>
+                    <div className={styles.lessonMeta}>
+                      <div>
+                        <span>{t("teacherRequests.date")}</span>
+                        <strong>
+                          {lesson?.starts_at
+                            ? formatDate(lesson.starts_at)
+                            : "—"}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>{t("teacherRequests.time")}</span>
+                        <strong>
+                          {lesson?.starts_at
+                            ? formatTime(lesson.starts_at)
+                            : "—"}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>{t("teacherRequests.duration")}</span>
+                        <strong>
+                          {t("teacherRequests.minutes", {
+                            count: lesson?.duration_minutes ?? 0,
+                          })}
+                        </strong>
+                      </div>
                     </div>
 
-                    <div>
-                      <span>{t("teacherRequests.time")}</span>
-                      <strong>{formatTime(request.requested_starts_at)}</strong>
-                    </div>
-
-                    <div>
-                      <span>{t("teacherRequests.duration")}</span>
-                      <strong>
-                        {t("teacherRequests.minutes", {
-                          count: request.duration_minutes,
-                        })}
-                      </strong>
-                    </div>
-                  </div>
-
-                  {request.message && (
-                    <div className={styles.studentComment}>
-                      <span>{t("teacherRequests.studentComment")}</span>
-                      <p>{request.message}</p>
-                    </div>
-                  )}
-                </div>
-
-                {!isRejecting ? (
-                  <div className={styles.actions}>
-                    <button
-                      type="button"
-                      className={styles.approveButton}
-                      onClick={() => handleApprove(request)}
-                      disabled={isProcessing}
+                    <div
+                      className={`${styles.cancellationRule} ${
+                        request.is_late ? styles.lateRule : ""
+                      }`}
                     >
-                      {isProcessing
-                        ? t("teacherRequests.processing")
-                        : t("teacherRequests.approve")}
-                    </button>
+                      {request.is_late
+                        ? t("teacherRequests.cancellation.lateRule", {
+                            time: formatLeadTime(
+                              request.minutes_before_start,
+                            ),
+                            amount,
+                          })
+                        : t("teacherRequests.cancellation.earlyRule", {
+                            time: formatLeadTime(
+                              request.minutes_before_start,
+                            ),
+                          })}
+                    </div>
 
-                    <button
-                      type="button"
-                      className={styles.rejectButton}
-                      onClick={() => openRejectForm(request.id)}
-                      disabled={isProcessing}
-                    >
-                      {t("teacherRequests.reject")}
-                    </button>
+                    {request.reason && (
+                      <div className={styles.studentComment}>
+                        <span>
+                          {t("teacherRequests.cancellation.studentReason")}
+                        </span>
+                        <p>{request.reason}</p>
+                      </div>
+                    )}
+
+                    {request.is_late && !hasPrice && (
+                      <p className={styles.inlineWarning}>
+                        {t("teacherRequests.cancellation.priceMissing")}
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <div className={styles.rejectPanel}>
-                    <label className={styles.commentField}>
-                      <span>{t("teacherRequests.rejectionComment")}</span>
-                      <textarea
-                        value={rejectionComment}
-                        onChange={(event) =>
-                          setRejectionComment(event.target.value.slice(0, 500))
-                        }
-                        maxLength={500}
-                        rows={3}
-                        placeholder={t(
-                          "teacherRequests.rejectionCommentPlaceholder",
+
+                  {isWaiverOpen ? (
+                    <div className={styles.rejectPanel}>
+                      <label className={styles.commentField}>
+                        <span>
+                          {t("teacherRequests.cancellation.waiverReason")}
+                        </span>
+                        <textarea
+                          value={waiverReason}
+                          onChange={(event) =>
+                            setWaiverReason(event.target.value)
+                          }
+                          rows={3}
+                          disabled={isResolving}
+                        />
+                      </label>
+
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.approveButton}
+                          disabled={
+                            isResolving || waiverReason.trim().length === 0
+                          }
+                          onClick={() =>
+                            handleResolveCancellation({
+                              request,
+                              action: "cancel_waive",
+                              waiverReasonValue: waiverReason.trim(),
+                            })
+                          }
+                        >
+                          {isResolving
+                            ? t("teacherRequests.processing")
+                            : t(
+                                "teacherRequests.cancellation.confirmWaive",
+                              )}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.cancelButton}
+                          disabled={isResolving}
+                          onClick={() => {
+                            setWaiverRequestId(null);
+                            setWaiverReason("");
+                          }}
+                        >
+                          {t("teacherRequests.cancel")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : lessonAlreadyStarted && !request.is_late ? (
+                    <p className={styles.inlineWarning}>
+                      {t(
+                        "teacherRequests.cancellation.earlyAutoCancellation",
+                      )}
+                    </p>
+                  ) : (
+                    <>
+                      {lessonAlreadyStarted && request.is_late && (
+                        <p className={styles.inlineWarning}>
+                          {t(
+                            paymentDecisionPending
+                              ? "teacherRequests.cancellation.paymentDecisionPending"
+                              : "teacherRequests.cancellation.lateAutoCancellation",
+                          )}
+                        </p>
+                      )}
+
+                      <div className={styles.actions}>
+                        {request.is_late ? (
+                          <>
+                            <button
+                              type="button"
+                              className={styles.rejectConfirmButton}
+                              disabled={isResolving || !hasPrice}
+                              onClick={() =>
+                                handleResolveCancellation({
+                                  request,
+                                  action: "cancel_charge",
+                                })
+                              }
+                            >
+                              {isResolving
+                                ? t("teacherRequests.processing")
+                                : t(
+                                    lessonAlreadyStarted
+                                      ? "teacherRequests.cancellation.chargeAfterAutoCancellation"
+                                      : "teacherRequests.cancellation.cancelWithCharge",
+                                  )}
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.approveButton}
+                              disabled={isResolving}
+                              onClick={() => {
+                                setWaiverRequestId(request.id);
+                                setWaiverReason("");
+                              }}
+                            >
+                              {t(
+                                lessonAlreadyStarted
+                                  ? "teacherRequests.cancellation.waiveAfterAutoCancellation"
+                                  : "teacherRequests.cancellation.cancelWithoutCharge",
+                              )}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className={styles.approveButton}
+                            disabled={isResolving}
+                            onClick={() =>
+                              handleResolveCancellation({
+                                request,
+                                action: "cancel",
+                              })
+                            }
+                          >
+                            {isResolving
+                              ? t("teacherRequests.processing")
+                              : t(
+                                  "teacherRequests.cancellation.cancelLesson",
+                                )}
+                          </button>
                         )}
-                        disabled={isProcessing}
-                      />
-                    </label>
 
-                    <div className={styles.commentCounter}>
-                      {rejectionComment.length}/500
+                        {!lessonAlreadyStarted && (
+                          <button
+                            type="button"
+                            className={styles.rejectButton}
+                            disabled={isResolving}
+                            onClick={() =>
+                              handleResolveCancellation({
+                                request,
+                                action: "reject",
+                              })
+                            }
+                          >
+                            {t("teacherRequests.cancellation.reject")}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {pendingRequests.length > 0 && (
+        <section className={styles.requestSection}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2>{t("teacherRequests.extraLessonSectionTitle")}</h2>
+              <p>{t("teacherRequests.extraLessonSectionDescription")}</p>
+            </div>
+            <span className={styles.sectionCount}>{pendingRequests.length}</span>
+          </div>
+
+          <div className={styles.list}>
+            {pendingRequests.map((request) => {
+              const isProcessing = processingId === request.id;
+              const isRejecting = rejectingId === request.id;
+
+              return (
+                <article key={request.id} className={styles.card}>
+                  <div className={styles.cardMain}>
+                    <div className={styles.studentRow}>
+                      <div>
+                        <span className={styles.eyebrow}>
+                          {t("teacherRequests.student")}
+                        </span>
+                        <h2>{getStudentName(request)}</h2>
+                      </div>
+
+                      <span className={styles.status}>
+                        {t("teacherRequests.pending")}
+                      </span>
                     </div>
 
+                    <div className={styles.lessonMeta}>
+                      <div>
+                        <span>{t("teacherRequests.date")}</span>
+                        <strong>
+                          {formatDate(request.requested_starts_at)}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>{t("teacherRequests.time")}</span>
+                        <strong>
+                          {formatTime(request.requested_starts_at)}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>{t("teacherRequests.duration")}</span>
+                        <strong>
+                          {t("teacherRequests.minutes", {
+                            count: request.duration_minutes,
+                          })}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {request.message && (
+                      <div className={styles.studentComment}>
+                        <span>{t("teacherRequests.studentComment")}</span>
+                        <p>{request.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isRejecting ? (
                     <div className={styles.actions}>
                       <button
                         type="button"
-                        className={styles.rejectConfirmButton}
-                        onClick={() => handleReject(request)}
+                        className={styles.approveButton}
+                        onClick={() => handleApprove(request)}
                         disabled={isProcessing}
                       >
                         {isProcessing
                           ? t("teacherRequests.processing")
-                          : t("teacherRequests.rejectConfirm")}
+                          : t("teacherRequests.approve")}
                       </button>
 
                       <button
                         type="button"
-                        className={styles.cancelButton}
-                        onClick={closeRejectForm}
+                        className={styles.rejectButton}
+                        onClick={() => openRejectForm(request.id)}
                         disabled={isProcessing}
                       >
-                        {t("teacherRequests.cancel")}
+                        {t("teacherRequests.reject")}
                       </button>
                     </div>
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
+                  ) : (
+                    <div className={styles.rejectPanel}>
+                      <label className={styles.commentField}>
+                        <span>{t("teacherRequests.rejectionComment")}</span>
+                        <textarea
+                          value={rejectionComment}
+                          onChange={(event) =>
+                            setRejectionComment(
+                              event.target.value.slice(0, 500),
+                            )
+                          }
+                          maxLength={500}
+                          rows={3}
+                          placeholder={t(
+                            "teacherRequests.rejectionCommentPlaceholder",
+                          )}
+                          disabled={isProcessing}
+                        />
+                      </label>
+
+                      <div className={styles.commentCounter}>
+                        {rejectionComment.length}/500
+                      </div>
+
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.rejectConfirmButton}
+                          onClick={() => handleReject(request)}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing
+                            ? t("teacherRequests.processing")
+                            : t("teacherRequests.rejectConfirm")}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={styles.cancelButton}
+                          onClick={closeRejectForm}
+                          disabled={isProcessing}
+                        >
+                          {t("teacherRequests.cancel")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
       )}
     </section>
   );

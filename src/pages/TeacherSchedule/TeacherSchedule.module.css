@@ -718,3 +718,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+.lessonStatus {
+  width: 100%;
+  overflow: hidden;
+  color: var(--color-error-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

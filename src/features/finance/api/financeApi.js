@@ -1,7 +1,5 @@
 import { supabase } from "../../../shared/api/supabaseClient";
 
-export const FINANCE_CURRENCIES = ["UAH", "USD", "EUR"];
-
 export const getStudentFinanceOverview = async (studentId) => {
   const [settingsResult, rateResult, scheduledRatesResult, balancesResult] = await Promise.all([
     supabase

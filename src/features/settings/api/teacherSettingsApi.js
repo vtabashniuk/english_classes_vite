@@ -10,7 +10,8 @@ const teacherScheduleSettingsQuery = () =>
         workday_end,
         lesson_duration_minutes,
         slot_interval_minutes,
-        low_balance_threshold_lessons
+        low_balance_threshold_lessons,
+        free_cancellation_hours
       `,
     );
 
@@ -40,7 +41,11 @@ export const updateMyTeacherSettings = ({
     p_lesson_duration_minutes: lessonDurationMinutes,
   });
 
-export const updateMyFinancePreferences = ({ lowBalanceThresholdLessons }) =>
+export const updateMyFinancePreferences = ({
+  lowBalanceThresholdLessons,
+  freeCancellationHours,
+}) =>
   supabase.rpc("update_my_finance_preferences", {
     p_low_balance_threshold_lessons: lowBalanceThresholdLessons,
+    p_free_cancellation_hours: freeCancellationHours,
   });

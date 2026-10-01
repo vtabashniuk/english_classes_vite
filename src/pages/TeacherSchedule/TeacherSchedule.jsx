@@ -175,9 +175,15 @@ const TeacherSchedule = () => {
 
   const [updatingOutcome, setUpdatingOutcome] = useState(false);
 
-  const [errorMessage, setErrorMessage] = useState("");
+  const [pageErrorMessage, setPageErrorMessage] = useState("");
 
-  const [successMessage, setSuccessMessage] = useState("");
+  const [createErrorMessage, setCreateErrorMessage] = useState("");
+
+  const [createSuccessMessage, setCreateSuccessMessage] = useState("");
+
+  const [detailErrorMessage, setDetailErrorMessage] = useState("");
+
+  const [detailSuccessMessage, setDetailSuccessMessage] = useState("");
 
   const locale = getIntlLocale(i18n.language);
 
@@ -234,7 +240,7 @@ const TeacherSchedule = () => {
         ]);
 
         if (!cancelled) {
-          setErrorMessage("");
+          setPageErrorMessage("");
           setStudents(nextStudents);
           setScheduleSettings(nextSettings);
         }
@@ -242,7 +248,7 @@ const TeacherSchedule = () => {
         console.error("TeacherSchedule initialization error:", error);
 
         if (!cancelled) {
-          setErrorMessage(t("teacherSchedule.errors.load"));
+          setPageErrorMessage(t("teacherSchedule.errors.load"));
         }
       } finally {
         if (!cancelled) {
@@ -266,14 +272,14 @@ const TeacherSchedule = () => {
         const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
 
         if (!cancelled) {
-          setErrorMessage("");
+          setPageErrorMessage("");
           setLessons(nextLessons);
         }
       } catch (error) {
         console.error("Load lessons error:", error);
 
         if (!cancelled) {
-          setErrorMessage(t("teacherSchedule.errors.loadLessons"));
+          setPageErrorMessage(t("teacherSchedule.errors.loadLessons"));
         }
       }
     };
@@ -288,11 +294,11 @@ const TeacherSchedule = () => {
   const loadLessons = async () => {
     try {
       const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
-      setErrorMessage("");
+      setPageErrorMessage("");
       setLessons(nextLessons);
     } catch (error) {
       console.error("Load lessons error:", error);
-      setErrorMessage(t("teacherSchedule.errors.loadLessons"));
+      setPageErrorMessage(t("teacherSchedule.errors.loadLessons"));
     }
   };
 
@@ -341,7 +347,10 @@ const TeacherSchedule = () => {
 
     setRecurringValidFrom(dateValue);
 
-    setSuccessMessage("");
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
+    setDetailErrorMessage("");
+    setDetailSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-create-form")?.scrollIntoView({
@@ -358,8 +367,8 @@ const TeacherSchedule = () => {
     setLessonZoomDraft(lesson.zoom_url || "");
     setEditingZoom(false);
     setEditingRecurringSeries(false);
-    setErrorMessage("");
-    setSuccessMessage("");
+    setDetailErrorMessage("");
+    setDetailSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-details-panel")?.scrollIntoView({
@@ -384,8 +393,8 @@ const TeacherSchedule = () => {
 
     try {
       setCancellingLessonId(selectedLesson.id);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const { error } = await cancelLesson({
         lessonId: selectedLesson.id,
@@ -395,14 +404,14 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setSuccessMessage(t("teacherSchedule.cancel.success"));
+      setDetailSuccessMessage(t("teacherSchedule.cancel.success"));
 
       setSelectedLesson(null);
 
       await loadLessons();
     } catch (error) {
       console.error("Cancel lesson error:", error);
-      setErrorMessage(getCancelLessonError(error, t));
+      setDetailErrorMessage(getCancelLessonError(error, t));
     } finally {
       setCancellingLessonId(null);
     }
@@ -415,8 +424,8 @@ const TeacherSchedule = () => {
 
     try {
       setLoadingRecurringSeries(true);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const { data, error } = await getRecurringLessonById(
         selectedLesson.recurring_lesson_id,
@@ -435,7 +444,7 @@ const TeacherSchedule = () => {
       setEditingZoom(false);
     } catch (error) {
       console.error("Load recurring series error:", error);
-      setErrorMessage(t("teacherSchedule.recurring.editFromHere.errors.load"));
+      setDetailErrorMessage(t("teacherSchedule.recurring.editFromHere.errors.load"));
     } finally {
       setLoadingRecurringSeries(false);
     }
@@ -461,8 +470,8 @@ const TeacherSchedule = () => {
 
     try {
       setSavingRecurringSeries(true);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const { data, error } = await editRecurringSeriesFromLesson({
         p_lesson_id: selectedLesson.id,
@@ -480,7 +489,7 @@ const TeacherSchedule = () => {
 
       const result = Array.isArray(data) ? data[0] : data;
 
-      setSuccessMessage(
+      setDetailSuccessMessage(
         t("teacherSchedule.recurring.editFromHere.success", {
           createdCount: result?.created_count ?? 0,
           conflictCount: result?.conflict_count ?? 0,
@@ -492,7 +501,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Edit recurring series error:", error);
-      setErrorMessage(getEditRecurringSeriesError(error, t));
+      setDetailErrorMessage(getEditRecurringSeriesError(error, t));
     } finally {
       setSavingRecurringSeries(false);
     }
@@ -517,8 +526,8 @@ const TeacherSchedule = () => {
 
     try {
       setCancellingSeriesId(selectedLesson.recurring_lesson_id);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const { data, error } = await cancelRecurringSeriesFromLesson(
         selectedLesson.id,
@@ -528,7 +537,7 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setSuccessMessage(
+      setDetailSuccessMessage(
         t("teacherSchedule.recurring.cancelFromHere.success", {
           count: data ?? 0,
         }),
@@ -538,7 +547,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Cancel recurring series error:", error);
-      setErrorMessage(getCancelRecurringSeriesError(error, t));
+      setDetailErrorMessage(getCancelRecurringSeriesError(error, t));
     } finally {
       setCancellingSeriesId(null);
     }
@@ -551,8 +560,8 @@ const TeacherSchedule = () => {
 
     try {
       setSavingZoom(true);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const normalizedZoomUrl = lessonZoomDraft.trim() || null;
 
@@ -575,11 +584,11 @@ const TeacherSchedule = () => {
       );
 
       setEditingZoom(false);
-      setSuccessMessage(t("teacherSchedule.zoomEdit.success"));
+      setDetailSuccessMessage(t("teacherSchedule.zoomEdit.success"));
       await loadLessons();
     } catch (error) {
       console.error("Update lesson Zoom error:", error);
-      setErrorMessage(getUpdateLessonZoomError(error, t));
+      setDetailErrorMessage(getUpdateLessonZoomError(error, t));
     } finally {
       setSavingZoom(false);
     }
@@ -592,8 +601,8 @@ const TeacherSchedule = () => {
 
     try {
       setUpdatingOutcome(true);
-      setErrorMessage("");
-      setSuccessMessage("");
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
 
       const { error } = await setLessonOutcome({
         lessonId: selectedLesson.id,
@@ -615,7 +624,7 @@ const TeacherSchedule = () => {
           : current,
       );
 
-      setSuccessMessage(
+      setDetailSuccessMessage(
         status === "completed"
           ? t("teacherSchedule.outcome.completedSuccess")
           : t("teacherSchedule.outcome.missedSuccess"),
@@ -624,7 +633,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Set lesson outcome error:", error);
-      setErrorMessage(getLessonOutcomeError(error, t));
+      setDetailErrorMessage(getLessonOutcomeError(error, t));
     } finally {
       setUpdatingOutcome(false);
     }
@@ -633,11 +642,11 @@ const TeacherSchedule = () => {
   const handleCreateLesson = async (event) => {
     event.preventDefault();
 
-    setErrorMessage("");
-    setSuccessMessage("");
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
 
     if (!selectedStudentId || !selectedDate || !selectedTime) {
-      setErrorMessage(t("teacherSchedule.errors.requiredFields"));
+      setCreateErrorMessage(t("teacherSchedule.errors.requiredFields"));
 
       return;
     }
@@ -656,7 +665,7 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setSuccessMessage(t("teacherSchedule.messages.lessonCreated"));
+      setCreateSuccessMessage(t("teacherSchedule.messages.lessonCreated"));
 
       setSelectedStudentId("");
 
@@ -668,7 +677,7 @@ const TeacherSchedule = () => {
     } catch (error) {
       console.error("Create lesson error:", error);
 
-      setErrorMessage(getCreateLessonError(error, t));
+      setCreateErrorMessage(getCreateLessonError(error, t));
     } finally {
       setCreating(false);
     }
@@ -676,8 +685,8 @@ const TeacherSchedule = () => {
 
   const handleCreateModeChange = (mode) => {
     setCreateMode(mode);
-    setErrorMessage("");
-    setSuccessMessage("");
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
 
     if (mode === "recurring" && selectedDate) {
       const date = parseInputDate(selectedDate);
@@ -692,8 +701,8 @@ const TeacherSchedule = () => {
   const handleCreateRecurringLesson = async (event) => {
     event.preventDefault();
 
-    setErrorMessage("");
-    setSuccessMessage("");
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
 
     if (
       !selectedStudentId ||
@@ -701,7 +710,7 @@ const TeacherSchedule = () => {
       !selectedTime ||
       !recurringValidFrom
     ) {
-      setErrorMessage(t("teacherSchedule.recurring.errors.requiredFields"));
+      setCreateErrorMessage(t("teacherSchedule.recurring.errors.requiredFields"));
       return;
     }
 
@@ -727,7 +736,7 @@ const TeacherSchedule = () => {
       const createdCount = result?.created_count ?? 0;
       const conflictCount = result?.conflict_count ?? 0;
 
-      setSuccessMessage(
+      setCreateSuccessMessage(
         conflictCount > 0
           ? t("teacherSchedule.recurring.messages.createdWithConflicts", {
               createdCount,
@@ -746,7 +755,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Create recurring lesson error:", error);
-      setErrorMessage(getCreateRecurringLessonError(error, t));
+      setCreateErrorMessage(getCreateRecurringLessonError(error, t));
     } finally {
       setCreating(false);
     }
@@ -757,7 +766,17 @@ const TeacherSchedule = () => {
 
     return lessons.filter((lesson) => {
       if (lesson.status === "cancelled") {
-        return false;
+        const hasPendingLatePaymentDecision =
+          lesson.cancelled_by === "student" &&
+          Boolean(lesson.cancellation_request_id) &&
+          lesson.cancellation_charge_mode == null;
+
+        if (
+          lesson.cancellation_charge_mode !== "charged" &&
+          !hasPendingLatePaymentDecision
+        ) {
+          return false;
+        }
       }
 
       const lessonDate = getDatePartsInTimezone(
@@ -795,6 +814,10 @@ const TeacherSchedule = () => {
           <strong>{timezoneLabel}</strong>
         </div>
       </header>
+
+      {pageErrorMessage && (
+        <p className={styles.error}>{pageErrorMessage}</p>
+      )}
 
       <div className={styles.settingsSummary}>
         <span>
@@ -1011,6 +1034,12 @@ const TeacherSchedule = () => {
                             lesson.profiles?.email ||
                             t("teacherSchedule.unknownStudent")}
                         </span>
+
+                        {lesson.status === "cancelled" && (
+                          <span className={styles.lessonStatus}>
+                            {t("teacherSchedule.statuses.cancelled")}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -1118,10 +1147,10 @@ const TeacherSchedule = () => {
                 />
               </label>
 
-              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+              {createErrorMessage && <p className={styles.error}>{createErrorMessage}</p>}
 
-              {successMessage && (
-                <p className={styles.success}>{successMessage}</p>
+              {createSuccessMessage && (
+                <p className={styles.success}>{createSuccessMessage}</p>
               )}
 
               <Button
@@ -1251,10 +1280,10 @@ const TeacherSchedule = () => {
                 {t("teacherSchedule.recurring.generationNote")}
               </p>
 
-              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+              {createErrorMessage && <p className={styles.error}>{createErrorMessage}</p>}
 
-              {successMessage && (
-                <p className={styles.success}>{successMessage}</p>
+              {createSuccessMessage && (
+                <p className={styles.success}>{createSuccessMessage}</p>
               )}
 
               <Button
@@ -1277,6 +1306,13 @@ const TeacherSchedule = () => {
 
             <p>{t("teacherSchedule.lessonDetailsHint")}</p>
           </div>
+
+          {detailErrorMessage && (
+            <p className={styles.error}>{detailErrorMessage}</p>
+          )}
+          {detailSuccessMessage && (
+            <p className={styles.success}>{detailSuccessMessage}</p>
+          )}
 
           {!selectedLesson ? (
             <div className={styles.emptyDetails}>
@@ -1542,9 +1578,6 @@ const TeacherSchedule = () => {
                   )}
                 </div>
               )}
-
-              {errorMessage && <p className={styles.error}>{errorMessage}</p>}
-              {successMessage && <p className={styles.success}>{successMessage}</p>}
 
               <div className={styles.lessonActions}>
                 {isLessonStarted(selectedLesson) &&

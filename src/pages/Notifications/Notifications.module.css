@@ -228,3 +228,109 @@
   color: var(--color-text-primary);
   white-space: pre-wrap;
 }
+
+.cancellationPanel {
+  margin-top: 0.85rem;
+  padding: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.cancellationRule {
+  margin: 0;
+  font-weight: 600;
+  white-space: pre-line;
+}
+
+.cancellationReason {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.cancellationReason strong,
+.waiverForm label > span {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.warningText {
+  margin: 0.7rem 0 0;
+  color: var(--color-error-text);
+  font-size: 0.9rem;
+}
+
+.requestActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+}
+
+.primaryAction,
+.dangerAction {
+  min-height: 40px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.primaryAction {
+  color: var(--color-surface);
+  background: var(--color-primary-blue);
+}
+
+.dangerAction {
+  color: var(--color-error-text);
+  border-color: var(--color-error-text);
+  background: var(--color-surface);
+}
+
+.primaryAction:disabled,
+.dangerAction:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.waiverForm {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.waiverForm label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.waiverForm textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.resolvedRequest {
+  margin: 0.75rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+@media (max-width: 700px) {
+  .requestActions {
+    flex-direction: column;
+  }
+
+  .requestActions button {
+    width: 100%;
+  }
+}

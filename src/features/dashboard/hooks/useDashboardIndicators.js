@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { hasPendingLessonRequests } from "../../lessonRequests/api/lessonRequestsApi";
+import { hasPendingLessonCancellationRequests } from "../../lessons/api/lessonsApi";
 import { hasUnreadNotifications } from "../../notifications/api/notificationsApi";
 
 export const useDashboardIndicators = ({ profile, pathname }) => {
@@ -36,10 +37,12 @@ export const useDashboardIndicators = ({ profile, pathname }) => {
 
     loadUnreadState();
     window.addEventListener("notifications-changed", loadUnreadState);
+    window.addEventListener("focus", loadUnreadState);
 
     return () => {
       cancelled = true;
       window.removeEventListener("notifications-changed", loadUnreadState);
+      window.removeEventListener("focus", loadUnreadState);
     };
   }, [profileId, pathname]);
 
@@ -51,18 +54,27 @@ export const useDashboardIndicators = ({ profile, pathname }) => {
     let cancelled = false;
 
     const loadPendingRequestsState = async () => {
-      const { data, error } = await hasPendingLessonRequests(profileId);
+      const [
+        { data: lessonRequestRows, error: lessonRequestError },
+        { data: cancellationRows, error: cancellationError },
+      ] = await Promise.all([
+        hasPendingLessonRequests(profileId),
+        hasPendingLessonCancellationRequests(profileId),
+      ]);
 
-      if (!cancelled && !error) {
+      if (!cancelled && !lessonRequestError && !cancellationError) {
         setPendingState({
           profileId,
-          value: (data?.length ?? 0) > 0,
+          value:
+            (lessonRequestRows?.length ?? 0) > 0 ||
+            (cancellationRows?.length ?? 0) > 0,
         });
       }
     };
 
     loadPendingRequestsState();
     window.addEventListener("lesson-requests-changed", loadPendingRequestsState);
+    window.addEventListener("focus", loadPendingRequestsState);
 
     return () => {
       cancelled = true;
@@ -70,6 +82,7 @@ export const useDashboardIndicators = ({ profile, pathname }) => {
         "lesson-requests-changed",
         loadPendingRequestsState,
       );
+      window.removeEventListener("focus", loadPendingRequestsState);
     };
   }, [profileId, isTeacher, pathname]);
 

@@ -8,6 +8,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../../features/notifications/api/notificationsApi";
+import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./Notifications.module.css";
@@ -22,6 +23,7 @@ const fetchNotifications = async () => {
   return data ?? [];
 };
 
+
 const Notifications = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
@@ -35,18 +37,25 @@ const Notifications = () => {
   const timezone = profile?.timezone || "Europe/Kyiv";
   const timezoneConfig = getTimezone(timezone);
   const timezoneLabel = timezoneConfig ? t(timezoneConfig.labelKey) : timezone;
-  const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
+  const language = i18n.resolvedLanguage || i18n.language;
+  const intlLocale = getIntlLocale(language);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.is_read).length,
     [notifications],
   );
 
+
+
   useEffect(() => {
     let cancelled = false;
 
-    const initialize = async () => {
+    const refreshNotifications = async ({ showLoading = false } = {}) => {
       try {
+        if (showLoading && !cancelled) {
+          setLoading(true);
+        }
+
         const nextNotifications = await fetchNotifications();
 
         if (!cancelled) {
@@ -60,16 +69,23 @@ const Notifications = () => {
           setErrorMessage(t("notifications.errors.load"));
         }
       } finally {
-        if (!cancelled) {
+        if (showLoading && !cancelled) {
           setLoading(false);
         }
       }
     };
 
-    initialize();
+    refreshNotifications({ showLoading: true });
+
+    const handleFocus = () => {
+      refreshNotifications();
+    };
+
+    window.addEventListener("focus", handleFocus);
 
     return () => {
       cancelled = true;
+      window.removeEventListener("focus", handleFocus);
     };
   }, [t]);
 
@@ -120,8 +136,16 @@ const Notifications = () => {
     }).format(Number(amountMinor) / 100);
   };
 
+
+
   const getBody = (notification) => {
     const startsAt = notification.data?.startsAt;
+    const priceAmountMinor = Number(notification.data?.priceAmountMinor);
+    const priceCurrency = notification.data?.priceCurrency;
+    const amount =
+      Number.isFinite(priceAmountMinor) && priceCurrency
+        ? formatFinanceMoney(priceAmountMinor, priceCurrency, language)
+        : "—";
 
     return t(notification.body_key, {
       studentName: notification.data?.studentName || t("notifications.student"),
@@ -133,6 +157,9 @@ const Notifications = () => {
       rateAmount: formatRateAmount(notification.data?.newAmountMinor),
       rateCurrency: notification.data?.newCurrency || "—",
       effectiveDate: formatCalendarDate(notification.data?.effectiveFrom),
+      amount,
+      waiverReason: notification.data?.waiverReason || "—",
+      graceHours: notification.data?.graceHours ?? 18,
     });
   };
 
@@ -161,6 +188,8 @@ const Notifications = () => {
       setProcessingId(null);
     }
   };
+
+
 
   const markAllAsRead = async () => {
     try {
@@ -236,54 +265,59 @@ const Notifications = () => {
         </div>
       ) : (
         <div className={styles.list}>
-          {notifications.map((notification) => (
-            <article
-              key={notification.id}
-              className={`${styles.card} ${
-                notification.is_read ? styles.read : styles.unread
-              }`}
-            >
-              <div className={styles.cardContent}>
-                <div className={styles.titleRow}>
-                  <h2>{t(notification.title_key)}</h2>
-                  {!notification.is_read && (
-                    <span className={styles.unreadDot} aria-hidden="true" />
-                  )}
+          {notifications.map((notification) => {
+            return (
+              <article
+                key={notification.id}
+                className={`${styles.card} ${
+                  notification.is_read ? styles.read : styles.unread
+                }`}
+              >
+                <div className={styles.cardContent}>
+                  <div className={styles.titleRow}>
+                    <h2>{t(notification.title_key)}</h2>
+                    {!notification.is_read && (
+                      <span className={styles.unreadDot} aria-hidden="true" />
+                    )}
+                  </div>
+
+                  <p>{getBody(notification)}</p>
+
+                  {notification.type === "lesson_request_rejected" &&
+                    notification.data?.comment && (
+                      <div className={styles.teacherComment}>
+                        <strong>{t("notifications.teacherComment")}</strong>
+                        <p>{notification.data.comment}</p>
+                      </div>
+                    )}
+
+
+
+                  <time dateTime={notification.created_at}>
+                    {formatCreatedAt(notification.created_at)}
+                  </time>
                 </div>
 
-                <p>{getBody(notification)}</p>
-
-                {notification.type === "lesson_request_rejected" &&
-                  notification.data?.comment && (
-                    <div className={styles.teacherComment}>
-                      <strong>{t("notifications.teacherComment")}</strong>
-                      <p>{notification.data.comment}</p>
-                    </div>
-                  )}
-
-                <time dateTime={notification.created_at}>
-                  {formatCreatedAt(notification.created_at)}
-                </time>
-              </div>
-
-              {!notification.is_read && (
-                <button
-                  type="button"
-                  className={styles.markReadButton}
-                  onClick={() => markAsRead(notification.id)}
-                  disabled={processingId === notification.id}
-                >
-                  {processingId === notification.id
-                    ? t("notifications.markingRead")
-                    : t("notifications.markRead")}
-                </button>
-              )}
-            </article>
-          ))}
+                {!notification.is_read && (
+                  <button
+                    type="button"
+                    className={styles.markReadButton}
+                    onClick={() => markAsRead(notification.id)}
+                    disabled={processingId === notification.id}
+                  >
+                    {processingId === notification.id
+                      ? t("notifications.markingRead")
+                      : t("notifications.markRead")}
+                  </button>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
   );
 };
+
 
 export default Notifications;

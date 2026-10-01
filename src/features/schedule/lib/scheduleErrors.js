@@ -100,6 +100,14 @@ export const getLessonOutcomeError = (error, t) => {
     return t("teacherSchedule.outcome.errors.cancelled");
   }
 
+  if (message.includes("LESSON_PRICE_NOT_SET")) {
+    return t("teacherSchedule.outcome.errors.priceNotSet");
+  }
+
+  if (message.includes("CANCELLATION_REQUEST_PENDING")) {
+    return t("teacherSchedule.outcome.errors.cancellationPending");
+  }
+
   if (message.includes("LESSON_NOT_FOUND")) {
     return t("teacherSchedule.outcome.errors.notFound");
   }

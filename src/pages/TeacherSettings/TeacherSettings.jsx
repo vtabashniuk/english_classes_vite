@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 
 import {
-  FINANCE_CURRENCIES,
   createPaymentAccount,
   getMyCurrentTaxProfile,
   getMyTaxParameterOverrides,
@@ -19,6 +18,14 @@ import {
   updateMyTeacherSettings,
 } from "../../features/settings/api/teacherSettingsApi";
 import { TIMEZONES } from "../../constants/timezones";
+import {
+  DEFAULT_FINANCE_SETTINGS,
+  FINANCE_CURRENCIES,
+  MAX_FREE_CANCELLATION_HOURS,
+  MAX_LOW_BALANCE_LESSONS,
+  MIN_FREE_CANCELLATION_HOURS,
+  MIN_LOW_BALANCE_LESSONS,
+} from "../../constants/finance";
 import {
   DEFAULT_SCHEDULE_SETTINGS,
   LESSON_DURATION_STEP,
@@ -57,7 +64,12 @@ const TeacherSettings = () => {
     DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
   );
   const [teacherToday, setTeacherToday] = useState(getBrowserDateString());
-  const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(2);
+  const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(
+    DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
+  );
+  const [freeCancellationHours, setFreeCancellationHours] = useState(
+    DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
+  );
 
   const [taxProfiles, setTaxProfiles] = useState([]);
   const [currentTaxProfile, setCurrentTaxProfile] = useState(null);
@@ -188,7 +200,16 @@ const TeacherSettings = () => {
         setTimezone(resolvedTimezone);
         setTeacherToday(today);
         setLowBalanceThresholdLessons(
-          Number(data?.low_balance_threshold_lessons ?? 2),
+          Number(
+            data?.low_balance_threshold_lessons ??
+              DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
+          ),
+        );
+        setFreeCancellationHours(
+          Number(
+            data?.free_cancellation_hours ??
+              DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
+          ),
         );
         setWorkdayStart(
           data?.workday_start?.slice(0, 5) ||
@@ -281,9 +302,25 @@ const TeacherSettings = () => {
     setFinancePreferencesSuccess("");
 
     const threshold = Number(lowBalanceThresholdLessons);
-    if (!Number.isInteger(threshold) || threshold < 1 || threshold > 20) {
+    if (
+      !Number.isInteger(threshold) ||
+      threshold < MIN_LOW_BALANCE_LESSONS ||
+      threshold > MAX_LOW_BALANCE_LESSONS
+    ) {
       setFinancePreferencesError(
         t("teacherSettings.financePreferences.errors.invalidThreshold"),
+      );
+      return;
+    }
+
+    const cancellationHours = Number(freeCancellationHours);
+    if (
+      !Number.isInteger(cancellationHours) ||
+      cancellationHours < MIN_FREE_CANCELLATION_HOURS ||
+      cancellationHours > MAX_FREE_CANCELLATION_HOURS
+    ) {
+      setFinancePreferencesError(
+        t("teacherSettings.financePreferences.errors.invalidCancellationHours"),
       );
       return;
     }
@@ -292,10 +329,12 @@ const TeacherSettings = () => {
       setFinancePreferencesSaving(true);
       const { error } = await updateMyFinancePreferences({
         lowBalanceThresholdLessons: threshold,
+        freeCancellationHours: cancellationHours,
       });
       if (error) throw error;
 
       setLowBalanceThresholdLessons(threshold);
+      setFreeCancellationHours(cancellationHours);
       setFinancePreferencesSuccess(
         t("teacherSettings.financePreferences.messages.saved"),
       );
@@ -578,8 +617,8 @@ const TeacherSettings = () => {
             <span>{t("teacherSettings.financePreferences.lowBalanceThreshold")}</span>
             <input
               type="number"
-              min="1"
-              max="20"
+              min={MIN_LOW_BALANCE_LESSONS}
+              max={MAX_LOW_BALANCE_LESSONS}
               step="1"
               value={lowBalanceThresholdLessons}
               onChange={(event) =>
@@ -588,6 +627,20 @@ const TeacherSettings = () => {
               disabled={financePreferencesSaving}
             />
             <small>{t("teacherSettings.financePreferences.lowBalanceHint")}</small>
+          </label>
+
+          <label className={styles.field}>
+            <span>{t("teacherSettings.financePreferences.freeCancellationHours")}</span>
+            <input
+              type="number"
+              min={MIN_FREE_CANCELLATION_HOURS}
+              max={MAX_FREE_CANCELLATION_HOURS}
+              step="1"
+              value={freeCancellationHours}
+              onChange={(event) => setFreeCancellationHours(event.target.value)}
+              disabled={financePreferencesSaving}
+            />
+            <small>{t("teacherSettings.financePreferences.freeCancellationHint")}</small>
           </label>
 
           {financePreferencesError && (
