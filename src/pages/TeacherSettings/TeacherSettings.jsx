@@ -21,6 +21,7 @@ import { TIMEZONES } from "../../constants/timezones";
 import {
   DEFAULT_FINANCE_SETTINGS,
   FINANCE_CURRENCIES,
+  FINANCE_HISTORY_PAGE_SIZE_OPTIONS,
   MAX_FREE_CANCELLATION_HOURS,
   MAX_LOW_BALANCE_LESSONS,
   MIN_FREE_CANCELLATION_HOURS,
@@ -69,6 +70,9 @@ const TeacherSettings = () => {
   );
   const [freeCancellationHours, setFreeCancellationHours] = useState(
     DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
+  );
+  const [historyPageSize, setHistoryPageSize] = useState(
+    DEFAULT_FINANCE_SETTINGS.historyPageSize,
   );
 
   const [taxProfiles, setTaxProfiles] = useState([]);
@@ -211,6 +215,12 @@ const TeacherSettings = () => {
               DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
           ),
         );
+        setHistoryPageSize(
+          Number(
+            data?.finance_history_page_size ??
+              DEFAULT_FINANCE_SETTINGS.historyPageSize,
+          ),
+        );
         setWorkdayStart(
           data?.workday_start?.slice(0, 5) ||
             DEFAULT_SCHEDULE_SETTINGS.workdayStart,
@@ -325,16 +335,26 @@ const TeacherSettings = () => {
       return;
     }
 
+    const resolvedHistoryPageSize = Number(historyPageSize);
+    if (!FINANCE_HISTORY_PAGE_SIZE_OPTIONS.includes(resolvedHistoryPageSize)) {
+      setFinancePreferencesError(
+        t("teacherSettings.financePreferences.errors.invalidHistoryPageSize"),
+      );
+      return;
+    }
+
     try {
       setFinancePreferencesSaving(true);
       const { error } = await updateMyFinancePreferences({
         lowBalanceThresholdLessons: threshold,
         freeCancellationHours: cancellationHours,
+        historyPageSize: resolvedHistoryPageSize,
       });
       if (error) throw error;
 
       setLowBalanceThresholdLessons(threshold);
       setFreeCancellationHours(cancellationHours);
+      setHistoryPageSize(resolvedHistoryPageSize);
       setFinancePreferencesSuccess(
         t("teacherSettings.financePreferences.messages.saved"),
       );
@@ -641,6 +661,22 @@ const TeacherSettings = () => {
               disabled={financePreferencesSaving}
             />
             <small>{t("teacherSettings.financePreferences.freeCancellationHint")}</small>
+          </label>
+
+          <label className={styles.field}>
+            <span>{t("teacherSettings.financePreferences.historyPageSize")}</span>
+            <select
+              value={historyPageSize}
+              onChange={(event) => setHistoryPageSize(Number(event.target.value))}
+              disabled={financePreferencesSaving}
+            >
+              {FINANCE_HISTORY_PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+            <small>{t("teacherSettings.financePreferences.historyPageSizeHint")}</small>
           </label>
 
           {financePreferencesError && (

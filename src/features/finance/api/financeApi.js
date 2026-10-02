@@ -59,16 +59,27 @@ export const getTeacherPaymentAccounts = async () =>
     .order("currency", { ascending: true })
     .order("name", { ascending: true });
 
-export const getStudentFinanceTransactions = async (studentId, limit = 30) => {
-  const transactionsResult = await supabase
-    .from("student_finance_transactions")
+export const getStudentFinanceTransactions = async (
+  studentId,
+  { limit = 20, offset = 0, dateFrom = null, dateTo = null } = {},
+) => {
+  let transactionsQuery = supabase
+    .from("student_finance_transaction_history")
     .select(
-      "id, transaction_type, amount_minor, currency, lesson_id, payment_id, reversal_of_id, description, effective_at, created_at",
+      "id, transaction_type, amount_minor, currency, lesson_id, payment_id, reversal_of_id, description, effective_at, effective_date, created_at",
+      { count: "exact" },
     )
     .eq("student_id", studentId)
     .order("effective_at", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false });
+
+  if (dateFrom) transactionsQuery = transactionsQuery.gte("effective_date", dateFrom);
+  if (dateTo) transactionsQuery = transactionsQuery.lte("effective_date", dateTo);
+
+  const transactionsResult = await transactionsQuery.range(
+    offset,
+    offset + limit - 1,
+  );
 
   if (transactionsResult.error) {
     return { data: null, error: transactionsResult.error };
@@ -154,6 +165,7 @@ export const getStudentFinanceTransactions = async (studentId, limit = 30) => {
       };
     }),
     error: null,
+    count: transactionsResult.count ?? transactions.length,
   };
 };
 
@@ -316,3 +328,25 @@ export const recordManualStudentPayment = ({
     p_paid_at: paidAt,
     p_client_request_id: clientRequestId,
   });
+
+export const correctManualStudentPayment = ({
+  paymentId,
+  amountMinor,
+  currency,
+  paymentAccountId,
+  paymentMethod,
+  description,
+  paidAt,
+  clientRequestId,
+}) =>
+  supabase.rpc("correct_manual_student_payment", {
+    p_payment_id: paymentId,
+    p_amount_minor: amountMinor,
+    p_currency: currency,
+    p_payment_account_id: paymentAccountId,
+    p_payment_method: paymentMethod,
+    p_description: description || null,
+    p_paid_at: paidAt,
+    p_client_request_id: clientRequestId,
+  });
+

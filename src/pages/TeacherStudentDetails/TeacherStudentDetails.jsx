@@ -3,17 +3,21 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
 import {
-  createPaymentAccount,
+  correctManualStudentPayment,
   getStudentFinanceOverview,
   getStudentFinanceTransactions,
   getTeacherPaymentAccounts,
-  getMyCurrentTaxProfile,
   recordManualStudentPayment,
   resolvePaymentTax,
   setStudentLessonRate,
 } from "../../features/finance/api/financeApi";
-import { FINANCE_CURRENCIES } from "../../constants/finance";
+import {
+  DEFAULT_FINANCE_HISTORY_DAYS,
+  DEFAULT_FINANCE_SETTINGS,
+  FINANCE_CURRENCIES,
+} from "../../constants/finance";
 import { getStudentById } from "../../features/profiles/api/profilesApi";
+import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 
@@ -47,7 +51,6 @@ const TeacherStudentDetails = () => {
   const [financeActivityError, setFinanceActivityError] = useState("");
   const [paymentAccounts, setPaymentAccounts] = useState([]);
   const [financeTransactions, setFinanceTransactions] = useState([]);
-  const [currentTaxProfile, setCurrentTaxProfile] = useState(null);
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentCurrency, setPaymentCurrency] = useState(DEFAULT_CURRENCY);
@@ -57,18 +60,25 @@ const TeacherStudentDetails = () => {
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
+  const [editingPaymentId, setEditingPaymentId] = useState("");
 
-  const [accountName, setAccountName] = useState("");
-  const [accountCurrency, setAccountCurrency] = useState(DEFAULT_CURRENCY);
-  const [accountOwnerType, setAccountOwnerType] = useState("personal");
-  const [accountType, setAccountType] = useState("bank_account");
-  const [accountSaving, setAccountSaving] = useState(false);
-  const [accountError, setAccountError] = useState("");
-  const [accountSuccess, setAccountSuccess] = useState("");
+  const [historyDateFrom, setHistoryDateFrom] = useState(() =>
+    getLocalDateDaysAgo(DEFAULT_FINANCE_HISTORY_DAYS - 1),
+  );
+  const [historyDateTo, setHistoryDateTo] = useState(getLocalDateString());
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize, setHistoryPageSize] = useState(
+    DEFAULT_FINANCE_SETTINGS.historyPageSize,
+  );
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+
   const [taxResolveError, setTaxResolveError] = useState("");
   const [taxRetryingPaymentId, setTaxRetryingPaymentId] = useState("");
 
   const paymentAttemptRef = useRef({ signature: "", requestId: "" });
+  const historySectionRef = useRef(null);
 
   useEffect(() => {
     const loadStudent = async () => {
@@ -121,7 +131,6 @@ const TeacherStudentDetails = () => {
           DEFAULT_CURRENCY;
 
         setPaymentCurrency(activeCurrency);
-        setAccountCurrency(activeCurrency);
       } catch (error) {
         console.error("Student finance load error:", error);
         setFinanceError(t("teacherStudentDetails.finance.errors.load"));
@@ -139,19 +148,22 @@ const TeacherStudentDetails = () => {
         setFinanceActivityLoading(true);
         setFinanceActivityError("");
 
-        const [accountsResult, transactionsResult, taxProfileResult] = await Promise.all([
+        const [accountsResult, settingsResult] = await Promise.all([
           getTeacherPaymentAccounts(),
-          getStudentFinanceTransactions(studentId),
-          getMyCurrentTaxProfile(),
+          getMyTeacherScheduleSettings(),
         ]);
 
-        if (accountsResult.error) throw accountsResult.error;
-        if (transactionsResult.error) throw transactionsResult.error;
-        if (taxProfileResult.error) throw taxProfileResult.error;
+        if (accountsResult.error || settingsResult.error) {
+          throw accountsResult.error || settingsResult.error;
+        }
 
         setPaymentAccounts(accountsResult.data ?? []);
-        setFinanceTransactions(transactionsResult.data ?? []);
-        setCurrentTaxProfile(taxProfileResult.data ?? null);
+        setHistoryPageSize(
+          Number(
+            settingsResult.data?.finance_history_page_size ??
+              DEFAULT_FINANCE_SETTINGS.historyPageSize,
+          ),
+        );
       } catch (error) {
         console.error("Student finance activity load error:", error);
         setFinanceActivityError(
@@ -163,7 +175,43 @@ const TeacherStudentDetails = () => {
     };
 
     loadFinanceActivity();
-  }, [studentId, t]);
+  }, [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadHistory = async () => {
+      try {
+        setHistoryLoading(true);
+        setHistoryError("");
+
+        const result = await getStudentFinanceTransactions(studentId, {
+          limit: historyPageSize,
+          offset: historyPage * historyPageSize,
+          dateFrom: historyDateFrom || null,
+          dateTo: historyDateTo || null,
+        });
+
+        if (result.error) throw result.error;
+        if (cancelled) return;
+
+        setFinanceTransactions(result.data ?? []);
+        setHistoryTotal(result.count ?? 0);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Student finance history load error:", error);
+        setHistoryError(t("teacherStudentDetails.finance.errors.historyLoad"));
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    };
+
+    loadHistory();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [historyDateFrom, historyDateTo, historyPage, historyPageSize, studentId, t]);
 
   const balancesByCurrency = useMemo(
     () =>
@@ -185,17 +233,12 @@ const TeacherStudentDetails = () => {
     balancesByCurrency[activeBillingCurrency] ?? 0;
   const today = getLocalDateString();
 
-  const peTaxEnabled = currentTaxProfile?.taxpayer_type === "pe";
-
   const eligiblePaymentAccounts = useMemo(
     () =>
       paymentAccounts.filter(
-        (account) =>
-          account.is_active &&
-          account.currency === paymentCurrency &&
-          (account.owner_type !== "pe" || peTaxEnabled),
+        (account) => account.is_active && account.currency === paymentCurrency,
       ),
-    [paymentAccounts, paymentCurrency, peTaxEnabled],
+    [paymentAccounts, paymentCurrency],
   );
 
   const resolvedPaymentAccountId =
@@ -212,15 +255,26 @@ const TeacherStudentDetails = () => {
     [eligiblePaymentAccounts, resolvedPaymentAccountId],
   );
 
-  const resolvedAccountOwnerType =
-    peTaxEnabled && accountOwnerType === "pe" ? "pe" : "personal";
-  const availableAccountTypes =
-    resolvedAccountOwnerType === "pe"
-      ? ["bank_account", "card", "cash"]
-      : ["card", "cash"];
-  const resolvedAccountType = availableAccountTypes.includes(accountType)
-    ? accountType
-    : availableAccountTypes[0];
+  const lessonRateIsValid = isPositiveIntegerInput(lessonRate);
+  const paymentAmountMinor = parseMoneyInputToMinor(paymentAmount);
+  const paymentAmountIsValid = paymentAmountMinor !== null && paymentAmountMinor > 0;
+  const historyPageCount = Math.max(
+    1,
+    Math.ceil(historyTotal / historyPageSize),
+  );
+
+  const handleHistoryPageChange = (nextPage) => {
+    setHistoryPage(nextPage);
+
+    window.requestAnimationFrame(() => {
+      historySectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+  const isEditingPayment = Boolean(editingPaymentId);
+
 
   const formatDate = (dateString) =>
     new Intl.DateTimeFormat(intlLocale, {
@@ -252,28 +306,73 @@ const TeacherStudentDetails = () => {
     return amount > 0 ? `+${formatted}` : formatted;
   };
 
+  const refreshFinanceHistory = async ({ page = historyPage } = {}) => {
+    const result = await getStudentFinanceTransactions(studentId, {
+      limit: historyPageSize,
+      offset: page * historyPageSize,
+      dateFrom: historyDateFrom || null,
+      dateTo: historyDateTo || null,
+    });
+
+    if (result.error) throw result.error;
+
+    setFinanceTransactions(result.data ?? []);
+    setHistoryTotal(result.count ?? 0);
+  };
+
+  const resetPaymentForm = () => {
+    setEditingPaymentId("");
+    setPaymentAmount("");
+    setPaymentCurrency(activeBillingCurrency);
+    setPaymentAccountId("");
+    setPaymentDate(getLocalDateString());
+    setPaymentDescription("");
+    setPaymentError("");
+    paymentAttemptRef.current = { signature: "", requestId: "" };
+  };
+
+  const handleEditPayment = (transaction) => {
+    if (
+      transaction.transaction_type !== "payment" ||
+      !transaction.payment ||
+      transaction.payment.provider !== "manual" ||
+      transaction.payment.status !== "succeeded"
+    ) {
+      return;
+    }
+
+    setEditingPaymentId(transaction.payment.id);
+    setPaymentAmount(minorToPaymentInputValue(transaction.amount_minor));
+    setPaymentCurrency(transaction.currency);
+    setPaymentAccountId(transaction.payment.payment_account_id ?? "");
+    setPaymentDate(toLocalDateInputValue(transaction.payment.paid_at));
+    setPaymentDescription(transaction.payment.description ?? "");
+    setPaymentError("");
+    setPaymentSuccess("");
+    paymentAttemptRef.current = { signature: "", requestId: "" };
+  };
+
   const handleFinanceSubmit = async (event) => {
     event.preventDefault();
 
     setFinanceSaveError("");
     setFinanceSuccess("");
 
-    const normalizedRate = lessonRate.trim().replace(",", ".");
-    const numericRate = Number(normalizedRate);
-
-    if (!normalizedRate) {
+    if (!lessonRate) {
       setFinanceSaveError(
         t("teacherStudentDetails.finance.errors.rateRequired"),
       );
       return;
     }
 
-    if (!Number.isFinite(numericRate) || numericRate <= 0) {
+    if (!lessonRateIsValid) {
       setFinanceSaveError(
         t("teacherStudentDetails.finance.errors.invalidRate"),
       );
       return;
     }
+
+    const numericRate = Number(lessonRate);
 
     if (!rateEffectiveFrom) {
       setFinanceSaveError(
@@ -294,7 +393,7 @@ const TeacherStudentDetails = () => {
 
       const { error } = await setStudentLessonRate({
         studentId,
-        amountMinor: Math.round(numericRate * MINOR_UNIT_FACTOR),
+        amountMinor: numericRate * MINOR_UNIT_FACTOR,
         currency: rateCurrency,
         effectiveFrom: rateEffectiveFrom,
       });
@@ -329,11 +428,9 @@ const TeacherStudentDetails = () => {
     setPaymentError("");
     setPaymentSuccess("");
 
-    const normalizedAmount = paymentAmount.trim().replace(",", ".");
-    const numericAmount = Number(normalizedAmount);
     const normalizedDescription = paymentDescription.trim();
 
-    if (!normalizedAmount || !Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (!paymentAmountIsValid) {
       setPaymentError(
         t("teacherStudentDetails.finance.errors.invalidPaymentAmount"),
       );
@@ -361,13 +458,14 @@ const TeacherStudentDetails = () => {
       return;
     }
 
-    const amountMinor = Math.round(numericAmount * MINOR_UNIT_FACTOR);
+    const amountMinor = paymentAmountMinor;
     const paymentMethod =
       selectedPaymentAccount.account_type === "cash"
         ? "cash"
         : "bank_transfer";
     const paidAt = localDateToNoonIso(paymentDate);
     const signature = JSON.stringify({
+      editingPaymentId: editingPaymentId || null,
       studentId,
       amountMinor,
       paymentCurrency,
@@ -387,16 +485,29 @@ const TeacherStudentDetails = () => {
     try {
       setPaymentSaving(true);
 
-      const { data: paymentResult, error } = await recordManualStudentPayment({
-        studentId,
-        amountMinor,
-        currency: paymentCurrency,
-        paymentAccountId: selectedPaymentAccount.id,
-        paymentMethod,
-        description: normalizedDescription,
-        paidAt,
-        clientRequestId: paymentAttemptRef.current.requestId,
-      });
+      const paymentMutation = isEditingPayment
+        ? correctManualStudentPayment({
+            paymentId: editingPaymentId,
+            amountMinor,
+            currency: paymentCurrency,
+            paymentAccountId: selectedPaymentAccount.id,
+            paymentMethod,
+            description: normalizedDescription,
+            paidAt,
+            clientRequestId: paymentAttemptRef.current.requestId,
+          })
+        : recordManualStudentPayment({
+            studentId,
+            amountMinor,
+            currency: paymentCurrency,
+            paymentAccountId: selectedPaymentAccount.id,
+            paymentMethod,
+            description: normalizedDescription,
+            paidAt,
+            clientRequestId: paymentAttemptRef.current.requestId,
+          });
+
+      const { data: paymentResult, error } = await paymentMutation;
 
       if (error) throw error;
 
@@ -414,87 +525,34 @@ const TeacherStudentDetails = () => {
         }
       }
 
-      const [overviewResult, transactionsResult] = await Promise.all([
-        getStudentFinanceOverview(studentId),
-        getStudentFinanceTransactions(studentId),
-      ]);
+      const overviewResult = await getStudentFinanceOverview(studentId);
 
       if (overviewResult.error) throw overviewResult.error;
-      if (transactionsResult.error) throw transactionsResult.error;
 
       setFinanceOverview(overviewResult.data);
-      setFinanceTransactions(transactionsResult.data ?? []);
-      setPaymentAmount("");
-      setPaymentDescription("");
-      setPaymentDate(getLocalDateString());
-      paymentAttemptRef.current = { signature: "", requestId: "" };
+      await refreshFinanceHistory({ page: 0 });
+      setHistoryPage(0);
+
+      const wasEditing = isEditingPayment;
+      resetPaymentForm();
       setPaymentSuccess(
         taxPending
-          ? t("teacherStudentDetails.finance.messages.paymentSavedTaxPending")
-          : t("teacherStudentDetails.finance.messages.paymentSaved"),
+          ? t(
+              wasEditing
+                ? "teacherStudentDetails.finance.messages.paymentUpdatedTaxPending"
+                : "teacherStudentDetails.finance.messages.paymentSavedTaxPending",
+            )
+          : t(
+              wasEditing
+                ? "teacherStudentDetails.finance.messages.paymentUpdated"
+                : "teacherStudentDetails.finance.messages.paymentSaved",
+            ),
       );
     } catch (error) {
       console.error("Manual payment error:", error);
       setPaymentError(getPaymentError(error, t));
     } finally {
       setPaymentSaving(false);
-    }
-  };
-
-  const handleAccountSubmit = async (event) => {
-    event.preventDefault();
-    setAccountError("");
-    setAccountSuccess("");
-
-    const normalizedName = accountName.trim();
-
-    if (!normalizedName) {
-      setAccountError(
-        t("teacherStudentDetails.finance.errors.accountNameRequired"),
-      );
-      return;
-    }
-
-    const provider = resolvedAccountType === "cash" ? "manual" : "monobank";
-
-    try {
-      setAccountSaving(true);
-
-      const { data, error } = await createPaymentAccount({
-        name: normalizedName,
-        provider,
-        accountType: resolvedAccountType,
-        ownerType: resolvedAccountOwnerType,
-        currency: accountCurrency,
-      });
-
-      if (error) throw error;
-
-      const accountsResult = await getTeacherPaymentAccounts();
-
-      if (accountsResult.error) throw accountsResult.error;
-
-      const refreshedAccounts = accountsResult.data ?? [];
-      const createdAccount =
-        (data?.id && refreshedAccounts.find((account) => account.id === data.id)) ||
-        refreshedAccounts.find(
-          (account) =>
-            account.name === normalizedName &&
-            account.currency === accountCurrency,
-        );
-
-      setPaymentAccounts(refreshedAccounts);
-      setPaymentCurrency(accountCurrency);
-      setPaymentAccountId(createdAccount?.id ?? "");
-      setAccountName("");
-      setAccountSuccess(
-        t("teacherStudentDetails.finance.messages.accountCreated"),
-      );
-    } catch (error) {
-      console.error("Payment account create error:", error);
-      setAccountError(getPaymentAccountError(error, t));
-    } finally {
-      setAccountSaving(false);
     }
   };
 
@@ -508,11 +566,7 @@ const TeacherStudentDetails = () => {
 
       if (error) throw error;
 
-      const transactionsResult = await getStudentFinanceTransactions(studentId);
-
-      if (transactionsResult.error) throw transactionsResult.error;
-
-      setFinanceTransactions(transactionsResult.data ?? []);
+      await refreshFinanceHistory();
     } catch (error) {
       console.error("Tax retry error:", error);
       setTaxResolveError(
@@ -716,14 +770,15 @@ const TeacherStudentDetails = () => {
                     <div className={styles.moneyInputWrap}>
                       <input
                         type="text"
-                        inputMode="decimal"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={lessonRate}
                         onChange={(event) => {
-                          setLessonRate(event.target.value);
+                          setLessonRate(sanitizePositiveIntegerInput(event.target.value));
                           setFinanceSaveError("");
                           setFinanceSuccess("");
                         }}
-                        placeholder="0.00"
+                        placeholder="0"
                         disabled={financeSaving}
                       />
                       <span>{rateCurrency}</span>
@@ -762,7 +817,12 @@ const TeacherStudentDetails = () => {
                   <button
                     type="submit"
                     className={styles.primaryButton}
-                    disabled={financeSaving}
+                    disabled={
+                      financeSaving ||
+                      !lessonRateIsValid ||
+                      !rateEffectiveFrom ||
+                      rateEffectiveFrom < today
+                    }
                   >
                     {financeSaving
                       ? t("teacherStudentDetails.finance.saving")
@@ -805,8 +865,20 @@ const TeacherStudentDetails = () => {
                 <section className={styles.financeSubsection}>
                   <div className={styles.subsectionHeader}>
                     <div>
-                      <h3>{t("teacherStudentDetails.finance.addPayment")}</h3>
-                      <p>{t("teacherStudentDetails.finance.addPaymentHint")}</p>
+                      <h3>
+                        {t(
+                          isEditingPayment
+                            ? "teacherStudentDetails.finance.editPayment"
+                            : "teacherStudentDetails.finance.addPayment",
+                        )}
+                      </h3>
+                      <p>
+                        {t(
+                          isEditingPayment
+                            ? "teacherStudentDetails.finance.editPaymentHint"
+                            : "teacherStudentDetails.finance.addPaymentHint",
+                        )}
+                      </p>
                     </div>
                   </div>
 
@@ -839,11 +911,11 @@ const TeacherStudentDetails = () => {
                             inputMode="decimal"
                             value={paymentAmount}
                             onChange={(event) => {
-                              setPaymentAmount(event.target.value);
+                              setPaymentAmount(sanitizeMoneyInput(event.target.value));
                               setPaymentError("");
                               setPaymentSuccess("");
                             }}
-                            placeholder="0.00"
+                            placeholder="0,00"
                             disabled={paymentSaving}
                           />
                           <span>{paymentCurrency}</span>
@@ -925,7 +997,10 @@ const TeacherStudentDetails = () => {
                       <p className={styles.rateHint}>
                         {t("teacherStudentDetails.finance.createAccountFirst", {
                           currency: paymentCurrency,
-                        })}
+                        })}{" "}
+                        <Link to="/teacher-dashboard/settings#payment-accounts">
+                          {t("teacherStudentDetails.finance.managePaymentAccounts")}
+                        </Link>
                       </p>
                     )}
 
@@ -935,152 +1010,53 @@ const TeacherStudentDetails = () => {
                     )}
 
                     <div className={styles.financeActions}>
+                      {isEditingPayment && (
+                        <button
+                          type="button"
+                          className={styles.secondaryButton}
+                          onClick={() => {
+                            resetPaymentForm();
+                            setPaymentSuccess("");
+                          }}
+                          disabled={paymentSaving}
+                        >
+                          {t("teacherStudentDetails.finance.cancelPaymentEdit")}
+                        </button>
+                      )}
+
                       <button
                         type="submit"
                         className={styles.primaryButton}
-                        disabled={paymentSaving || eligiblePaymentAccounts.length === 0}
+                        disabled={
+                          paymentSaving ||
+                          !paymentAmountIsValid ||
+                          !selectedPaymentAccount ||
+                          !paymentDate ||
+                          paymentDate > today
+                        }
                       >
                         {paymentSaving
-                          ? t("teacherStudentDetails.finance.savingPayment")
-                          : t("teacherStudentDetails.finance.savePayment")}
-                      </button>
-                    </div>
-                  </form>
-                </section>
-
-                <section className={styles.financeSubsection}>
-                  <div className={styles.subsectionHeader}>
-                    <div>
-                      <h3>{t("teacherStudentDetails.finance.paymentAccounts")}</h3>
-                      <p>{t("teacherStudentDetails.finance.paymentAccountsHint")}</p>
-                    </div>
-                  </div>
-
-                  {paymentAccounts.length > 0 && (
-                    <div className={styles.accountList}>
-                      {paymentAccounts.map((account) => (
-                        <span key={account.id} className={styles.accountChip}>
-                          <strong>{account.name}</strong>
-                          <small>
-                            {account.currency} · {t(
-                              `teacherStudentDetails.finance.accountOwners.${account.owner_type}`,
-                            )} · {t(
-                              `teacherStudentDetails.finance.accountTypes.${account.account_type}`,
+                          ? t(
+                              isEditingPayment
+                                ? "teacherStudentDetails.finance.savingPaymentChanges"
+                                : "teacherStudentDetails.finance.savingPayment",
+                            )
+                          : t(
+                              isEditingPayment
+                                ? "teacherStudentDetails.finance.savePaymentChanges"
+                                : "teacherStudentDetails.finance.savePayment",
                             )}
-                          </small>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <form className={styles.accountForm} onSubmit={handleAccountSubmit}>
-                    <div className={styles.financeFields}>
-                      <label className={`${styles.field} ${styles.fullField}`}>
-                        <span>{t("teacherStudentDetails.finance.accountName")}</span>
-                        <input
-                          type="text"
-                          value={accountName}
-                          onChange={(event) => {
-                            setAccountName(event.target.value);
-                            setAccountError("");
-                            setAccountSuccess("");
-                          }}
-                          placeholder={t(
-                            "teacherStudentDetails.finance.accountNamePlaceholder",
-                          )}
-                          maxLength={100}
-                          disabled={accountSaving}
-                        />
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{t("teacherStudentDetails.finance.accountCurrency")}</span>
-                        <select
-                          value={accountCurrency}
-                          onChange={(event) => {
-                            setAccountCurrency(event.target.value);
-                            setAccountError("");
-                            setAccountSuccess("");
-                          }}
-                          disabled={accountSaving}
-                        >
-                          {FINANCE_CURRENCIES.map((currency) => (
-                            <option key={currency} value={currency}>
-                              {currency}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{t("teacherStudentDetails.finance.accountOwner")}</span>
-                        <select
-                          value={resolvedAccountOwnerType}
-                          onChange={(event) => {
-                            setAccountOwnerType(event.target.value);
-                            setAccountError("");
-                            setAccountSuccess("");
-                          }}
-                          disabled={accountSaving}
-                        >
-                          <option value="personal">
-                            {t("teacherStudentDetails.finance.accountOwners.personal")}
-                          </option>
-                          {peTaxEnabled && (
-                            <option value="pe">
-                              {t("teacherStudentDetails.finance.accountOwners.pe")}
-                            </option>
-                          )}
-                        </select>
-                      </label>
-
-                      {!peTaxEnabled && (
-                        <p className={`${styles.rateHint} ${styles.fullField}`}>
-                          {t("teacherStudentDetails.finance.peAccountRequiresTaxProfile")}
-                        </p>
-                      )}
-
-                      <label className={styles.field}>
-                        <span>{t("teacherStudentDetails.finance.accountKind")}</span>
-                        <select
-                          value={resolvedAccountType}
-                          onChange={(event) => {
-                            setAccountType(event.target.value);
-                            setAccountError("");
-                            setAccountSuccess("");
-                          }}
-                          disabled={accountSaving}
-                        >
-                          {availableAccountTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {t(`teacherStudentDetails.finance.accountTypes.${type}`)}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    {accountError && <p className={styles.error}>{accountError}</p>}
-                    {accountSuccess && (
-                      <p className={styles.success}>{accountSuccess}</p>
-                    )}
-
-                    <div className={styles.financeActions}>
-                      <button
-                        type="submit"
-                        className={styles.secondaryButton}
-                        disabled={accountSaving}
-                      >
-                        {accountSaving
-                          ? t("teacherStudentDetails.finance.creatingAccount")
-                          : t("teacherStudentDetails.finance.createAccount")}
                       </button>
                     </div>
                   </form>
                 </section>
+
               </div>
 
-              <section className={`${styles.financeSubsection} ${styles.historySection}`}>
+              <section
+                ref={historySectionRef}
+                className={`${styles.financeSubsection} ${styles.historySection}`}
+              >
                 <div className={styles.subsectionHeader}>
                   <div>
                     <h3>{t("teacherStudentDetails.finance.history")}</h3>
@@ -1088,15 +1064,63 @@ const TeacherStudentDetails = () => {
                   </div>
                 </div>
 
+                <div className={styles.historyFilters}>
+                  <label className={styles.field}>
+                    <span>{t("teacherStudentDetails.finance.historyFrom")}</span>
+                    <input
+                      type="date"
+                      value={historyDateFrom}
+                      max={historyDateTo}
+                      onChange={(event) => {
+                        setHistoryDateFrom(event.target.value);
+                        setHistoryPage(0);
+                      }}
+                    />
+                  </label>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherStudentDetails.finance.historyTo")}</span>
+                    <input
+                      type="date"
+                      value={historyDateTo}
+                      min={historyDateFrom}
+                      max={today}
+                      onChange={(event) => {
+                        setHistoryDateTo(event.target.value);
+                        setHistoryPage(0);
+                      }}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className={styles.secondaryButton}
+                    onClick={() => {
+                      setHistoryDateFrom(
+                        getLocalDateDaysAgo(DEFAULT_FINANCE_HISTORY_DAYS - 1),
+                      );
+                      setHistoryDateTo(getLocalDateString());
+                      setHistoryPage(0);
+                    }}
+                  >
+                    {t("teacherStudentDetails.finance.historyReset")}
+                  </button>
+                </div>
+
                 {taxResolveError && (
                   <p className={styles.error}>{taxResolveError}</p>
                 )}
 
-                {financeTransactions.length === 0 ? (
+                {historyError ? (
+                  <p className={styles.error}>{historyError}</p>
+                ) : historyLoading ? (
+                  <p className={styles.rateMeta}>{t("common.loading")}</p>
+                ) : financeTransactions.length === 0 ? (
                   <p className={styles.rateMeta}>
                     {t("teacherStudentDetails.finance.historyEmpty")}
                   </p>
                 ) : (
+                  <>
                   <div className={styles.transactionList}>
                     {financeTransactions.map((transaction) => (
                       <div key={transaction.id} className={styles.transactionRow}>
@@ -1106,7 +1130,13 @@ const TeacherStudentDetails = () => {
                               `teacherStudentDetails.finance.transactionTypes.${transaction.transaction_type}`,
                             )}
                           </strong>
-                          <span>{formatDateTime(transaction.effective_at)}</span>
+                          <span>
+                            {formatDateTime(
+                              transaction.transaction_type === "payment"
+                                ? transaction.created_at
+                                : transaction.effective_at,
+                            )}
+                          </span>
 
                           {transaction.paymentAccount && (
                             <span>
@@ -1119,6 +1149,26 @@ const TeacherStudentDetails = () => {
                           {transaction.description && (
                             <small>{transaction.description}</small>
                           )}
+
+                          {transaction.transaction_type === "payment" &&
+                            transaction.payment?.status === "cancelled" && (
+                              <small className={styles.correctedPaymentLabel}>
+                                {t("teacherStudentDetails.finance.paymentCorrected")}
+                              </small>
+                            )}
+
+                          {transaction.transaction_type === "payment" &&
+                            transaction.payment?.provider === "manual" &&
+                            transaction.payment?.status === "succeeded" && (
+                              <button
+                                type="button"
+                                className={styles.inlineButton}
+                                onClick={() => handleEditPayment(transaction)}
+                                disabled={paymentSaving}
+                              >
+                                {t("teacherStudentDetails.finance.editPaymentAction")}
+                              </button>
+                            )}
 
                           {transaction.taxAccrual && (
                             <div className={styles.taxBreakdown}>
@@ -1213,6 +1263,41 @@ const TeacherStudentDetails = () => {
                       </div>
                     ))}
                   </div>
+
+                  <div className={styles.historyPagination}>
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={() => handleHistoryPageChange(Math.max(0, historyPage - 1))}
+                      disabled={historyPage === 0 || historyLoading}
+                    >
+                      {t("teacherStudentDetails.finance.historyPrevious")}
+                    </button>
+
+                    <span>
+                      {t("teacherStudentDetails.finance.historyPage", {
+                        current: historyPage + 1,
+                        total: historyPageCount,
+                        count: historyTotal,
+                      })}
+                    </span>
+
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={() =>
+                        handleHistoryPageChange(
+                          Math.min(historyPageCount - 1, historyPage + 1),
+                        )
+                      }
+                      disabled={
+                        historyPage >= historyPageCount - 1 || historyLoading
+                      }
+                    >
+                      {t("teacherStudentDetails.finance.historyNext")}
+                    </button>
+                  </div>
+                  </>
                 )}
               </section>
             </div>
@@ -1262,7 +1347,41 @@ const TeacherStudentDetails = () => {
 const minorToInputValue = (amountMinor) => {
   const amount = Number(amountMinor) / MINOR_UNIT_FACTOR;
 
-  return Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  return Number.isInteger(amount) ? String(amount) : "";
+};
+
+const minorToPaymentInputValue = (amountMinor) => {
+  const amount = Number(amountMinor) / MINOR_UNIT_FACTOR;
+
+  return Number.isInteger(amount)
+    ? String(amount)
+    : amount.toFixed(2).replace(".", ",");
+};
+
+const sanitizePositiveIntegerInput = (value) => value.replace(/\D/g, "");
+
+const sanitizeMoneyInput = (value) => {
+  const normalized = value.replace(".", ",").replace(/[^\d,]/g, "");
+  const [integerPart = "", ...fractionParts] = normalized.split(",");
+
+  if (fractionParts.length === 0) return integerPart;
+
+  const fraction = fractionParts.join("").slice(0, 2);
+  return `${integerPart},${fraction}`;
+};
+
+const isPositiveIntegerInput = (value) => /^[1-9]\d*$/.test(value);
+
+const parseMoneyInputToMinor = (value) => {
+  const normalized = value.trim().replace(",", ".");
+
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null;
+
+  const [whole, fraction = ""] = normalized.split(".");
+  const amountMinor =
+    Number(whole) * MINOR_UNIT_FACTOR + Number(fraction.padEnd(2, "0"));
+
+  return Number.isSafeInteger(amountMinor) ? amountMinor : null;
 };
 
 const getLocalDateString = () => {
@@ -1276,6 +1395,28 @@ const getLocalDateString = () => {
 
 const localDateToNoonIso = (dateString) =>
   new Date(`${dateString}T12:00:00`).toISOString();
+
+const getLocalDateDaysAgo = (daysAgo) => {
+  const date = new Date();
+  date.setDate(date.getDate() - daysAgo);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const toLocalDateInputValue = (dateString) => {
+  if (!dateString) return getLocalDateString();
+
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 const createClientRequestId = () => {
   if (globalThis.crypto?.randomUUID) {
@@ -1353,6 +1494,22 @@ const getPaymentError = (error, t) => {
     return t("teacherStudentDetails.finance.errors.paymentRequestConflict");
   }
 
+  if (message.includes("FUTURE_PAYMENT_DATE_NOT_ALLOWED")) {
+    return t("teacherStudentDetails.finance.errors.futurePaymentDate");
+  }
+
+  if (message.includes("PAYMENT_UNCHANGED")) {
+    return t("teacherStudentDetails.finance.errors.paymentUnchanged");
+  }
+
+  if (
+    message.includes("PAYMENT_NOT_EDITABLE") ||
+    message.includes("PAYMENT_ALREADY_CORRECTED") ||
+    message.includes("PAYMENT_ALREADY_REVERSED")
+  ) {
+    return t("teacherStudentDetails.finance.errors.paymentNotEditable");
+  }
+
   if (message.includes("PE_TAX_PROFILE_REQUIRED_FOR_PAYMENT")) {
     return t("teacherStudentDetails.finance.errors.peTaxProfileRequired");
   }
@@ -1362,31 +1519,6 @@ const getPaymentError = (error, t) => {
   }
 
   return t("teacherStudentDetails.finance.errors.paymentSave");
-};
-
-const getPaymentAccountError = (error, t) => {
-  const message = error?.message ?? "";
-
-  if (message.includes("INVALID_PAYMENT_ACCOUNT_NAME")) {
-    return t("teacherStudentDetails.finance.errors.accountNameRequired");
-  }
-
-  if (
-    message.includes("payment_accounts_teacher_name_idx") ||
-    message.includes("duplicate key")
-  ) {
-    return t("teacherStudentDetails.finance.errors.accountNameDuplicate");
-  }
-
-  if (message.includes("PE_TAX_PROFILE_REQUIRED_FOR_ACCOUNT")) {
-    return t("teacherStudentDetails.finance.errors.peAccountRequiresTaxProfile");
-  }
-
-  if (message.includes("PERSONAL_ACCOUNT_TYPE_NOT_ALLOWED")) {
-    return t("teacherStudentDetails.finance.errors.personalAccountTypeNotAllowed");
-  }
-
-  return t("teacherStudentDetails.finance.errors.accountCreate");
 };
 
 export default TeacherStudentDetails;

@@ -609,10 +609,13 @@
       "errors": {
         "invalidThreshold": "Enter a whole number of lessons from 1 to 20.",
         "save": "Could not save financial control settings.",
-        "invalidCancellationHours": "Enter a whole number of hours from 1 to 168."
+        "invalidCancellationHours": "Enter a whole number of hours from 1 to 168.",
+        "invalidHistoryPageSize": "Choose a transaction count from the list."
       },
       "freeCancellationHours": "Free cancellation window, hours before lesson",
-      "freeCancellationHint": "A student request sent at least this long before the lesson is cancelled without a charge. A later request is charged in full by default."
+      "freeCancellationHint": "A student request sent at least this long before the lesson is cancelled without a charge. A later request is charged in full by default.",
+      "historyPageSize": "Transactions per history page",
+      "historyPageSizeHint": "Controls how many finance transactions are shown on one history page."
     }
   },
   "teacherStudentDetails": {
@@ -655,7 +658,9 @@
         "rateSavedAndNotified": "Rate saved. The student has been notified.",
         "paymentSaved": "Payment credited. Balance updated.",
         "accountCreated": "Payment account added.",
-        "paymentSavedTaxPending": "Payment credited. The NBU rate for the foreign-currency receipt can be resolved separately; tax and management analytics will update afterward."
+        "paymentSavedTaxPending": "Payment credited. The NBU rate for the foreign-currency receipt can be resolved separately; tax and management analytics will update afterward.",
+        "paymentUpdated": "Payment corrected. Balance updated.",
+        "paymentUpdatedTaxPending": "Payment corrected. The NBU rate for the foreign-currency receipt is still pending."
       },
       "errors": {
         "load": "Could not load finance data.",
@@ -683,7 +688,10 @@
         "accountClassificationLocked": "The classification of an account already used for payments cannot be changed.",
         "peTaxProfileRequired": "A PE payment account requires an active PE tax profile on the payment date.",
         "peAccountRequiresTaxProfile": "Set up an active PE tax profile first.",
-        "personalAccountTypeNotAllowed": "A personal profile can use only a private card or cash."
+        "personalAccountTypeNotAllowed": "A personal profile can use only a private card or cash.",
+        "historyLoad": "Could not load transaction history.",
+        "paymentUnchanged": "The payment data has not changed.",
+        "paymentNotEditable": "This payment has already been corrected or can no longer be edited."
       },
       "scheduledRates": "Scheduled rates",
       "paymentsAndHistory": "Payments and history",
@@ -708,7 +716,7 @@
       "createAccount": "Add account",
       "creatingAccount": "Creating...",
       "history": "Transaction history",
-      "historyHint": "Latest financial transactions for this student.",
+      "historyHint": "Filter transactions by date. The last 30 days are shown by default.",
       "historyEmpty": "There are no financial transactions yet.",
       "accountKinds": {
         "monobank": "Monobank / bank account",
@@ -752,7 +760,21 @@
         "parametersMissing": "No tax constants are configured for this date. The payment is saved, but the accrual requires updated rules.",
         "monthlyProfileNote": "These taxes are calculated monthly from the tax profile, not from each individual payment."
       },
-      "peAccountRequiresTaxProfile": "To create or use PE accounts, first enable and configure a PE tax profile in Settings."
+      "peAccountRequiresTaxProfile": "To create or use PE accounts, first enable and configure a PE tax profile in Settings.",
+      "editPayment": "Edit payment",
+      "editPaymentHint": "Correct a recorded payment while preserving the finance audit trail.",
+      "savePaymentChanges": "Save changes",
+      "savingPaymentChanges": "Saving changes...",
+      "cancelPaymentEdit": "Cancel editing",
+      "managePaymentAccounts": "Manage accounts",
+      "editPaymentAction": "Edit",
+      "paymentCorrected": "Payment corrected",
+      "historyFrom": "From",
+      "historyTo": "To",
+      "historyReset": "Last 30 days",
+      "historyPrevious": "Previous",
+      "historyNext": "Next",
+      "historyPage": "Page {{current}} of {{total}} · transactions: {{count}}"
     }
   },
   "languageSwitcher": {
