@@ -10,6 +10,7 @@ import {
   getTeacherFinanceReceipts,
   getTeacherMonthlyTaxSummary,
   getTeacherStudentFinanceHealth,
+  refreshFinanceFxRates,
 } from "../../features/finance/api/financeApi";
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
 import {
@@ -63,6 +64,11 @@ const TeacherFinance = () => {
         const timezone = scheduleResult.data?.schedule_timezone || "Europe/Kyiv";
         const today = getDateInTimeZone(timezone);
         const monthRange = getMonthRange(today);
+
+        const fxRefreshResult = await refreshFinanceFxRates(today);
+        if (fxRefreshResult.error) {
+          console.warn("Refresh finance FX rates warning:", fxRefreshResult.error);
+        }
 
         const [
           currentProfileResult,
@@ -187,12 +193,20 @@ const TeacherFinance = () => {
     () =>
       studentFinanceHealth
         .filter((item) => {
-          const balance = Number(item.balance_minor ?? 0);
+          const coverageBalance = Number(
+            item.coverage_balance_minor ?? item.balance_minor ?? 0,
+          );
+          const coverageCurrency =
+            item.coverage_currency ||
+            item.current_rate_currency ||
+            item.billing_currency;
           const remaining = item.remaining_lesson_count;
+
           return (
-            item.billing_currency &&
-            balance >= 0 &&
-            (balance > 0 || Number(item.priced_upcoming_lessons ?? 0) > 0) &&
+            coverageCurrency &&
+            !item.coverage_fx_pending &&
+            coverageBalance >= 0 &&
+            (coverageBalance > 0 || Number(item.priced_upcoming_lessons ?? 0) > 0) &&
             remaining != null &&
             Number(remaining) <= lowBalanceThresholdLessons
           );
@@ -203,6 +217,11 @@ const TeacherFinance = () => {
           return remainingCompare || (a.student_name || "").localeCompare(b.student_name || "");
         }),
     [studentFinanceHealth, lowBalanceThresholdLessons],
+  );
+
+  const lowBalanceFxPending = useMemo(
+    () => studentFinanceHealth.some((item) => item.coverage_fx_pending),
+    [studentFinanceHealth],
   );
 
   const receiptGroups = useMemo(
@@ -415,6 +434,11 @@ const TeacherFinance = () => {
               >
                 {t("teacherFinance.configureLowBalance")}
               </Link>
+              {lowBalanceFxPending && (
+                <p className={styles.muted}>
+                  {t("teacherFinance.lowBalanceFxPending")}
+                </p>
+              )}
             </div>
             <strong>{lowBalanceStudents.length}</strong>
           </div>
@@ -436,9 +460,10 @@ const TeacherFinance = () => {
                     </small>
                   </div>
                   <strong>
+                    {item.coverage_uses_fx ? "≈ " : ""}
                     {formatFinanceMoney(
-                      item.balance_minor,
-                      item.billing_currency,
+                      item.coverage_balance_minor ?? item.balance_minor,
+                      item.coverage_currency || item.billing_currency,
                       language,
                     )}
                   </strong>

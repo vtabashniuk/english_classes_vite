@@ -7,6 +7,7 @@ import {
   createLesson,
   listTeacherLessonsForRange,
   setLessonOutcome,
+  updateLessonSchedule,
   updateLessonZoom,
 } from "../../features/lessons/api/lessonsApi";
 import {
@@ -24,6 +25,7 @@ import {
   getCreateRecurringLessonError,
   getEditRecurringSeriesError,
   getLessonOutcomeError,
+  getUpdateLessonScheduleError,
   getUpdateLessonZoomError,
 } from "../../features/schedule/lib/scheduleErrors";
 import {
@@ -168,6 +170,18 @@ const TeacherSchedule = () => {
   const [seriesZoomUrl, setSeriesZoomUrl] = useState("");
 
   const [editingZoom, setEditingZoom] = useState(false);
+
+  const [editingLesson, setEditingLesson] = useState(false);
+
+  const [editLessonDate, setEditLessonDate] = useState("");
+
+  const [editLessonMinDate, setEditLessonMinDate] = useState("");
+
+  const [editLessonTime, setEditLessonTime] = useState("");
+
+  const [editLessonZoom, setEditLessonZoom] = useState("");
+
+  const [savingLesson, setSavingLesson] = useState(false);
 
   const [lessonZoomDraft, setLessonZoomDraft] = useState("");
 
@@ -366,6 +380,7 @@ const TeacherSchedule = () => {
     setSelectedLesson(lesson);
     setLessonZoomDraft(lesson.zoom_url || "");
     setEditingZoom(false);
+    setEditingLesson(false);
     setEditingRecurringSeries(false);
     setDetailErrorMessage("");
     setDetailSuccessMessage("");
@@ -376,6 +391,77 @@ const TeacherSchedule = () => {
         block: "start",
       });
     });
+  };
+
+  const handleStartEditLesson = () => {
+    if (
+      !selectedLesson ||
+      selectedLesson.status !== "scheduled" ||
+      selectedLesson.recurring_lesson_id ||
+      isLessonStarted(selectedLesson)
+    ) {
+      return;
+    }
+
+    const startParts = getDatePartsInTimezone(
+      selectedLesson.starts_at,
+      scheduleTimezone,
+    );
+
+    setEditLessonDate(
+      `${startParts.year}-${pad(startParts.month)}-${pad(startParts.day)}`,
+    );
+    setEditLessonMinDate(
+      formatZonedDateForInput(new Date().toISOString(), scheduleTimezone),
+    );
+    setEditLessonTime(`${pad(startParts.hour)}:${pad(startParts.minute)}`);
+    setEditLessonZoom(selectedLesson.zoom_url || "");
+    setEditingZoom(false);
+    setEditingRecurringSeries(false);
+    setEditingLesson(true);
+    setDetailErrorMessage("");
+    setDetailSuccessMessage("");
+  };
+
+  const handleSaveLesson = async () => {
+    if (
+      !selectedLesson ||
+      selectedLesson.status !== "scheduled" ||
+      selectedLesson.recurring_lesson_id ||
+      !editLessonDate ||
+      !editLessonTime
+    ) {
+      return;
+    }
+
+    try {
+      setSavingLesson(true);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const normalizedZoomUrl = editLessonZoom.trim() || null;
+
+      const { error } = await updateLessonSchedule({
+        lessonId: selectedLesson.id,
+        lessonDate: editLessonDate,
+        startTime: editLessonTime,
+        zoomUrl: normalizedZoomUrl,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setEditingLesson(false);
+      setSelectedLesson(null);
+      setDetailSuccessMessage(t("teacherSchedule.lessonEdit.success"));
+      await loadLessons();
+    } catch (error) {
+      console.error("Update lesson schedule error:", error);
+      setDetailErrorMessage(getUpdateLessonScheduleError(error, t));
+    } finally {
+      setSavingLesson(false);
+    }
   };
 
   const handleCancelLesson = async () => {
@@ -1406,6 +1492,7 @@ const TeacherSchedule = () => {
               {selectedLesson.recurring_lesson_id &&
                 selectedLesson.status === "scheduled" &&
                 !isLessonStarted(selectedLesson) &&
+                !editingLesson &&
                 editingRecurringSeries && (
                   <div className={styles.recurringSeriesEditor}>
                     <div>
@@ -1508,6 +1595,81 @@ const TeacherSchedule = () => {
                   </div>
                 )}
 
+              {selectedLesson.status === "scheduled" &&
+                !selectedLesson.recurring_lesson_id &&
+                !isLessonStarted(selectedLesson) &&
+                editingLesson && (
+                  <div className={styles.recurringSeriesEditor}>
+                    <div>
+                      <h3>{t("teacherSchedule.lessonEdit.title")}</h3>
+                      <p>{t("teacherSchedule.lessonEdit.hint")}</p>
+                    </div>
+
+                    <div className={styles.formRow}>
+                      <label className={styles.field}>
+                        <span>{t("teacherSchedule.date")}</span>
+                        <input
+                          type="date"
+                          value={editLessonDate}
+                          min={editLessonMinDate}
+                          onChange={(event) =>
+                            setEditLessonDate(event.target.value)
+                          }
+                        />
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>{t("teacherSchedule.time")}</span>
+                        <select
+                          value={editLessonTime}
+                          onChange={(event) =>
+                            setEditLessonTime(event.target.value)
+                          }
+                        >
+                          {timeSlots.map((slot) => (
+                            <option key={slot} value={slot}>
+                              {slot}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.zoomUrl")}</span>
+                      <input
+                        type="url"
+                        value={editLessonZoom}
+                        onChange={(event) =>
+                          setEditLessonZoom(event.target.value)
+                        }
+                        placeholder="https://..."
+                      />
+                    </label>
+
+                    <div className={styles.inlineActions}>
+                      <Button
+                        variant="primary"
+                        size="large"
+                        onClick={handleSaveLesson}
+                        disabled={savingLesson}
+                      >
+                        {savingLesson
+                          ? t("teacherSchedule.lessonEdit.saving")
+                          : t("teacherSchedule.lessonEdit.save")}
+                      </Button>
+
+                      <Button
+                        variant="secondary"
+                        onClick={() => setEditingLesson(false)}
+                        disabled={savingLesson}
+                      >
+                        {t("teacherSchedule.lessonEdit.cancel")}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
               <div className={styles.detailItem}>
                 <span>Zoom</span>
 
@@ -1525,7 +1687,8 @@ const TeacherSchedule = () => {
               </div>
 
               {selectedLesson.status !== "cancelled" &&
-                !editingRecurringSeries && (
+                !editingRecurringSeries &&
+                !editingLesson && (
                 <div className={styles.zoomEditor}>
                   {editingZoom ? (
                     <>
@@ -1606,8 +1769,22 @@ const TeacherSchedule = () => {
                   )}
 
                 {selectedLesson.status === "scheduled" &&
-                  !isLessonStarted(selectedLesson) && (
+                  !isLessonStarted(selectedLesson) &&
+                  !editingLesson && (
                     <>
+                      {!selectedLesson.recurring_lesson_id && (
+                        <Button
+                          variant="secondary"
+                          onClick={handleStartEditLesson}
+                          disabled={
+                            savingLesson ||
+                            cancellingLessonId === selectedLesson.id
+                          }
+                        >
+                          {t("teacherSchedule.lessonEdit.button")}
+                        </Button>
+                      )}
+
                       {selectedLesson.recurring_lesson_id && (
                         <Button
                           variant="secondary"
@@ -1631,8 +1808,10 @@ const TeacherSchedule = () => {
                         onClick={handleCancelLesson}
                         disabled={
                           cancellingLessonId === selectedLesson.id ||
-                          cancellingSeriesId === selectedLesson.recurring_lesson_id ||
-                          savingRecurringSeries
+                          (Boolean(selectedLesson.recurring_lesson_id) &&
+                            cancellingSeriesId === selectedLesson.recurring_lesson_id) ||
+                          savingRecurringSeries ||
+                          savingLesson
                         }
                       >
                         {cancellingLessonId === selectedLesson.id

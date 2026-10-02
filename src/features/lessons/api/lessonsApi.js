@@ -151,6 +151,19 @@ export const setLessonOutcome = ({ lessonId, status }) =>
     p_status: status,
   });
 
+export const updateLessonSchedule = ({
+  lessonId,
+  lessonDate,
+  startTime,
+  zoomUrl,
+}) =>
+  supabase.rpc("update_lesson_schedule", {
+    p_lesson_id: lessonId,
+    p_lesson_date: lessonDate,
+    p_start_time: startTime,
+    p_zoom_url: zoomUrl,
+  });
+
 export const updateLessonZoom = ({ lessonId, zoomUrl }) =>
   supabase.rpc("update_lesson_zoom", {
     p_lesson_id: lessonId,

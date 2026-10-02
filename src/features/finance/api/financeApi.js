@@ -334,6 +334,11 @@ export const resolvePaymentTax = (paymentId) =>
     body: { paymentId },
   });
 
+export const refreshFinanceFxRates = (rateDate) =>
+  supabase.functions.invoke("refresh-finance-fx-rates", {
+    body: { rateDate },
+  });
+
 export const getTeacherMonthlyTaxSummary = async () =>
   supabase
     .from("teacher_monthly_tax_summary")
@@ -362,7 +367,7 @@ export const getTeacherStudentFinanceHealth = async () =>
   supabase
     .from("teacher_student_finance_health")
     .select(
-      "student_id, student_name, student_email, billing_currency, balance_minor, debt_minor, unpaid_lesson_count, current_rate_minor, current_rate_currency, covered_scheduled_lessons, priced_upcoming_lessons, remaining_lesson_count",
+      "student_id, student_name, student_email, billing_currency, balance_minor, debt_minor, unpaid_lesson_count, current_rate_minor, current_rate_currency, coverage_currency, coverage_balance_minor, coverage_uses_fx, coverage_fx_pending, covered_scheduled_lessons, priced_upcoming_lessons, remaining_lesson_count",
     )
     .order("student_name", { ascending: true });
 

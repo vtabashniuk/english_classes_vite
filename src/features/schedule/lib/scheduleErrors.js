@@ -75,6 +75,49 @@ export const getCreateRecurringLessonError = (error, t) => {
   return t("teacherSchedule.recurring.errors.create");
 };
 
+export const getUpdateLessonScheduleError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("RECURRING_LESSON_REQUIRES_SERIES_EDIT")) {
+    return t("teacherSchedule.lessonEdit.errors.recurring");
+  }
+
+  if (message.includes("LESSON_NOT_SCHEDULED")) {
+    return t("teacherSchedule.lessonEdit.errors.notScheduled");
+  }
+
+  if (message.includes("PAST_LESSON_CANNOT_BE_EDITED") ||
+      message.includes("LESSON_IN_PAST")) {
+    return t("teacherSchedule.lessonEdit.errors.past");
+  }
+
+  if (message.includes("CANCELLATION_REQUEST_PENDING")) {
+    return t("teacherSchedule.lessonEdit.errors.cancellationPending");
+  }
+
+  if (message.includes("WEEKEND_NOT_ALLOWED")) {
+    return t("teacherSchedule.errors.weekend");
+  }
+
+  if (message.includes("OUTSIDE_WORKING_HOURS")) {
+    return t("teacherSchedule.errors.workingHours");
+  }
+
+  if (message.includes("INVALID_TIME_SLOT")) {
+    return t("teacherSchedule.errors.invalidSlot");
+  }
+
+  if (message.includes("LESSON_TIME_CONFLICT")) {
+    return t("teacherSchedule.errors.conflict");
+  }
+
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("teacherSchedule.lessonEdit.errors.notFound");
+  }
+
+  return t("teacherSchedule.lessonEdit.errors.generic");
+};
+
 export const getUpdateLessonZoomError = (error, t) => {
   const message = error?.message ?? "";
 

@@ -468,7 +468,24 @@
       }
     },
     "lessonPrice": "Lesson price",
-    "pricingDate": "Pricing date"
+    "pricingDate": "Pricing date",
+    "lessonEdit": {
+      "button": "Edit lesson",
+      "title": "Edit lesson",
+      "hint": "Change the date, time, or Zoom link. This lesson keeps its original price snapshot.",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "cancel": "Cancel editing",
+      "success": "Lesson updated.",
+      "errors": {
+        "generic": "Could not update the lesson.",
+        "notFound": "Lesson not found.",
+        "notScheduled": "Only a scheduled lesson can be edited.",
+        "past": "A lesson that has already started cannot be edited.",
+        "recurring": "Use series editing for a recurring lesson.",
+        "cancellationPending": "Resolve the student cancellation request for this lesson first."
+      }
+    }
   },
   "teacherSettings": {
     "title": "Settings",
@@ -1251,13 +1268,14 @@
     "unpaidLessons": "Unpaid lessons: {{count}}",
     "noDebtors": "No debtors.",
     "lowBalanceTitle": "Low balance",
-    "lowBalanceHint": "Balance covers no more than {{count}} lessons.",
+    "lowBalanceHint": "Balances in all currencies are converted to the current lesson-rate currency using the NBU rate with a conservative 1% adjustment. Students whose balance covers no more than {{count}} lessons appear here.",
     "balanceForLessons": "Lessons covered: {{count}}",
     "noLowBalance": "No students with a low balance.",
     "netIncomeManagementHint": "Net income is a management metric in UAH. Direct taxes from PE receipts are deducted from the payment that generated them; monthly fixed taxes are allocated proportionally across all receipts in that month using their UAH equivalent.",
     "netIncomePendingShort": "Net income: waiting for NBU rate",
     "netIncomeStudent": "Net: {{amount}}",
     "paymentNetIncome": "Net: {{amount}}",
-    "configureLowBalance": "Configure threshold"
+    "configureLowBalance": "Configure threshold",
+    "lowBalanceFxPending": "Some foreign-currency balances are temporarily excluded because a current NBU rate is unavailable."
   }
 }
