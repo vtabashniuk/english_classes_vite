@@ -70,7 +70,8 @@ export const getStudentFinanceTransactions = async (
       { count: "exact" },
     )
     .eq("student_id", studentId)
-    .order("display_at", { ascending: false });
+    .order("display_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (dateFrom) transactionsQuery = transactionsQuery.gte("display_date", dateFrom);
   if (dateTo) transactionsQuery = transactionsQuery.lte("display_date", dateTo);
@@ -351,10 +352,11 @@ export const getTeacherFinanceReceipts = async ({ dateFrom, dateTo }) => {
   let query = supabase
     .from("teacher_finance_receipts")
     .select(
-      "payment_id, student_id, student_name, student_email, payment_account_id, account_name, owner_type, account_type, amount_minor, currency, payment_method, provider, paid_at, payment_date, payment_month, description, reporting_uah_minor, direct_tax_uah_minor, allocated_fixed_tax_uah_minor, net_income_uah_minor, profitability_status",
+      "payment_id, student_id, student_name, student_email, payment_account_id, account_name, owner_type, account_type, amount_minor, currency, payment_method, provider, paid_at, payment_date, payment_month, description, reporting_uah_minor, direct_tax_uah_minor, allocated_fixed_tax_uah_minor, net_income_uah_minor, profitability_status, created_at",
     )
     .order("payment_date", { ascending: false })
-    .order("paid_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("payment_id", { ascending: false });
 
   if (dateFrom) query = query.gte("payment_date", dateFrom);
   if (dateTo) query = query.lte("payment_date", dateTo);

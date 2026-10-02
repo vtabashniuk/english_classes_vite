@@ -14,6 +14,7 @@ import {
   setStudentLessonRate,
   transferManualStudentPayment,
 } from "../../features/finance/api/financeApi";
+import { sortFinanceOperationsNewestFirst } from "../../features/finance/lib/financeSort";
 import {
   DEFAULT_FINANCE_HISTORY_DAYS,
   DEFAULT_FINANCE_SETTINGS,
@@ -1949,54 +1950,52 @@ const buildTransactionDisplayGroups = (transactions) => {
     replacement: 3,
   };
 
-  return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      transactions: [...group.transactions].sort((left, right) => {
-        const leftDisplayAt = new Date(
-          left.display_at ?? left.created_at,
-        ).getTime();
-        const rightDisplayAt = new Date(
-          right.display_at ?? right.created_at,
-        ).getTime();
-        const timeDifference = rightDisplayAt - leftDisplayAt;
+  const displayGroups = [...groups.values()].map((group) => ({
+    ...group,
+    transactions: [...group.transactions].sort((left, right) => {
+      const leftDisplayAt = new Date(
+        left.display_at ?? left.created_at,
+      ).getTime();
+      const rightDisplayAt = new Date(
+        right.display_at ?? right.created_at,
+      ).getTime();
+      const timeDifference = rightDisplayAt - leftDisplayAt;
 
-        // Keep the same newest-first chronology inside a related block that we
-        // use for the blocks themselves. Grouping should not make an older
-        // original transaction appear above a newer correction/reversal.
-        if (timeDifference !== 0) return timeDifference;
+      // Keep the same newest-first chronology inside a related block that we
+      // use for the blocks themselves. Grouping should not make an older
+      // original transaction appear above a newer correction/reversal.
+      if (timeDifference !== 0) return timeDifference;
 
-        const leftRelation = getPrimaryTransactionRelation(left);
-        const rightRelation = getPrimaryTransactionRelation(right);
+      const leftRelation = getPrimaryTransactionRelation(left);
+      const rightRelation = getPrimaryTransactionRelation(right);
 
-        if (
-          leftRelation &&
-          rightRelation &&
-          leftRelation.relation_id === rightRelation.relation_id
-        ) {
-          // PostgreSQL now() is transaction-scoped, so correction rows created
-          // by one RPC can have exactly the same timestamp. In that case show
-          // the newest logical state first: replacement -> reversal -> original.
-          const roleDifference =
-            (roleOrder[rightRelation.relation_role] ?? 0) -
-            (roleOrder[leftRelation.relation_role] ?? 0);
+      if (
+        leftRelation &&
+        rightRelation &&
+        leftRelation.relation_id === rightRelation.relation_id
+      ) {
+        // PostgreSQL now() is transaction-scoped, so correction rows created
+        // by one RPC can have exactly the same timestamp. In that case show
+        // the newest logical state first: replacement -> reversal -> original.
+        const roleDifference =
+          (roleOrder[rightRelation.relation_role] ?? 0) -
+          (roleOrder[leftRelation.relation_role] ?? 0);
 
-          if (roleDifference !== 0) return roleDifference;
-        }
-
-        if (left.id === right.reversal_of_id) return 1;
-        if (right.id === left.reversal_of_id) return -1;
-
-        return 0;
-      }),
-    }))
-    .sort((left, right) => {
-      if (left.displayDate !== right.displayDate) {
-        return right.displayDate.localeCompare(left.displayDate);
+        if (roleDifference !== 0) return roleDifference;
       }
 
-      return right.sortAt - left.sortAt;
-    });
+      if (left.id === right.reversal_of_id) return 1;
+      if (right.id === left.reversal_of_id) return -1;
+
+      return 0;
+    }),
+  }));
+
+  return sortFinanceOperationsNewestFirst(displayGroups, {
+    dateField: "displayDate",
+    createdAtField: "sortAt",
+    idField: "key",
+  });
 };
 
 const getStudentRelationName = (student) =>

@@ -18,6 +18,7 @@ import {
   FINANCE_CURRENCIES,
 } from "../../constants/finance";
 import { formatFinanceMoney, formatPercentValue } from "../../utils/formatFinanceMoney";
+import { sortFinanceOperationsNewestFirst } from "../../features/finance/lib/financeSort";
 
 import styles from "./TeacherFinance.module.css";
 
@@ -876,7 +877,12 @@ const groupReceipts = (rows, mode, formatAccount) => {
     group.items.push(row);
   });
 
-  return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      items: sortFinanceOperationsNewestFirst(group.items),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 };
 
 const sumTaxRows = (rows) =>
