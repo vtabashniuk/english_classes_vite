@@ -716,3 +716,79 @@
     flex-direction: column;
   }
 }
+
+.transactionGroup {
+  display: grid;
+  gap: 0;
+}
+
+.transactionGroupRelated {
+  padding: 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+
+.transactionGroupRelated .transactionRow:last-child {
+  border-bottom: 0;
+}
+
+.transactionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.dangerInlineButton {
+  border-color: var(--color-error-border);
+  color: var(--color-error-text);
+}
+
+.dangerInlineButton:hover:not(:disabled) {
+  background: var(--color-error-bg);
+}
+
+.paymentActionPanel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.paymentActionPanel > strong {
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+}
+
+.paymentActionPanel > p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.dangerButton {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  font: inherit;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.dangerButton:hover:not(:disabled) {
+  filter: brightness(0.98);
+}
+
+.dangerButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

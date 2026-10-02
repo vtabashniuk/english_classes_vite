@@ -66,15 +66,14 @@ export const getStudentFinanceTransactions = async (
   let transactionsQuery = supabase
     .from("student_finance_transaction_history")
     .select(
-      "id, transaction_type, amount_minor, currency, lesson_id, payment_id, reversal_of_id, description, effective_at, effective_date, created_at",
+      "id, transaction_type, amount_minor, currency, lesson_id, payment_id, reversal_of_id, description, metadata, effective_at, effective_date, created_at, display_at, display_date",
       { count: "exact" },
     )
     .eq("student_id", studentId)
-    .order("effective_at", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("display_at", { ascending: false });
 
-  if (dateFrom) transactionsQuery = transactionsQuery.gte("effective_date", dateFrom);
-  if (dateTo) transactionsQuery = transactionsQuery.lte("effective_date", dateTo);
+  if (dateFrom) transactionsQuery = transactionsQuery.gte("display_date", dateFrom);
+  if (dateTo) transactionsQuery = transactionsQuery.lte("display_date", dateTo);
 
   const transactionsResult = await transactionsQuery.range(
     offset,
@@ -86,7 +85,25 @@ export const getStudentFinanceTransactions = async (
   }
 
   const transactions = transactionsResult.data ?? [];
+  const transactionIds = transactions.map((item) => item.id);
   const paymentIds = [...new Set(transactions.map((item) => item.payment_id).filter(Boolean))];
+
+  let relations = [];
+
+  if (transactionIds.length > 0) {
+    const relationsResult = await supabase
+      .from("student_finance_transaction_relations")
+      .select(
+        "transaction_id, relation_id, relation_type, relation_role, relation_created_at, source_student_id, target_student_id, original_payment_id, replacement_payment_id, reason_code, reason_note",
+      )
+      .in("transaction_id", transactionIds);
+
+    if (relationsResult.error) {
+      return { data: null, error: relationsResult.error };
+    }
+
+    relations = relationsResult.data ?? [];
+  }
 
   let payments = [];
 
@@ -140,11 +157,51 @@ export const getStudentFinanceTransactions = async (
     accounts = accountsResult.data ?? [];
   }
 
+  const relatedStudentIds = [
+    ...new Set(
+      relations
+        .flatMap((item) => [item.source_student_id, item.target_student_id])
+        .filter(Boolean),
+    ),
+  ];
+
+  let relatedStudents = [];
+
+  if (relatedStudentIds.length > 0) {
+    const studentsResult = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", relatedStudentIds);
+
+    if (studentsResult.error) {
+      return { data: null, error: studentsResult.error };
+    }
+
+    relatedStudents = studentsResult.data ?? [];
+  }
+
   const paymentsById = Object.fromEntries(payments.map((item) => [item.id, item]));
   const accountsById = Object.fromEntries(accounts.map((item) => [item.id, item]));
   const taxByPaymentId = Object.fromEntries(
     taxAccruals.map((item) => [item.payment_id, item]),
   );
+  const relatedStudentsById = Object.fromEntries(
+    relatedStudents.map((item) => [item.id, item]),
+  );
+  const relationsByTransactionId = relations.reduce((acc, item) => {
+    const relation = {
+      ...item,
+      sourceStudent: item.source_student_id
+        ? relatedStudentsById[item.source_student_id] ?? null
+        : null,
+      targetStudent: item.target_student_id
+        ? relatedStudentsById[item.target_student_id] ?? null
+        : null,
+    };
+
+    acc[item.transaction_id] = [...(acc[item.transaction_id] ?? []), relation];
+    return acc;
+  }, {});
 
   return {
     data: transactions.map((transaction) => {
@@ -162,6 +219,7 @@ export const getStudentFinanceTransactions = async (
         taxAccrual: transaction.payment_id
           ? taxByPaymentId[transaction.payment_id] ?? null
           : null,
+        relations: relationsByTransactionId[transaction.id] ?? [],
       };
     }),
     error: null,
@@ -347,6 +405,32 @@ export const correctManualStudentPayment = ({
     p_payment_method: paymentMethod,
     p_description: description || null,
     p_paid_at: paidAt,
+    p_client_request_id: clientRequestId,
+  });
+
+export const cancelManualStudentPayment = ({
+  paymentId,
+  reasonCode,
+  reasonNote,
+}) =>
+  supabase.rpc("cancel_manual_student_payment", {
+    p_payment_id: paymentId,
+    p_reason_code: reasonCode,
+    p_reason_note: reasonNote || null,
+  });
+
+export const transferManualStudentPayment = ({
+  paymentId,
+  targetStudentId,
+  reasonCode,
+  reasonNote,
+  clientRequestId,
+}) =>
+  supabase.rpc("transfer_manual_student_payment", {
+    p_payment_id: paymentId,
+    p_target_student_id: targetStudentId,
+    p_reason_code: reasonCode,
+    p_reason_note: reasonNote || null,
     p_client_request_id: clientRequestId,
   });
 

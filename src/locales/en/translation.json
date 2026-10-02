@@ -660,7 +660,9 @@
         "accountCreated": "Payment account added.",
         "paymentSavedTaxPending": "Payment credited. The NBU rate for the foreign-currency receipt can be resolved separately; tax and management analytics will update afterward.",
         "paymentUpdated": "Payment corrected. Balance updated.",
-        "paymentUpdatedTaxPending": "Payment corrected. The NBU rate for the foreign-currency receipt is still pending."
+        "paymentUpdatedTaxPending": "Payment corrected. The NBU rate for the foreign-currency receipt is still pending.",
+        "paymentCancelled": "Payment cancelled. Balance and finance totals were updated.",
+        "paymentTransferred": "Payment transferred to another student. Total receipts and the tax base are not counted twice."
       },
       "errors": {
         "load": "Could not load finance data.",
@@ -674,7 +676,7 @@
         "rateRequired": "Enter the lesson price.",
         "activityLoad": "Could not load payments and transaction history.",
         "invalidPaymentAmount": "Enter a valid payment amount greater than 0.",
-        "paymentDateRequired": "Choose the payment date.",
+        "paymentDateRequired": "Choose the date the funds were actually received.",
         "futurePaymentDate": "A manually recorded payment cannot have a future date.",
         "paymentAccountRequired": "Choose a receiving account.",
         "paymentAccountMismatch": "The selected account is unavailable or its currency does not match the payment currency.",
@@ -691,7 +693,12 @@
         "personalAccountTypeNotAllowed": "A personal profile can use only a private card or cash.",
         "historyLoad": "Could not load transaction history.",
         "paymentUnchanged": "The payment data has not changed.",
-        "paymentNotEditable": "This payment has already been corrected or can no longer be edited."
+        "paymentNotEditable": "This payment has already been corrected or can no longer be edited.",
+        "transferStudentRequired": "Choose the student who should receive the payment.",
+        "paymentActionReasonRequired": "Add a comment when the reason is “Other”.",
+        "transferStudentNotAssigned": "The selected student is not assigned to this teacher.",
+        "transferSameStudent": "A payment cannot be transferred to the same student.",
+        "paymentActionFailed": "Could not complete the payment operation."
       },
       "scheduledRates": "Scheduled rates",
       "paymentsAndHistory": "Payments and history",
@@ -701,7 +708,7 @@
       "paymentAmount": "Payment amount",
       "paymentAccount": "Receiving account",
       "noPaymentAccounts": "No active accounts in this currency",
-      "paymentDate": "Payment date",
+      "paymentDate": "Date funds received",
       "paymentMethod": "Payment method",
       "paymentNote": "Note",
       "createAccountFirst": "Add a receiving account for {{currency}} first.",
@@ -774,7 +781,47 @@
       "historyReset": "Last 30 days",
       "historyPrevious": "Previous",
       "historyNext": "Next",
-      "historyPage": "Page {{current}} of {{total}} · transactions: {{count}}"
+      "historyPage": "Page {{current}} of {{total}} · transactions: {{count}}",
+      "transferPaymentAction": "Transfer",
+      "cancelPaymentAction": "Cancel payment",
+      "cancelPaymentTitle": "Cancel payment",
+      "cancelPaymentConfirm": "Cancel the {{amount}} payment? The balance and finance totals will be adjusted with a reversal.",
+      "transferPaymentTitle": "Transfer payment",
+      "transferPaymentHint": "Transfer the real {{amount}} receipt to another student without creating tax income a second time.",
+      "transferPaymentStudent": "Transfer to student",
+      "noTransferStudents": "No other students available",
+      "paymentActionReason": "Reason",
+      "paymentActionNote": "Comment",
+      "paymentActionSaving": "Saving...",
+      "confirmCancelPayment": "Cancel payment",
+      "confirmTransferPayment": "Transfer payment",
+      "paymentEffectiveDate": "Date funds received: {{date}}",
+      "paymentCancellationReasons": {
+        "duplicate": "Duplicate payment",
+        "not_received": "Payment was not actually received",
+        "entry_error": "Entry error",
+        "other": "Other"
+      },
+      "paymentTransferReasons": {
+        "wrong_student": "Wrong student selected",
+        "other": "Other"
+      },
+      "relationLabels": {
+        "correction": {
+          "original": "Corrected original payment",
+          "reversal": "Original payment reversal",
+          "replacement": "Corrected payment"
+        },
+        "cancellation": {
+          "original": "Cancelled payment",
+          "reversal": "Cancelled payment reversal"
+        },
+        "transfer": {
+          "original": "Payment transferred to {{target}}",
+          "reversal": "Reversal for transfer to {{target}}",
+          "replacement": "Transferred from {{source}}"
+        }
+      }
     }
   },
   "languageSwitcher": {

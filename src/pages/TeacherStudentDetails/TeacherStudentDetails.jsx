@@ -3,13 +3,16 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 
 import {
+  cancelManualStudentPayment,
   correctManualStudentPayment,
   getStudentFinanceOverview,
   getStudentFinanceTransactions,
   getTeacherPaymentAccounts,
+  getTeacherStudentFinanceHealth,
   recordManualStudentPayment,
   resolvePaymentTax,
   setStudentLessonRate,
+  transferManualStudentPayment,
 } from "../../features/finance/api/financeApi";
 import {
   DEFAULT_FINANCE_HISTORY_DAYS,
@@ -61,6 +64,17 @@ const TeacherStudentDetails = () => {
   const [paymentError, setPaymentError] = useState("");
   const [paymentSuccess, setPaymentSuccess] = useState("");
   const [editingPaymentId, setEditingPaymentId] = useState("");
+  const [paymentAction, setPaymentAction] = useState(null);
+  const [paymentActionSaving, setPaymentActionSaving] = useState(false);
+  const [paymentActionError, setPaymentActionError] = useState("");
+  const [paymentActionSuccess, setPaymentActionSuccess] = useState("");
+  const [cancelReasonCode, setCancelReasonCode] = useState("duplicate");
+  const [cancelReasonNote, setCancelReasonNote] = useState("");
+  const [transferStudentId, setTransferStudentId] = useState("");
+  const [transferReasonCode, setTransferReasonCode] = useState("wrong_student");
+  const [transferReasonNote, setTransferReasonNote] = useState("");
+  const [transferCandidates, setTransferCandidates] = useState([]);
+  const [paymentActionRequestId, setPaymentActionRequestId] = useState("");
 
   const [historyDateFrom, setHistoryDateFrom] = useState(() =>
     getLocalDateDaysAgo(DEFAULT_FINANCE_HISTORY_DAYS - 1),
@@ -148,16 +162,20 @@ const TeacherStudentDetails = () => {
         setFinanceActivityLoading(true);
         setFinanceActivityError("");
 
-        const [accountsResult, settingsResult] = await Promise.all([
+        const [accountsResult, settingsResult, studentsResult] = await Promise.all([
           getTeacherPaymentAccounts(),
           getMyTeacherScheduleSettings(),
+          getTeacherStudentFinanceHealth(),
         ]);
 
-        if (accountsResult.error || settingsResult.error) {
-          throw accountsResult.error || settingsResult.error;
+        if (accountsResult.error || settingsResult.error || studentsResult.error) {
+          throw accountsResult.error || settingsResult.error || studentsResult.error;
         }
 
         setPaymentAccounts(accountsResult.data ?? []);
+        setTransferCandidates(
+          (studentsResult.data ?? []).filter((item) => item.student_id !== studentId),
+        );
         setHistoryPageSize(
           Number(
             settingsResult.data?.finance_history_page_size ??
@@ -175,7 +193,7 @@ const TeacherStudentDetails = () => {
     };
 
     loadFinanceActivity();
-  }, [t]);
+  }, [studentId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -274,7 +292,10 @@ const TeacherStudentDetails = () => {
     });
   };
   const isEditingPayment = Boolean(editingPaymentId);
-
+  const transactionDisplayGroups = useMemo(
+    () => buildTransactionDisplayGroups(financeTransactions),
+    [financeTransactions],
+  );
 
   const formatDate = (dateString) =>
     new Intl.DateTimeFormat(intlLocale, {
@@ -350,6 +371,127 @@ const TeacherStudentDetails = () => {
     setPaymentError("");
     setPaymentSuccess("");
     paymentAttemptRef.current = { signature: "", requestId: "" };
+  };
+
+  const resetPaymentAction = () => {
+    setPaymentAction(null);
+    setPaymentActionError("");
+    setCancelReasonCode("duplicate");
+    setCancelReasonNote("");
+    setTransferStudentId("");
+    setTransferReasonCode("wrong_student");
+    setTransferReasonNote("");
+    setPaymentActionRequestId("");
+  };
+
+  const openPaymentCancellation = (transaction) => {
+    setPaymentAction({ mode: "cancel", transaction });
+    setPaymentActionError("");
+    setPaymentActionSuccess("");
+    setCancelReasonCode("duplicate");
+    setCancelReasonNote("");
+    setPaymentActionRequestId("");
+  };
+
+  const openPaymentTransfer = (transaction) => {
+    setPaymentAction({ mode: "transfer", transaction });
+    setPaymentActionError("");
+    setPaymentActionSuccess("");
+    setTransferStudentId(transferCandidates[0]?.student_id ?? "");
+    setTransferReasonCode("wrong_student");
+    setTransferReasonNote("");
+    setPaymentActionRequestId(createClientRequestId());
+  };
+
+  const refreshFinanceAfterPaymentAction = async () => {
+    const overviewResult = await getStudentFinanceOverview(studentId);
+    if (overviewResult.error) throw overviewResult.error;
+
+    setFinanceOverview(overviewResult.data);
+    await refreshFinanceHistory({ page: historyPage });
+  };
+
+  const handleCancelPayment = async () => {
+    const transaction = paymentAction?.transaction;
+    if (!transaction?.payment?.id) return;
+
+    if (cancelReasonCode === "other" && !cancelReasonNote.trim()) {
+      setPaymentActionError(
+        t("teacherStudentDetails.finance.errors.paymentActionReasonRequired"),
+      );
+      return;
+    }
+
+    try {
+      setPaymentActionSaving(true);
+      setPaymentActionError("");
+      setPaymentActionSuccess("");
+
+      const { error } = await cancelManualStudentPayment({
+        paymentId: transaction.payment.id,
+        reasonCode: cancelReasonCode,
+        reasonNote: cancelReasonNote.trim(),
+      });
+
+      if (error) throw error;
+
+      await refreshFinanceAfterPaymentAction();
+      resetPaymentAction();
+      setPaymentActionSuccess(
+        t("teacherStudentDetails.finance.messages.paymentCancelled"),
+      );
+    } catch (error) {
+      console.error("Manual payment cancellation error:", error);
+      setPaymentActionError(getPaymentActionError(error, t));
+    } finally {
+      setPaymentActionSaving(false);
+    }
+  };
+
+  const handleTransferPayment = async () => {
+    const transaction = paymentAction?.transaction;
+    if (!transaction?.payment?.id) return;
+
+    if (!transferStudentId) {
+      setPaymentActionError(
+        t("teacherStudentDetails.finance.errors.transferStudentRequired"),
+      );
+      return;
+    }
+
+    if (transferReasonCode === "other" && !transferReasonNote.trim()) {
+      setPaymentActionError(
+        t("teacherStudentDetails.finance.errors.paymentActionReasonRequired"),
+      );
+      return;
+    }
+
+    try {
+      setPaymentActionSaving(true);
+      setPaymentActionError("");
+      setPaymentActionSuccess("");
+
+      const { error } = await transferManualStudentPayment({
+        paymentId: transaction.payment.id,
+        targetStudentId: transferStudentId,
+        reasonCode: transferReasonCode,
+        reasonNote: transferReasonNote.trim(),
+        clientRequestId: paymentActionRequestId || createClientRequestId(),
+      });
+
+      if (error) throw error;
+
+      await refreshFinanceAfterPaymentAction();
+      resetPaymentAction();
+      setPaymentActionSuccess(
+        t("teacherStudentDetails.finance.messages.paymentTransferred"),
+      );
+    } catch (error) {
+      console.error("Manual payment transfer error:", error);
+      setPaymentActionError(getPaymentActionError(error, t));
+    } finally {
+      setPaymentActionSaving(false);
+    }
   };
 
   const handleFinanceSubmit = async (event) => {
@@ -1121,145 +1263,405 @@ const TeacherStudentDetails = () => {
                   </p>
                 ) : (
                   <>
+                  {paymentActionSuccess && (
+                    <p className={styles.success}>{paymentActionSuccess}</p>
+                  )}
+                  {paymentActionError && (
+                    <p className={styles.error}>{paymentActionError}</p>
+                  )}
+
                   <div className={styles.transactionList}>
-                    {financeTransactions.map((transaction) => (
-                      <div key={transaction.id} className={styles.transactionRow}>
-                        <div className={styles.transactionInfo}>
-                          <strong>
-                            {t(
-                              `teacherStudentDetails.finance.transactionTypes.${transaction.transaction_type}`,
-                            )}
-                          </strong>
-                          <span>
-                            {formatDateTime(
-                              transaction.transaction_type === "payment"
-                                ? transaction.created_at
-                                : transaction.effective_at,
-                            )}
-                          </span>
-
-                          {transaction.paymentAccount && (
-                            <span>
-                              {transaction.paymentAccount.name} · {t(
-                                `teacherStudentDetails.finance.methods.${transaction.payment?.payment_method}`,
-                              )}
-                            </span>
-                          )}
-
-                          {transaction.description && (
-                            <small>{transaction.description}</small>
-                          )}
-
-                          {transaction.transaction_type === "payment" &&
-                            transaction.payment?.status === "cancelled" && (
-                              <small className={styles.correctedPaymentLabel}>
-                                {t("teacherStudentDetails.finance.paymentCorrected")}
-                              </small>
-                            )}
-
-                          {transaction.transaction_type === "payment" &&
+                    {transactionDisplayGroups.map((group) => (
+                      <div
+                        key={group.key}
+                        className={`${styles.transactionGroup} ${
+                          group.related ? styles.transactionGroupRelated : ""
+                        }`}
+                      >
+                        {group.transactions.map((transaction) => {
+                          const primaryRelation = getPrimaryTransactionRelation(
+                            transaction,
+                          );
+                          const isActiveManualPayment =
+                            transaction.transaction_type === "payment" &&
                             transaction.payment?.provider === "manual" &&
-                            transaction.payment?.status === "succeeded" && (
-                              <button
-                                type="button"
-                                className={styles.inlineButton}
-                                onClick={() => handleEditPayment(transaction)}
-                                disabled={paymentSaving}
-                              >
-                                {t("teacherStudentDetails.finance.editPaymentAction")}
-                              </button>
-                            )}
+                            transaction.payment?.status === "succeeded";
+                          const isPaymentActionOpen =
+                            paymentAction?.transaction?.id === transaction.id;
 
-                          {transaction.taxAccrual && (
-                            <div className={styles.taxBreakdown}>
-                              <strong>
-                                {t("teacherStudentDetails.finance.tax.title")}
-                              </strong>
-
-                              {transaction.taxAccrual.status === "ready" ? (
-                                <>
-                                  {transaction.taxAccrual.source_currency !== "UAH" && (
-                                    <span>
-                                      {t("teacherStudentDetails.finance.tax.nbuRate")}: {Number(
-                                        transaction.taxAccrual.fx_rate,
-                                      ).toFixed(4)} UAH/{transaction.taxAccrual.source_currency}
-                                    </span>
+                          return (
+                            <div
+                              key={transaction.id}
+                              className={styles.transactionRow}
+                            >
+                              <div className={styles.transactionInfo}>
+                                <strong>
+                                  {t(
+                                    `teacherStudentDetails.finance.transactionTypes.${transaction.transaction_type}`,
                                   )}
+                                </strong>
+                                <span>{formatDateTime(transaction.display_at ?? transaction.created_at)}</span>
+
+                                {transaction.paymentAccount && (
                                   <span>
-                                    {t("teacherStudentDetails.finance.tax.taxBase")}: {formatMoney(
-                                      transaction.taxAccrual.tax_base_uah_minor,
-                                      "UAH",
+                                    {transaction.paymentAccount.name} · {t(
+                                      `teacherStudentDetails.finance.methods.${transaction.payment?.payment_method}`,
                                     )}
                                   </span>
-                                  {transaction.taxAccrual.single_tax_basis ===
-                                    "income_percent" && (
-                                    <span>
-                                      {t("teacherStudentDetails.finance.tax.singleTax")}: {formatMoney(
-                                        transaction.taxAccrual.single_tax_minor,
-                                        "UAH",
-                                      )}
-                                    </span>
-                                  )}
-                                  {transaction.taxAccrual.military_levy_basis ===
-                                    "income_percent" && (
-                                    <span>
-                                      {t("teacherStudentDetails.finance.tax.militaryLevy")}: {formatMoney(
-                                        transaction.taxAccrual.military_levy_minor,
-                                        "UAH",
-                                      )}
-                                    </span>
-                                  )}
-                                  {transaction.taxAccrual.single_tax_basis ===
-                                    "income_percent" ||
-                                  transaction.taxAccrual.military_levy_basis ===
-                                    "income_percent" ? (
-                                    <strong>
-                                      {t("teacherStudentDetails.finance.tax.totalIncomeTaxes")}: {formatMoney(
-                                        transaction.taxAccrual.total_income_taxes_minor,
-                                        "UAH",
-                                      )}
-                                    </strong>
-                                  ) : (
-                                    <span>
-                                      {t("teacherStudentDetails.finance.tax.monthlyProfileNote")}
-                                    </span>
-                                  )}
-                                </>
-                              ) : transaction.taxAccrual.status === "fx_pending" ? (
-                                <>
-                                  <span>
-                                    {t("teacherStudentDetails.finance.tax.fxPending")}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className={styles.inlineButton}
-                                    onClick={() => handleTaxRetry(transaction.payment_id)}
-                                    disabled={taxRetryingPaymentId === transaction.payment_id}
-                                  >
-                                    {taxRetryingPaymentId === transaction.payment_id
-                                      ? t("teacherStudentDetails.finance.tax.retrying")
-                                      : t("teacherStudentDetails.finance.tax.retry")}
-                                  </button>
-                                </>
-                              ) : (
-                                <span>{t("teacherStudentDetails.finance.tax.parametersMissing")}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                                )}
 
-                        <strong
-                          className={`${styles.transactionAmount} ${
-                            Number(transaction.amount_minor) < 0
-                              ? styles.balanceNegative
-                              : styles.balancePositive
-                          }`}
-                        >
-                          {formatSignedMoney(
-                            transaction.amount_minor,
-                            transaction.currency,
-                          )}
-                        </strong>
+                                {transaction.transaction_type === "payment" &&
+                                  transaction.payment?.paid_at &&
+                                  transaction.display_date !==
+                                    transaction.effective_date && (
+                                    <small>
+                                      {t("teacherStudentDetails.finance.paymentEffectiveDate", {
+                                        date: formatDate(transaction.payment.paid_at),
+                                      })}
+                                    </small>
+                                  )}
+
+                                {transaction.description && (
+                                  <small>{transaction.description}</small>
+                                )}
+
+                                {primaryRelation && (
+                                  <small className={styles.correctedPaymentLabel}>
+                                    {getTransactionRelationLabel(
+                                      primaryRelation,
+                                      transaction,
+                                      t,
+                                    )}
+                                  </small>
+                                )}
+
+                                {isActiveManualPayment && (
+                                  <div className={styles.transactionActions}>
+                                    <button
+                                      type="button"
+                                      className={styles.inlineButton}
+                                      onClick={() => {
+                                        resetPaymentAction();
+                                        handleEditPayment(transaction);
+                                      }}
+                                      disabled={paymentSaving || paymentActionSaving || isEditingPayment}
+                                    >
+                                      {t("teacherStudentDetails.finance.editPaymentAction")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={styles.inlineButton}
+                                      onClick={() => openPaymentTransfer(transaction)}
+                                      disabled={paymentSaving || paymentActionSaving || isEditingPayment}
+                                    >
+                                      {t("teacherStudentDetails.finance.transferPaymentAction")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={`${styles.inlineButton} ${styles.dangerInlineButton}`}
+                                      onClick={() => openPaymentCancellation(transaction)}
+                                      disabled={paymentSaving || paymentActionSaving || isEditingPayment}
+                                    >
+                                      {t("teacherStudentDetails.finance.cancelPaymentAction")}
+                                    </button>
+                                  </div>
+                                )}
+
+                                {isPaymentActionOpen && paymentAction?.mode === "cancel" && (
+                                  <div className={styles.paymentActionPanel}>
+                                    <strong>
+                                      {t("teacherStudentDetails.finance.cancelPaymentTitle")}
+                                    </strong>
+                                    <p>
+                                      {t("teacherStudentDetails.finance.cancelPaymentConfirm", {
+                                        amount: formatMoney(
+                                          transaction.amount_minor,
+                                          transaction.currency,
+                                        ),
+                                      })}
+                                    </p>
+                                    <label className={styles.field}>
+                                      <span>
+                                        {t("teacherStudentDetails.finance.paymentActionReason")}
+                                      </span>
+                                      <select
+                                        value={cancelReasonCode}
+                                        onChange={(event) => {
+                                          setCancelReasonCode(event.target.value);
+                                          setPaymentActionError("");
+                                        }}
+                                        disabled={paymentActionSaving}
+                                      >
+                                        {["duplicate", "not_received", "entry_error", "other"].map(
+                                          (reason) => (
+                                            <option key={reason} value={reason}>
+                                              {t(
+                                                `teacherStudentDetails.finance.paymentCancellationReasons.${reason}`,
+                                              )}
+                                            </option>
+                                          ),
+                                        )}
+                                      </select>
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span>
+                                        {t("teacherStudentDetails.finance.paymentActionNote")}
+                                      </span>
+                                      <textarea
+                                        value={cancelReasonNote}
+                                        onChange={(event) => {
+                                          setCancelReasonNote(event.target.value);
+                                          setPaymentActionError("");
+                                        }}
+                                        maxLength={500}
+                                        rows={2}
+                                        disabled={paymentActionSaving}
+                                      />
+                                    </label>
+                                    <div className={styles.financeActions}>
+                                      <button
+                                        type="button"
+                                        className={styles.secondaryButton}
+                                        onClick={resetPaymentAction}
+                                        disabled={paymentActionSaving}
+                                      >
+                                        {t("common.cancel")}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={styles.dangerButton}
+                                        onClick={handleCancelPayment}
+                                        disabled={
+                                          paymentActionSaving ||
+                                          (cancelReasonCode === "other" &&
+                                            !cancelReasonNote.trim())
+                                        }
+                                      >
+                                        {paymentActionSaving
+                                          ? t("teacherStudentDetails.finance.paymentActionSaving")
+                                          : t("teacherStudentDetails.finance.confirmCancelPayment")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {isPaymentActionOpen && paymentAction?.mode === "transfer" && (
+                                  <div className={styles.paymentActionPanel}>
+                                    <strong>
+                                      {t("teacherStudentDetails.finance.transferPaymentTitle")}
+                                    </strong>
+                                    <p>
+                                      {t("teacherStudentDetails.finance.transferPaymentHint", {
+                                        amount: formatMoney(
+                                          transaction.amount_minor,
+                                          transaction.currency,
+                                        ),
+                                      })}
+                                    </p>
+                                    <label className={styles.field}>
+                                      <span>
+                                        {t("teacherStudentDetails.finance.transferPaymentStudent")}
+                                      </span>
+                                      <select
+                                        value={transferStudentId}
+                                        onChange={(event) => {
+                                          setTransferStudentId(event.target.value);
+                                          setPaymentActionError("");
+                                        }}
+                                        disabled={paymentActionSaving}
+                                      >
+                                        {transferCandidates.length === 0 ? (
+                                          <option value="">
+                                            {t(
+                                              "teacherStudentDetails.finance.noTransferStudents",
+                                            )}
+                                          </option>
+                                        ) : (
+                                          transferCandidates.map((candidate) => (
+                                            <option
+                                              key={candidate.student_id}
+                                              value={candidate.student_id}
+                                            >
+                                              {candidate.student_name ||
+                                                candidate.student_email}
+                                            </option>
+                                          ))
+                                        )}
+                                      </select>
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span>
+                                        {t("teacherStudentDetails.finance.paymentActionReason")}
+                                      </span>
+                                      <select
+                                        value={transferReasonCode}
+                                        onChange={(event) => {
+                                          setTransferReasonCode(event.target.value);
+                                          setPaymentActionError("");
+                                        }}
+                                        disabled={paymentActionSaving}
+                                      >
+                                        {["wrong_student", "other"].map((reason) => (
+                                          <option key={reason} value={reason}>
+                                            {t(
+                                              `teacherStudentDetails.finance.paymentTransferReasons.${reason}`,
+                                            )}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </label>
+                                    <label className={styles.field}>
+                                      <span>
+                                        {t("teacherStudentDetails.finance.paymentActionNote")}
+                                      </span>
+                                      <textarea
+                                        value={transferReasonNote}
+                                        onChange={(event) => {
+                                          setTransferReasonNote(event.target.value);
+                                          setPaymentActionError("");
+                                        }}
+                                        maxLength={500}
+                                        rows={2}
+                                        disabled={paymentActionSaving}
+                                      />
+                                    </label>
+                                    <div className={styles.financeActions}>
+                                      <button
+                                        type="button"
+                                        className={styles.secondaryButton}
+                                        onClick={resetPaymentAction}
+                                        disabled={paymentActionSaving}
+                                      >
+                                        {t("common.cancel")}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={styles.primaryButton}
+                                        onClick={handleTransferPayment}
+                                        disabled={
+                                          paymentActionSaving ||
+                                          !transferStudentId ||
+                                          (transferReasonCode === "other" &&
+                                            !transferReasonNote.trim())
+                                        }
+                                      >
+                                        {paymentActionSaving
+                                          ? t("teacherStudentDetails.finance.paymentActionSaving")
+                                          : t("teacherStudentDetails.finance.confirmTransferPayment")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {transaction.taxAccrual && (
+                                  <div className={styles.taxBreakdown}>
+                                    <strong>
+                                      {t("teacherStudentDetails.finance.tax.title")}
+                                    </strong>
+
+                                    {transaction.taxAccrual.status === "ready" ? (
+                                      <>
+                                        {transaction.taxAccrual.source_currency !== "UAH" && (
+                                          <span>
+                                            {t("teacherStudentDetails.finance.tax.nbuRate")}: {Number(
+                                              transaction.taxAccrual.fx_rate,
+                                            ).toFixed(4)} UAH/{transaction.taxAccrual.source_currency}
+                                          </span>
+                                        )}
+                                        <span>
+                                          {t("teacherStudentDetails.finance.tax.taxBase")}: {formatMoney(
+                                            transaction.taxAccrual.tax_base_uah_minor,
+                                            "UAH",
+                                          )}
+                                        </span>
+                                        {transaction.taxAccrual.single_tax_basis ===
+                                          "income_percent" && (
+                                          <span>
+                                            {t("teacherStudentDetails.finance.tax.singleTax")}: {formatMoney(
+                                              transaction.taxAccrual.single_tax_minor,
+                                              "UAH",
+                                            )}
+                                          </span>
+                                        )}
+                                        {transaction.taxAccrual.military_levy_basis ===
+                                          "income_percent" && (
+                                          <span>
+                                            {t("teacherStudentDetails.finance.tax.militaryLevy")}: {formatMoney(
+                                              transaction.taxAccrual.military_levy_minor,
+                                              "UAH",
+                                            )}
+                                          </span>
+                                        )}
+                                        {transaction.taxAccrual.single_tax_basis ===
+                                          "income_percent" ||
+                                        transaction.taxAccrual.military_levy_basis ===
+                                          "income_percent" ? (
+                                          <strong>
+                                            {t(
+                                              "teacherStudentDetails.finance.tax.totalIncomeTaxes",
+                                            )}: {formatMoney(
+                                              transaction.taxAccrual.total_income_taxes_minor,
+                                              "UAH",
+                                            )}
+                                          </strong>
+                                        ) : (
+                                          <span>
+                                            {t(
+                                              "teacherStudentDetails.finance.tax.monthlyProfileNote",
+                                            )}
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : transaction.taxAccrual.status === "fx_pending" ? (
+                                      <>
+                                        <span>
+                                          {t("teacherStudentDetails.finance.tax.fxPending")}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          className={styles.inlineButton}
+                                          onClick={() =>
+                                            handleTaxRetry(transaction.payment_id)
+                                          }
+                                          disabled={
+                                            taxRetryingPaymentId === transaction.payment_id
+                                          }
+                                        >
+                                          {taxRetryingPaymentId === transaction.payment_id
+                                            ? t(
+                                                "teacherStudentDetails.finance.tax.retrying",
+                                              )
+                                            : t(
+                                                "teacherStudentDetails.finance.tax.retry",
+                                              )}
+                                        </button>
+                                      </>
+                                    ) : (
+                                      <span>
+                                        {t(
+                                          "teacherStudentDetails.finance.tax.parametersMissing",
+                                        )}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              <strong
+                                className={`${styles.transactionAmount} ${
+                                  Number(transaction.amount_minor) < 0
+                                    ? styles.balanceNegative
+                                    : styles.balancePositive
+                                }`}
+                              >
+                                {formatSignedMoney(
+                                  transaction.amount_minor,
+                                  transaction.currency,
+                                )}
+                              </strong>
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
@@ -1469,6 +1871,204 @@ const getFinanceError = (error, t) => {
   }
 
   return t("teacherStudentDetails.finance.errors.save");
+};
+
+const getPrimaryTransactionRelation = (transaction) => {
+  const relations = transaction?.relations ?? [];
+
+  if (relations.length === 0) return null;
+
+  return [...relations].sort(
+    (left, right) =>
+      new Date(right.relation_created_at).getTime() -
+      new Date(left.relation_created_at).getTime(),
+  )[0];
+};
+
+const buildTransactionDisplayGroups = (transactions) => {
+  const transactionsById = Object.fromEntries(
+    transactions.map((transaction) => [transaction.id, transaction]),
+  );
+  const genericReversalGroupByTransactionId = new Map();
+
+  transactions.forEach((transaction) => {
+    if (
+      transaction.transaction_type !== "reversal" ||
+      getPrimaryTransactionRelation(transaction) ||
+      !transaction.reversal_of_id
+    ) {
+      return;
+    }
+
+    const original = transactionsById[transaction.reversal_of_id];
+
+    if (
+      original &&
+      !getPrimaryTransactionRelation(original) &&
+      original.display_date === transaction.display_date
+    ) {
+      const groupKey = `reversal:${original.id}:${transaction.display_date}`;
+      genericReversalGroupByTransactionId.set(original.id, groupKey);
+      genericReversalGroupByTransactionId.set(transaction.id, groupKey);
+    }
+  });
+
+  const groups = new Map();
+
+  transactions.forEach((transaction) => {
+    const relation = getPrimaryTransactionRelation(transaction);
+    const displayDate = transaction.display_date ?? "";
+    const genericReversalGroup = genericReversalGroupByTransactionId.get(
+      transaction.id,
+    );
+    const key = relation
+      ? `${relation.relation_id}:${displayDate}`
+      : genericReversalGroup ?? `transaction:${transaction.id}`;
+    const displayAt = new Date(
+      transaction.display_at ?? transaction.created_at,
+    ).getTime();
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        related: Boolean(relation || genericReversalGroup),
+        displayDate,
+        sortAt: displayAt,
+        transactions: [],
+      });
+    }
+
+    const group = groups.get(key);
+    group.sortAt = Math.max(group.sortAt, displayAt);
+    group.transactions.push(transaction);
+  });
+
+  const roleOrder = {
+    original: 1,
+    reversal: 2,
+    replacement: 3,
+  };
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      transactions: [...group.transactions].sort((left, right) => {
+        const leftDisplayAt = new Date(
+          left.display_at ?? left.created_at,
+        ).getTime();
+        const rightDisplayAt = new Date(
+          right.display_at ?? right.created_at,
+        ).getTime();
+        const timeDifference = rightDisplayAt - leftDisplayAt;
+
+        // Keep the same newest-first chronology inside a related block that we
+        // use for the blocks themselves. Grouping should not make an older
+        // original transaction appear above a newer correction/reversal.
+        if (timeDifference !== 0) return timeDifference;
+
+        const leftRelation = getPrimaryTransactionRelation(left);
+        const rightRelation = getPrimaryTransactionRelation(right);
+
+        if (
+          leftRelation &&
+          rightRelation &&
+          leftRelation.relation_id === rightRelation.relation_id
+        ) {
+          // PostgreSQL now() is transaction-scoped, so correction rows created
+          // by one RPC can have exactly the same timestamp. In that case show
+          // the newest logical state first: replacement -> reversal -> original.
+          const roleDifference =
+            (roleOrder[rightRelation.relation_role] ?? 0) -
+            (roleOrder[leftRelation.relation_role] ?? 0);
+
+          if (roleDifference !== 0) return roleDifference;
+        }
+
+        if (left.id === right.reversal_of_id) return 1;
+        if (right.id === left.reversal_of_id) return -1;
+
+        return 0;
+      }),
+    }))
+    .sort((left, right) => {
+      if (left.displayDate !== right.displayDate) {
+        return right.displayDate.localeCompare(left.displayDate);
+      }
+
+      return right.sortAt - left.sortAt;
+    });
+};
+
+const getStudentRelationName = (student) =>
+  student?.full_name || student?.email || "—";
+
+const getTransactionRelationLabel = (relation, transaction, t) => {
+  if (!relation) return "";
+
+  const source = getStudentRelationName(relation.sourceStudent);
+  const target = getStudentRelationName(relation.targetStudent);
+  const label = t(
+    `teacherStudentDetails.finance.relationLabels.${relation.relation_type}.${relation.relation_role}`,
+    { source, target },
+  );
+
+  if (
+    relation.relation_type === "cancellation" &&
+    relation.reason_code
+  ) {
+    return `${label} · ${t(
+      `teacherStudentDetails.finance.paymentCancellationReasons.${relation.reason_code}`,
+    )}`;
+  }
+
+  if (relation.relation_type === "transfer" && relation.reason_code) {
+    return `${label} · ${t(
+      `teacherStudentDetails.finance.paymentTransferReasons.${relation.reason_code}`,
+    )}`;
+  }
+
+  if (
+    transaction.transaction_type === "payment" &&
+    relation.relation_type === "correction" &&
+    relation.relation_role === "original"
+  ) {
+    return t("teacherStudentDetails.finance.paymentCorrected");
+  }
+
+  return label;
+};
+
+const getPaymentActionError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (
+    message.includes("PAYMENT_NOT_EDITABLE") ||
+    message.includes("PAYMENT_ALREADY_REVERSED") ||
+    message.includes("PAYMENT_ALREADY_TRANSFERRED")
+  ) {
+    return t("teacherStudentDetails.finance.errors.paymentNotEditable");
+  }
+
+  if (message.includes("TARGET_STUDENT_NOT_ASSIGNED")) {
+    return t("teacherStudentDetails.finance.errors.transferStudentNotAssigned");
+  }
+
+  if (message.includes("PAYMENT_TRANSFER_SAME_STUDENT")) {
+    return t("teacherStudentDetails.finance.errors.transferSameStudent");
+  }
+
+  if (
+    message.includes("PAYMENT_CANCELLATION_NOTE_REQUIRED") ||
+    message.includes("PAYMENT_TRANSFER_NOTE_REQUIRED")
+  ) {
+    return t("teacherStudentDetails.finance.errors.paymentActionReasonRequired");
+  }
+
+  if (message.includes("PAYMENT_REQUEST_ID_CONFLICT")) {
+    return t("teacherStudentDetails.finance.errors.paymentRequestConflict");
+  }
+
+  return t("teacherStudentDetails.finance.errors.paymentActionFailed");
 };
 
 const getPaymentError = (error, t) => {
