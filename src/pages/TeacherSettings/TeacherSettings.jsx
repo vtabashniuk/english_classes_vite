@@ -14,8 +14,9 @@ import {
 } from "../../features/finance/api/financeApi";
 import {
   getMyTeacherScheduleSettings,
+  getMyTeacherWorkingHours,
   updateMyFinancePreferences,
-  updateMyTeacherSettings,
+  updateMyScheduleSettings,
 } from "../../features/settings/api/teacherSettingsApi";
 import { TIMEZONES } from "../../constants/timezones";
 import {
@@ -28,10 +29,12 @@ import {
   MIN_LOW_BALANCE_LESSONS,
 } from "../../constants/finance";
 import {
+  createDefaultWorkingHours,
   DEFAULT_SCHEDULE_SETTINGS,
   LESSON_DURATION_STEP,
   MAX_LESSON_DURATION,
   MIN_LESSON_DURATION,
+  WEEKDAYS,
 } from "../../constants/schedule";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 
@@ -55,12 +58,7 @@ const TeacherSettings = () => {
   const location = useLocation();
 
   const [timezone, setTimezone] = useState(DEFAULT_SCHEDULE_SETTINGS.timezone);
-  const [workdayStart, setWorkdayStart] = useState(
-    DEFAULT_SCHEDULE_SETTINGS.workdayStart,
-  );
-  const [workdayEnd, setWorkdayEnd] = useState(
-    DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
-  );
+  const [workingHours, setWorkingHours] = useState(createDefaultWorkingHours);
   const [lessonDurationMinutes, setLessonDurationMinutes] = useState(
     DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
   );
@@ -163,16 +161,23 @@ const TeacherSettings = () => {
         setErrorMessage("");
         setTaxErrorMessage("");
 
-        const [scheduleResult, taxProfilesResult, currentProfileResult, accountsResult] =
-          await Promise.all([
-            getMyTeacherScheduleSettings(),
-            getMyTaxProfiles(),
-            getMyCurrentTaxProfile(),
-            getTeacherPaymentAccounts(),
-          ]);
+        const [
+          scheduleResult,
+          workingHoursResult,
+          taxProfilesResult,
+          currentProfileResult,
+          accountsResult,
+        ] = await Promise.all([
+          getMyTeacherScheduleSettings(),
+          getMyTeacherWorkingHours(),
+          getMyTaxProfiles(),
+          getMyCurrentTaxProfile(),
+          getTeacherPaymentAccounts(),
+        ]);
 
         const initialError =
           scheduleResult.error ||
+          workingHoursResult.error ||
           taxProfilesResult.error ||
           currentProfileResult.error ||
           accountsResult.error;
@@ -221,12 +226,14 @@ const TeacherSettings = () => {
               DEFAULT_FINANCE_SETTINGS.historyPageSize,
           ),
         );
-        setWorkdayStart(
-          data?.workday_start?.slice(0, 5) ||
-            DEFAULT_SCHEDULE_SETTINGS.workdayStart,
-        );
-        setWorkdayEnd(
-          data?.workday_end?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
+        setWorkingHours(
+          normalizeWorkingHours(
+            workingHoursResult.data,
+            data?.workday_start?.slice(0, 5) ||
+              DEFAULT_SCHEDULE_SETTINGS.workdayStart,
+            data?.workday_end?.slice(0, 5) ||
+              DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
+          ),
         );
         setLessonDurationMinutes(
           data?.lesson_duration_minutes ??
@@ -276,23 +283,41 @@ const TeacherSettings = () => {
     });
   }, [loading, location.hash]);
 
+  const handleWorkingHoursChange = (weekday, field, value) => {
+    setWorkingHours((current) =>
+      current.map((item) =>
+        item.weekday === weekday ? { ...item, [field]: value } : item,
+      ),
+    );
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (workdayEnd <= workdayStart) {
-      setErrorMessage(t("teacherSettings.errors.invalidWorkday"));
+    const duration = Number(lessonDurationMinutes);
+    const invalidWorkingDay = workingHours.some((item) => {
+      if (!item.isWorking) return false;
+      if (!item.workdayStart || !item.workdayEnd) return true;
+
+      const startMinutes = timeValueToMinutes(item.workdayStart);
+      const endMinutes = timeValueToMinutes(item.workdayEnd);
+
+      return endMinutes <= startMinutes || endMinutes - startMinutes < duration;
+    });
+
+    if (invalidWorkingDay) {
+      setErrorMessage(t("teacherSettings.errors.invalidWorkingHours"));
       return;
     }
 
     try {
       setSaving(true);
-      const { error } = await updateMyTeacherSettings({
+      const { error } = await updateMyScheduleSettings({
         timezone,
-        workdayStart,
-        workdayEnd,
-        lessonDurationMinutes: Number(lessonDurationMinutes),
+        workingHours,
+        lessonDurationMinutes: duration,
       });
       if (error) throw error;
 
@@ -566,26 +591,66 @@ const TeacherSettings = () => {
             <small>{t("teacherSettings.timezoneHint")}</small>
           </label>
 
-          <div className={styles.row}>
-            <label className={styles.field}>
-              <span>{t("teacherSettings.workdayStart")}</span>
-              <input
-                type="time"
-                step="1800"
-                value={workdayStart}
-                onChange={(event) => setWorkdayStart(event.target.value)}
-              />
-            </label>
+          <div className={styles.workingDays}>
+            <div className={styles.workingDaysHeader}>
+              <strong>{t("teacherSettings.workingDaysTitle")}</strong>
+              <small>{t("teacherSettings.workingDaysHint")}</small>
+            </div>
 
-            <label className={styles.field}>
-              <span>{t("teacherSettings.workdayEnd")}</span>
-              <input
-                type="time"
-                step="1800"
-                value={workdayEnd}
-                onChange={(event) => setWorkdayEnd(event.target.value)}
-              />
-            </label>
+            {workingHours.map((item) => {
+              const day = WEEKDAYS.find((weekday) => weekday.value === item.weekday);
+
+              return (
+                <div key={item.weekday} className={styles.workingDayRow}>
+                  <label className={styles.workingDayToggle}>
+                    <input
+                      type="checkbox"
+                      checked={item.isWorking}
+                      onChange={(event) =>
+                        handleWorkingHoursChange(
+                          item.weekday,
+                          "isWorking",
+                          event.target.checked,
+                        )
+                      }
+                    />
+                    <span>{t(`teacherSettings.weekdays.${day.key}`)}</span>
+                  </label>
+
+                  <div className={styles.workingDayTimes}>
+                    <input
+                      type="time"
+                      step="1800"
+                      value={item.workdayStart}
+                      disabled={!item.isWorking}
+                      aria-label={t("teacherSettings.workdayStart")}
+                      onChange={(event) =>
+                        handleWorkingHoursChange(
+                          item.weekday,
+                          "workdayStart",
+                          event.target.value,
+                        )
+                      }
+                    />
+                    <span>—</span>
+                    <input
+                      type="time"
+                      step="1800"
+                      value={item.workdayEnd}
+                      disabled={!item.isWorking}
+                      aria-label={t("teacherSettings.workdayEnd")}
+                      onChange={(event) =>
+                        handleWorkingHoursChange(
+                          item.weekday,
+                          "workdayEnd",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <label className={styles.field}>
@@ -1221,9 +1286,30 @@ const formatAccountType = (accountType, t) => {
   return t("teacherSettings.finance.typeCard");
 };
 
+const normalizeWorkingHours = (rows, fallbackStart, fallbackEnd) => {
+  const byWeekday = new Map((rows ?? []).map((item) => [Number(item.weekday), item]));
+
+  return WEEKDAYS.map(({ value: weekday }) => {
+    const row = byWeekday.get(weekday);
+
+    return {
+      weekday,
+      isWorking: row ? Boolean(row.is_working) : weekday <= 5,
+      workdayStart: row?.workday_start?.slice(0, 5) || fallbackStart,
+      workdayEnd: row?.workday_end?.slice(0, 5) || fallbackEnd,
+    };
+  });
+};
+
+const timeValueToMinutes = (value) => {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
 const getSettingsError = (error, t) => {
   const message = error?.message ?? "";
   if (message.includes("INVALID_TIMEZONE")) return t("teacherSettings.errors.invalidTimezone");
+  if (message.includes("INVALID_WORKING_HOURS")) return t("teacherSettings.errors.invalidWorkingHours");
   if (message.includes("INVALID_WORKDAY")) return t("teacherSettings.errors.invalidWorkday");
   if (message.includes("INVALID_LESSON_DURATION")) return t("teacherSettings.errors.invalidDuration");
   if (message.includes("WORKDAY_TOO_SHORT")) return t("teacherSettings.errors.workdayTooShort");

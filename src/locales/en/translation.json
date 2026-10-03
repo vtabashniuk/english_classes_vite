@@ -331,7 +331,9 @@
       "tuesday": "Tue",
       "wednesday": "Wed",
       "thursday": "Thu",
-      "friday": "Fri"
+      "friday": "Fri",
+      "saturday": "Sat",
+      "sunday": "Sun"
     },
     "statuses": {
       "scheduled": "Scheduled",
@@ -346,13 +348,13 @@
       "load": "Could not load the schedule.",
       "loadLessons": "Could not load lessons.",
       "requiredFields": "Select a student, date and time.",
-      "weekend": "Lessons are not available on Saturday or Sunday.",
       "workingHours": "The lesson falls outside working hours.",
       "invalidSlot": "The lesson must start on an allowed time slot.",
       "conflict": "This time is already occupied.",
       "past": "A lesson cannot be created in the past.",
       "studentNotFound": "The student was not found or the account is inactive.",
-      "create": "Could not create the lesson."
+      "create": "Could not create the lesson.",
+      "nonWorkingDay": "This day is not part of the teacher’s working schedule."
     },
     "cancel": {
       "button": "Cancel lesson",
@@ -390,7 +392,9 @@
         "tuesday": "Tuesday",
         "wednesday": "Wednesday",
         "thursday": "Thursday",
-        "friday": "Friday"
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
       },
       "messages": {
         "created": "Recurring lesson created. Lessons created: {{createdCount}}.",
@@ -398,7 +402,7 @@
       },
       "errors": {
         "requiredFields": "Select a student, weekday, time and start date.",
-        "weekday": "Select a weekday from Monday to Friday.",
+        "weekday": "Select an available working day.",
         "interval": "Invalid repeat interval.",
         "past": "The recurring lesson start date cannot be in the past.",
         "dateRange": "The end date cannot be earlier than the start date.",
@@ -438,7 +442,8 @@
           "load": "Could not load the recurring series settings.",
           "generic": "Could not update the recurring series."
         }
-      }
+      },
+      "selectWeekday": "Select a working day"
     },
     "zoomEdit": {
       "button": "Edit Zoom",
@@ -485,7 +490,8 @@
         "recurring": "Use series editing for a recurring lesson.",
         "cancellationPending": "Resolve the student cancellation request for this lesson first."
       }
-    }
+    },
+    "weeklyAvailability": "Individual hours by weekday"
   },
   "teacherSettings": {
     "title": "Settings",
@@ -514,7 +520,8 @@
       "invalidWorkday": "The workday must end after it starts.",
       "invalidDuration": "The lesson duration is invalid.",
       "workdayTooShort": "The workday is shorter than one lesson.",
-      "teacherRequired": "This operation is available to teachers only."
+      "teacherRequired": "This operation is available to teachers only.",
+      "invalidWorkingHours": "Check the working hours: every enabled day must end after it starts and be long enough for one lesson."
     },
     "tax": {
       "title": "Taxation",
@@ -633,6 +640,17 @@
       "freeCancellationHint": "A student request sent at least this long before the lesson is cancelled without a charge. A later request is charged in full by default.",
       "historyPageSize": "Transactions per history page",
       "historyPageSizeHint": "Controls how many finance transactions are shown on one history page."
+    },
+    "workingDaysTitle": "Working days and hours",
+    "workingDaysHint": "Enable working days and set a separate time range for each day.",
+    "weekdays": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
     }
   },
   "teacherStudentDetails": {
@@ -899,6 +917,10 @@
       "title": "Lesson request rejected",
       "body": "The teacher rejected your lesson request for {{date}} at {{time}}."
     },
+    "lessonRescheduled": {
+      "title": "Lesson rescheduled",
+      "body": "The teacher moved your lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}}."
+    },
     "lessonStatusChanged": {
       "missed": {
         "title": "Lesson missed",
@@ -1014,7 +1036,8 @@
       "timePassed": "The requested lesson time has already passed.",
       "notFound": "Request not found.",
       "commentTooLong": "The comment cannot exceed 500 characters.",
-      "generic": "Could not process the request."
+      "generic": "Could not process the request.",
+      "scheduleUnavailable": "This time is no longer within the working schedule. Choose or agree on another time."
     },
     "extraLessonSectionTitle": "Extra lesson requests",
     "extraLessonSectionDescription": "Student requests to schedule additional lessons.",

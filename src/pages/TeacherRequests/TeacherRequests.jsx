@@ -265,6 +265,15 @@ const TeacherRequests = () => {
       return t("teacherRequests.errors.timePassed");
     }
 
+    if (
+      message.includes("NON_WORKING_DAY") ||
+      message.includes("OUTSIDE_WORKING_HOURS") ||
+      message.includes("INVALID_TIME_SLOT")
+    ) {
+      return t("teacherRequests.errors.scheduleUnavailable");
+    }
+
+
     if (message.includes("REQUEST_NOT_FOUND")) {
       return t("teacherRequests.errors.notFound");
     }

@@ -6,6 +6,24 @@ export const DEFAULT_SCHEDULE_SETTINGS = {
   slotIntervalMinutes: 30,
 };
 
+export const WEEKDAYS = [
+  { value: 1, key: "monday" },
+  { value: 2, key: "tuesday" },
+  { value: 3, key: "wednesday" },
+  { value: 4, key: "thursday" },
+  { value: 5, key: "friday" },
+  { value: 6, key: "saturday" },
+  { value: 7, key: "sunday" },
+];
+
+export const createDefaultWorkingHours = () =>
+  WEEKDAYS.map(({ value: weekday }) => ({
+    weekday,
+    isWorking: weekday <= 5,
+    workdayStart: DEFAULT_SCHEDULE_SETTINGS.workdayStart,
+    workdayEnd: DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
+  }));
+
 export const MIN_LESSON_DURATION = 30;
 export const MAX_LESSON_DURATION = 120;
 

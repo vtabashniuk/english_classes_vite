@@ -144,13 +144,13 @@
 }
 
 .calendar {
-  min-width: 900px;
+  min-width: 1180px;
 }
 
 .calendarHeader {
   display: grid;
 
-  grid-template-columns: 72px repeat(5, minmax(150px, 1fr));
+  grid-template-columns: 72px repeat(7, minmax(150px, 1fr));
 
   position: sticky;
   top: 0;
@@ -208,6 +208,15 @@
   background: rgba(var(--color-primary-blue-rgb), 0.06);
 }
 
+
+.nonWorkingHeader {
+  background: var(--color-surface-muted);
+}
+
+.nonWorkingHeader span,
+.nonWorkingHeader strong {
+  color: var(--color-text-secondary);
+}
 .todayHeader strong {
   color: var(--color-primary-blue);
 }
@@ -215,7 +224,7 @@
 .calendarBody {
   display: grid;
 
-  grid-template-columns: 72px repeat(5, minmax(150px, 1fr));
+  grid-template-columns: 72px repeat(7, minmax(150px, 1fr));
 }
 
 .timeColumn {
@@ -270,6 +279,19 @@
   background: rgba(var(--color-primary-blue-rgb), 0.025);
 }
 
+
+.nonWorkingDay {
+  background: var(--color-surface-muted);
+}
+
+.unavailableRange {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  background: rgba(127, 127, 127, 0.08);
+  pointer-events: none;
+}
 .gridLine {
   position: absolute;
 

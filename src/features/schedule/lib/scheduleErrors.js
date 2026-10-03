@@ -1,8 +1,11 @@
 export const getCreateLessonError = (error, t) => {
   const message = error?.message ?? "";
 
-  if (message.includes("WEEKEND_NOT_ALLOWED")) {
-    return t("teacherSchedule.errors.weekend");
+  if (
+    message.includes("NON_WORKING_DAY") ||
+    message.includes("WEEKEND_NOT_ALLOWED")
+  ) {
+    return t("teacherSchedule.errors.nonWorkingDay");
   }
 
   if (message.includes("OUTSIDE_WORKING_HOURS")) {
@@ -32,7 +35,10 @@ export const getCreateLessonError = (error, t) => {
 export const getCreateRecurringLessonError = (error, t) => {
   const message = error?.message ?? "";
 
-  if (message.includes("INVALID_WEEKDAY")) {
+  if (
+    message.includes("INVALID_WEEKDAY") ||
+    message.includes("NON_WORKING_DAY")
+  ) {
     return t("teacherSchedule.recurring.errors.weekday");
   }
 
@@ -95,8 +101,11 @@ export const getUpdateLessonScheduleError = (error, t) => {
     return t("teacherSchedule.lessonEdit.errors.cancellationPending");
   }
 
-  if (message.includes("WEEKEND_NOT_ALLOWED")) {
-    return t("teacherSchedule.errors.weekend");
+  if (
+    message.includes("NON_WORKING_DAY") ||
+    message.includes("WEEKEND_NOT_ALLOWED")
+  ) {
+    return t("teacherSchedule.errors.nonWorkingDay");
   }
 
   if (message.includes("OUTSIDE_WORKING_HOURS")) {
@@ -178,7 +187,10 @@ export const getEditRecurringSeriesError = (error, t) => {
     return t("teacherSchedule.recurring.editFromHere.errors.notFound");
   }
 
-  if (message.includes("INVALID_WEEKDAY")) {
+  if (
+    message.includes("INVALID_WEEKDAY") ||
+    message.includes("NON_WORKING_DAY")
+  ) {
     return t("teacherSchedule.recurring.errors.weekday");
   }
 

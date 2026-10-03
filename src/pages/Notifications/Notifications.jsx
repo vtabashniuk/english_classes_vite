@@ -140,6 +140,7 @@ const Notifications = () => {
 
   const getBody = (notification) => {
     const startsAt = notification.data?.startsAt;
+    const oldStartsAt = notification.data?.oldStartsAt;
     const priceAmountMinor = Number(notification.data?.priceAmountMinor);
     const priceCurrency = notification.data?.priceCurrency;
     const amount =
@@ -151,6 +152,8 @@ const Notifications = () => {
       studentName: notification.data?.studentName || t("notifications.student"),
       date: startsAt ? formatDate(startsAt) : "—",
       time: startsAt ? formatTime(startsAt) : "—",
+      oldDate: oldStartsAt ? formatDate(oldStartsAt) : "—",
+      oldTime: oldStartsAt ? formatTime(oldStartsAt) : "—",
       duration: notification.data?.durationMinutes,
       assignmentTitle: notification.data?.assignmentTitle || "—",
       materialTitle: notification.data?.materialTitle || "—",

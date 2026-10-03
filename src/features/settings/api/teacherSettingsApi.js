@@ -22,6 +22,12 @@ export const getMyTeacherScheduleSettings = () =>
 export const getTeacherScheduleSettings = (teacherId) =>
   teacherScheduleSettingsQuery().eq("teacher_id", teacherId).single();
 
+export const getMyTeacherWorkingHours = () =>
+  supabase
+    .from("teacher_working_hours")
+    .select("weekday, is_working, workday_start, workday_end")
+    .order("weekday", { ascending: true });
+
 export const getTeacherTimezone = (teacherId) =>
   supabase
     .from("teacher_settings")
@@ -40,6 +46,22 @@ export const updateMyTeacherSettings = ({
     p_workday_start: workdayStart,
     p_workday_end: workdayEnd,
     p_lesson_duration_minutes: lessonDurationMinutes,
+  });
+
+export const updateMyScheduleSettings = ({
+  timezone,
+  lessonDurationMinutes,
+  workingHours,
+}) =>
+  supabase.rpc("update_my_schedule_settings", {
+    p_schedule_timezone: timezone,
+    p_lesson_duration_minutes: lessonDurationMinutes,
+    p_working_hours: workingHours.map((item) => ({
+      weekday: item.weekday,
+      is_working: item.isWorking,
+      workday_start: item.workdayStart,
+      workday_end: item.workdayEnd,
+    })),
   });
 
 export const updateMyFinancePreferences = ({

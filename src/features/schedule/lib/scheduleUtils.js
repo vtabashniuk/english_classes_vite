@@ -10,7 +10,7 @@ export const timeToMinutes = (value) => {
   return hours * 60 + minutes;
 };
 
-const minutesToTime = (minutes) => {
+export const minutesToTime = (minutes) => {
   const hours = Math.floor(minutes / 60);
 
   const mins = minutes % 60;
@@ -121,7 +121,7 @@ export const formatZonedDateForInput = (value, timezone) => {
 
 
 export const formatWeekRange = (weekStart, locale) => {
-  const weekEnd = addDays(weekStart, 4);
+  const weekEnd = addDays(weekStart, 6);
 
   const startText = new Intl.DateTimeFormat(locale, {
     day: "2-digit",

@@ -17,7 +17,10 @@ import {
   getRecurringLessonById,
 } from "../../features/lessons/api/recurringLessonsApi";
 import { listActiveStudents } from "../../features/profiles/api/profilesApi";
-import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
+import {
+  getMyTeacherScheduleSettings,
+  getMyTeacherWorkingHours,
+} from "../../features/settings/api/teacherSettingsApi";
 import {
   getCancelLessonError,
   getCancelRecurringSeriesError,
@@ -45,6 +48,7 @@ import {
   isLessonStarted,
   isSameCalendarDate,
   isSlotBlockedByLesson,
+  minutesToTime,
   pad,
   parseInputDate,
   PIXELS_PER_MINUTE,
@@ -56,13 +60,17 @@ import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import { getTimezone } from "../../constants/timezones";
 
-import { DEFAULT_SCHEDULE_SETTINGS } from "../../constants/schedule";
+import {
+  createDefaultWorkingHours,
+  DEFAULT_SCHEDULE_SETTINGS,
+  WEEKDAYS,
+} from "../../constants/schedule";
 
 import Button from "../../components/common/ui/Button/Button";
 
 import styles from "./TeacherSchedule.module.css";
 
-const DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+const DAY_NAMES = WEEKDAYS.map((day) => day.key);
 
 const fetchActiveStudents = async () => {
   const { data, error } = await listActiveStudents({ includeContact: true });
@@ -75,30 +83,82 @@ const fetchActiveStudents = async () => {
 };
 
 const fetchTeacherScheduleSettings = async () => {
-  const { data, error } = await getMyTeacherScheduleSettings();
+  const [settingsResult, workingHoursResult] = await Promise.all([
+    getMyTeacherScheduleSettings(),
+    getMyTeacherWorkingHours(),
+  ]);
 
-  if (error) {
-    throw error;
+  if (settingsResult.error || workingHoursResult.error) {
+    throw settingsResult.error || workingHoursResult.error;
   }
+
+  const data = settingsResult.data;
+  const legacyStart =
+    data?.workday_start?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayStart;
+  const legacyEnd =
+    data?.workday_end?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayEnd;
 
   return {
     timezone: data?.schedule_timezone || DEFAULT_SCHEDULE_SETTINGS.timezone,
-    workdayStart:
-      data?.workday_start?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayStart,
-    workdayEnd:
-      data?.workday_end?.slice(0, 5) || DEFAULT_SCHEDULE_SETTINGS.workdayEnd,
     lessonDurationMinutes:
       data?.lesson_duration_minutes ??
       DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
     slotIntervalMinutes:
       data?.slot_interval_minutes ??
       DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
+    workingHours: normalizeWorkingHours(
+      workingHoursResult.data,
+      legacyStart,
+      legacyEnd,
+    ),
   };
+};
+
+const normalizeWorkingHours = (rows, fallbackStart, fallbackEnd) => {
+  const byWeekday = new Map((rows ?? []).map((item) => [Number(item.weekday), item]));
+
+  return WEEKDAYS.map(({ value: weekday }) => {
+    const row = byWeekday.get(weekday);
+
+    return {
+      weekday,
+      isWorking: row ? Boolean(row.is_working) : weekday <= 5,
+      workdayStart: row?.workday_start?.slice(0, 5) || fallbackStart,
+      workdayEnd: row?.workday_end?.slice(0, 5) || fallbackEnd,
+    };
+  });
+};
+
+const getIsoWeekday = (date) => {
+  const weekday = date.getDay();
+  return weekday === 0 ? 7 : weekday;
+};
+
+const getWorkingHoursForWeekday = (settings, weekday) =>
+  settings.workingHours.find((item) => item.weekday === Number(weekday)) ?? null;
+
+const getTimeSlotsForWeekday = (settings, weekday) => {
+  const workingHours = getWorkingHoursForWeekday(settings, weekday);
+
+  if (!workingHours?.isWorking) return [];
+
+  return createTimeSlots(
+    workingHours.workdayStart,
+    workingHours.workdayEnd,
+    settings.lessonDurationMinutes,
+    settings.slotIntervalMinutes,
+  );
+};
+
+const getTimeSlotsForDate = (settings, dateValue) => {
+  const date = parseInputDate(dateValue);
+  if (!date) return [];
+  return getTimeSlotsForWeekday(settings, getIsoWeekday(date));
 };
 
 const fetchTeacherLessonsForWeek = async (weekStart) => {
   const start = startOfDay(addDays(weekStart, -1));
-  const end = startOfDay(addDays(weekStart, 6));
+  const end = startOfDay(addDays(weekStart, 8));
 
   const { data, error } = await listTeacherLessonsForRange({
     startIso: start.toISOString(),
@@ -119,9 +179,10 @@ const TeacherSchedule = () => {
 
   const [lessons, setLessons] = useState([]);
 
-  const [scheduleSettings, setScheduleSettings] = useState(
-    DEFAULT_SCHEDULE_SETTINGS,
-  );
+  const [scheduleSettings, setScheduleSettings] = useState(() => ({
+    ...DEFAULT_SCHEDULE_SETTINGS,
+    workingHours: createDefaultWorkingHours(),
+  }));
 
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()));
 
@@ -199,43 +260,116 @@ const TeacherSchedule = () => {
 
   const [detailSuccessMessage, setDetailSuccessMessage] = useState("");
 
+  useEffect(() => {
+    if (!createErrorMessage && !createSuccessMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCreateErrorMessage("");
+      setCreateSuccessMessage("");
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [createErrorMessage, createSuccessMessage]);
+
+  useEffect(() => {
+    if (!detailErrorMessage && !detailSuccessMessage) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [detailErrorMessage, detailSuccessMessage]);
+
   const locale = getIntlLocale(i18n.language);
 
   const scheduleTimezone = scheduleSettings.timezone;
 
-  const workdayStartMinutes = timeToMinutes(scheduleSettings.workdayStart);
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  }, [weekStart]);
 
-  const workdayEndMinutes = timeToMinutes(scheduleSettings.workdayEnd);
+  const enabledWorkingHours = useMemo(
+    () => scheduleSettings.workingHours.filter((item) => item.isWorking),
+    [scheduleSettings.workingHours],
+  );
+
+  const calendarBounds = useMemo(() => {
+    const fallbackStart = timeToMinutes(DEFAULT_SCHEDULE_SETTINGS.workdayStart);
+    const fallbackEnd = timeToMinutes(DEFAULT_SCHEDULE_SETTINGS.workdayEnd);
+
+    let startMinutes = enabledWorkingHours.length
+      ? Math.min(...enabledWorkingHours.map((item) => timeToMinutes(item.workdayStart)))
+      : fallbackStart;
+    let endMinutes = enabledWorkingHours.length
+      ? Math.max(...enabledWorkingHours.map((item) => timeToMinutes(item.workdayEnd)))
+      : fallbackEnd;
+
+    const displayedDates = new Set(weekDays.map(formatDateForInput));
+
+    lessons.forEach((lesson) => {
+      if (!displayedDates.has(formatZonedDateForInput(lesson.starts_at, scheduleTimezone))) {
+        return;
+      }
+
+      const start = getDatePartsInTimezone(lesson.starts_at, scheduleTimezone);
+      const end = getDatePartsInTimezone(lesson.ends_at, scheduleTimezone);
+      const lessonStartMinutes = start.hour * 60 + start.minute;
+      const lessonEndMinutes = end.hour * 60 + end.minute;
+
+      startMinutes = Math.min(startMinutes, lessonStartMinutes);
+      endMinutes = Math.max(endMinutes, lessonEndMinutes);
+    });
+
+    return { startMinutes, endMinutes };
+  }, [enabledWorkingHours, lessons, scheduleTimezone, weekDays]);
+
+  const calendarStartMinutes = calendarBounds.startMinutes;
+  const calendarEndMinutes = calendarBounds.endMinutes;
+  const calendarStart = minutesToTime(calendarStartMinutes);
+  const calendarEnd = minutesToTime(calendarEndMinutes);
 
   const calendarHeight =
-    (workdayEndMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE +
+    (calendarEndMinutes - calendarStartMinutes) * PIXELS_PER_MINUTE +
     CALENDAR_TOP_PADDING +
     CALENDAR_BOTTOM_PADDING;
 
-  const workdayEndTop =
+  const calendarEndTop =
     CALENDAR_TOP_PADDING +
-    (workdayEndMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE;
-
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 5 }, (_, index) => addDays(weekStart, index));
-  }, [weekStart]);
-
-  const timeSlots = useMemo(() => {
-    return createTimeSlots(
-      scheduleSettings.workdayStart,
-      scheduleSettings.workdayEnd,
-      scheduleSettings.lessonDurationMinutes,
-      scheduleSettings.slotIntervalMinutes,
-    );
-  }, [scheduleSettings]);
+    (calendarEndMinutes - calendarStartMinutes) * PIXELS_PER_MINUTE;
 
   const displayTimeSlots = useMemo(() => {
     return createDisplayTimeSlots(
-      scheduleSettings.workdayStart,
-      scheduleSettings.workdayEnd,
+      calendarStart,
+      calendarEnd,
       scheduleSettings.slotIntervalMinutes,
     );
-  }, [scheduleSettings]);
+  }, [calendarStart, calendarEnd, scheduleSettings.slotIntervalMinutes]);
+
+  const selectedDateSlots = useMemo(
+    () => getTimeSlotsForDate(scheduleSettings, selectedDate),
+    [scheduleSettings, selectedDate],
+  );
+
+  const recurringTimeSlots = useMemo(
+    () => getTimeSlotsForWeekday(scheduleSettings, Number(recurringWeekday)),
+    [scheduleSettings, recurringWeekday],
+  );
+
+  const seriesTimeSlots = useMemo(
+    () => getTimeSlotsForWeekday(scheduleSettings, Number(seriesWeekday)),
+    [scheduleSettings, seriesWeekday],
+  );
+
+  const editLessonTimeSlots = useMemo(
+    () => getTimeSlotsForDate(scheduleSettings, editLessonDate),
+    [scheduleSettings, editLessonDate],
+  );
 
   const timezoneConfig = getTimezone(scheduleTimezone);
 
@@ -257,6 +391,21 @@ const TeacherSchedule = () => {
           setPageErrorMessage("");
           setStudents(nextStudents);
           setScheduleSettings(nextSettings);
+
+          const firstWorkingDay = nextSettings.workingHours.find(
+            (item) => item.isWorking,
+          );
+          if (firstWorkingDay) {
+            setRecurringWeekday((current) =>
+              nextSettings.workingHours.some(
+                (item) => item.isWorking && String(item.weekday) === current,
+              )
+                ? current
+                : String(firstWorkingDay.weekday),
+            );
+          } else {
+            setRecurringWeekday("");
+          }
         }
       } catch (error) {
         console.error("TeacherSchedule initialization error:", error);
@@ -334,7 +483,51 @@ const TeacherSchedule = () => {
     setWeekStart(getMonday(new Date()));
   };
 
+  const handleSelectedDateChange = (value) => {
+    setSelectedDate(value);
+
+    const slots = getTimeSlotsForDate(scheduleSettings, value);
+    if (!slots.includes(selectedTime)) {
+      setSelectedTime("");
+    }
+
+    const date = parseInputDate(value);
+    if (date) {
+      const weekday = getIsoWeekday(date);
+      const workingHours = getWorkingHoursForWeekday(scheduleSettings, weekday);
+      if (workingHours?.isWorking) {
+        setRecurringWeekday(String(weekday));
+      }
+    }
+  };
+
+  const handleRecurringWeekdayChange = (value) => {
+    setRecurringWeekday(value);
+    const slots = getTimeSlotsForWeekday(scheduleSettings, Number(value));
+    if (!slots.includes(selectedTime)) {
+      setSelectedTime("");
+    }
+  };
+
+  const handleSeriesWeekdayChange = (value) => {
+    setSeriesWeekday(value);
+    const slots = getTimeSlotsForWeekday(scheduleSettings, Number(value));
+    if (!slots.includes(seriesTime)) {
+      setSeriesTime("");
+    }
+  };
+
+  const handleEditLessonDateChange = (value) => {
+    setEditLessonDate(value);
+    const slots = getTimeSlotsForDate(scheduleSettings, value);
+    if (!slots.includes(editLessonTime)) {
+      setEditLessonTime("");
+    }
+  };
+
   const handleSlotClick = (date, slot) => {
+    const weekday = getIsoWeekday(date);
+    const workingHours = getWorkingHoursForWeekday(scheduleSettings, weekday);
     const blocked = isSlotBlockedByLesson(
       date,
       slot,
@@ -343,7 +536,7 @@ const TeacherSchedule = () => {
       scheduleSettings.lessonDurationMinutes,
     );
 
-    if (blocked) {
+    if (!workingHours?.isWorking || blocked) {
       return;
     }
 
@@ -355,9 +548,7 @@ const TeacherSchedule = () => {
 
     setSelectedTime(slot);
 
-    if (date.getDay() >= 1 && date.getDay() <= 5) {
-      setRecurringWeekday(String(date.getDay()));
-    }
+    setRecurringWeekday(String(weekday));
 
     setRecurringValidFrom(dateValue);
 
@@ -414,7 +605,10 @@ const TeacherSchedule = () => {
     setEditLessonMinDate(
       formatZonedDateForInput(new Date().toISOString(), scheduleTimezone),
     );
-    setEditLessonTime(`${pad(startParts.hour)}:${pad(startParts.minute)}`);
+    const currentTime = `${pad(startParts.hour)}:${pad(startParts.minute)}`;
+    const currentDate = `${startParts.year}-${pad(startParts.month)}-${pad(startParts.day)}`;
+    const availableSlots = getTimeSlotsForDate(scheduleSettings, currentDate);
+    setEditLessonTime(availableSlots.includes(currentTime) ? currentTime : "");
     setEditLessonZoom(selectedLesson.zoom_url || "");
     setEditingZoom(false);
     setEditingRecurringSeries(false);
@@ -521,8 +715,25 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setSeriesWeekday(String(data.weekday));
-      setSeriesTime(data.start_time?.slice(0, 5) || "");
+      const currentWeekday = Number(data.weekday);
+      const currentTime = data.start_time?.slice(0, 5) || "";
+      const availableSlots = getTimeSlotsForWeekday(
+        scheduleSettings,
+        currentWeekday,
+      );
+      const firstWorkingDay = scheduleSettings.workingHours.find(
+        (item) => item.isWorking,
+      );
+
+      if (availableSlots.includes(currentTime)) {
+        setSeriesWeekday(String(currentWeekday));
+        setSeriesTime(currentTime);
+      } else {
+        setSeriesWeekday(
+          firstWorkingDay ? String(firstWorkingDay.weekday) : "",
+        );
+        setSeriesTime("");
+      }
       setSeriesIntervalWeeks(String(data.interval_weeks ?? 1));
       setSeriesValidUntil(data.valid_until || "");
       setSeriesZoomUrl(data.zoom_url || "");
@@ -777,9 +988,17 @@ const TeacherSchedule = () => {
     if (mode === "recurring" && selectedDate) {
       const date = parseInputDate(selectedDate);
 
-      if (date && date.getDay() >= 1 && date.getDay() <= 5) {
-        setRecurringWeekday(String(date.getDay()));
-        setRecurringValidFrom((current) => current || selectedDate);
+      if (date) {
+        const weekday = getIsoWeekday(date);
+        const workingHours = getWorkingHoursForWeekday(
+          scheduleSettings,
+          weekday,
+        );
+
+        if (workingHours?.isWorking) {
+          setRecurringWeekday(String(weekday));
+          setRecurringValidFrom((current) => current || selectedDate);
+        }
       }
     }
   };
@@ -906,11 +1125,7 @@ const TeacherSchedule = () => {
       )}
 
       <div className={styles.settingsSummary}>
-        <span>
-          {scheduleSettings.workdayStart}
-          {" — "}
-          {scheduleSettings.workdayEnd}
-        </span>
+        <span>{t("teacherSchedule.weeklyAvailability")}</span>
 
         <span>
           {t("teacherSchedule.lessonDuration", {
@@ -960,13 +1175,17 @@ const TeacherSchedule = () => {
 
             {weekDays.map((date, index) => {
               const today = isSameCalendarDate(date, new Date());
+              const workingHours = getWorkingHoursForWeekday(
+                scheduleSettings,
+                getIsoWeekday(date),
+              );
 
               return (
                 <div
                   key={DAY_NAMES[index]}
                   className={`${styles.dayHeader} ${
                     today ? styles.todayHeader : ""
-                  }`}
+                  } ${!workingHours?.isWorking ? styles.nonWorkingHeader : ""}`}
                 >
                   <span>{t(`teacherSchedule.days.${DAY_NAMES[index]}`)}</span>
 
@@ -991,7 +1210,7 @@ const TeacherSchedule = () => {
               {displayTimeSlots.map((slot) => {
                 const top =
                   CALENDAR_TOP_PADDING +
-                  (timeToMinutes(slot) - workdayStartMinutes) *
+                  (timeToMinutes(slot) - calendarStartMinutes) *
                     PIXELS_PER_MINUTE;
 
                 return (
@@ -1009,23 +1228,43 @@ const TeacherSchedule = () => {
 
               <span
                 className={styles.endTimeLabel}
-                style={{ top: `${workdayEndTop}px` }}
+                style={{ top: `${calendarEndTop}px` }}
               >
-                {scheduleSettings.workdayEnd}
+                {calendarEnd}
               </span>
             </div>
 
             {weekDays.map((date) => {
               const dayLessons = getLessonsForDay(date);
-
               const today = isSameCalendarDate(date, new Date());
+              const weekday = getIsoWeekday(date);
+              const workingHours = getWorkingHoursForWeekday(
+                scheduleSettings,
+                weekday,
+              );
+              const dayTimeSlots = getTimeSlotsForWeekday(
+                scheduleSettings,
+                weekday,
+              );
+              const workingStartTop = workingHours?.isWorking
+                ? CALENDAR_TOP_PADDING +
+                  (timeToMinutes(workingHours.workdayStart) -
+                    calendarStartMinutes) *
+                    PIXELS_PER_MINUTE
+                : CALENDAR_TOP_PADDING;
+              const workingEndTop = workingHours?.isWorking
+                ? CALENDAR_TOP_PADDING +
+                  (timeToMinutes(workingHours.workdayEnd) -
+                    calendarStartMinutes) *
+                    PIXELS_PER_MINUTE
+                : calendarEndTop;
 
               return (
                 <div
                   key={date.toISOString()}
                   className={`${styles.dayColumn} ${
                     today ? styles.todayColumn : ""
-                  }`}
+                  } ${!workingHours?.isWorking ? styles.nonWorkingDay : ""}`}
                   style={{
                     height: calendarHeight,
                   }}
@@ -1033,7 +1272,7 @@ const TeacherSchedule = () => {
                   {displayTimeSlots.map((slot) => {
                     const top =
                       CALENDAR_TOP_PADDING +
-                      (timeToMinutes(slot) - workdayStartMinutes) *
+                      (timeToMinutes(slot) - calendarStartMinutes) *
                         PIXELS_PER_MINUTE;
 
                     return (
@@ -1049,13 +1288,33 @@ const TeacherSchedule = () => {
 
                   <div
                     className={`${styles.gridLine} ${styles.endGridLine}`}
-                    style={{ top: `${workdayEndTop}px` }}
+                    style={{ top: `${calendarEndTop}px` }}
                   />
 
-                  {timeSlots.map((slot) => {
+                  {workingHours?.isWorking && workingStartTop > CALENDAR_TOP_PADDING && (
+                    <div
+                      className={styles.unavailableRange}
+                      style={{
+                        top: `${CALENDAR_TOP_PADDING}px`,
+                        height: `${workingStartTop - CALENDAR_TOP_PADDING}px`,
+                      }}
+                    />
+                  )}
+
+                  {workingHours?.isWorking && workingEndTop < calendarEndTop && (
+                    <div
+                      className={styles.unavailableRange}
+                      style={{
+                        top: `${workingEndTop}px`,
+                        height: `${calendarEndTop - workingEndTop}px`,
+                      }}
+                    />
+                  )}
+
+                  {dayTimeSlots.map((slot) => {
                     const top =
                       CALENDAR_TOP_PADDING +
-                      (timeToMinutes(slot) - workdayStartMinutes) *
+                      (timeToMinutes(slot) - calendarStartMinutes) *
                         PIXELS_PER_MINUTE;
 
                     const height =
@@ -1091,7 +1350,7 @@ const TeacherSchedule = () => {
                     const position = getLessonPosition(
                       lesson,
                       scheduleTimezone,
-                      workdayStartMinutes,
+                      calendarStartMinutes,
                     );
 
                     return (
@@ -1200,7 +1459,9 @@ const TeacherSchedule = () => {
                   <input
                     type="date"
                     value={selectedDate}
-                    onChange={(event) => setSelectedDate(event.target.value)}
+                    onChange={(event) =>
+                      handleSelectedDateChange(event.target.value)
+                    }
                   />
                 </label>
 
@@ -1213,7 +1474,7 @@ const TeacherSchedule = () => {
                   >
                     <option value="">{t("teacherSchedule.selectTime")}</option>
 
-                    {timeSlots.map((slot) => (
+                    {selectedDateSlots.map((slot) => (
                       <option key={slot} value={slot}>
                         {slot}
                       </option>
@@ -1278,13 +1539,24 @@ const TeacherSchedule = () => {
 
                   <select
                     value={recurringWeekday}
-                    onChange={(event) => setRecurringWeekday(event.target.value)}
+                    onChange={(event) =>
+                      handleRecurringWeekdayChange(event.target.value)
+                    }
                   >
-                    {DAY_NAMES.map((dayName, index) => (
-                      <option key={dayName} value={index + 1}>
-                        {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
-                      </option>
-                    ))}
+                    <option value="">
+                      {t("teacherSchedule.recurring.selectWeekday")}
+                    </option>
+                    {enabledWorkingHours.map((item) => {
+                      const dayName = WEEKDAYS.find(
+                        (day) => day.value === item.weekday,
+                      )?.key;
+
+                      return (
+                        <option key={item.weekday} value={item.weekday}>
+                          {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                        </option>
+                      );
+                    })}
                   </select>
                 </label>
 
@@ -1297,7 +1569,7 @@ const TeacherSchedule = () => {
                   >
                     <option value="">{t("teacherSchedule.selectTime")}</option>
 
-                    {timeSlots.map((slot) => (
+                    {recurringTimeSlots.map((slot) => (
                       <option key={slot} value={slot}>
                         {slot}
                       </option>
@@ -1505,13 +1777,24 @@ const TeacherSchedule = () => {
                         <span>{t("teacherSchedule.recurring.weekday")}</span>
                         <select
                           value={seriesWeekday}
-                          onChange={(event) => setSeriesWeekday(event.target.value)}
+                          onChange={(event) =>
+                            handleSeriesWeekdayChange(event.target.value)
+                          }
                         >
-                          {DAY_NAMES.map((dayName, index) => (
-                            <option key={dayName} value={index + 1}>
-                              {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
-                            </option>
-                          ))}
+                          <option value="">
+                            {t("teacherSchedule.recurring.selectWeekday")}
+                          </option>
+                          {enabledWorkingHours.map((item) => {
+                      const dayName = WEEKDAYS.find(
+                        (day) => day.value === item.weekday,
+                      )?.key;
+
+                      return (
+                        <option key={item.weekday} value={item.weekday}>
+                          {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                        </option>
+                      );
+                    })}
                         </select>
                       </label>
 
@@ -1521,7 +1804,8 @@ const TeacherSchedule = () => {
                           value={seriesTime}
                           onChange={(event) => setSeriesTime(event.target.value)}
                         >
-                          {timeSlots.map((slot) => (
+                          <option value="">{t("teacherSchedule.selectTime")}</option>
+                          {seriesTimeSlots.map((slot) => (
                             <option key={slot} value={slot}>
                               {slot}
                             </option>
@@ -1613,7 +1897,7 @@ const TeacherSchedule = () => {
                           value={editLessonDate}
                           min={editLessonMinDate}
                           onChange={(event) =>
-                            setEditLessonDate(event.target.value)
+                            handleEditLessonDateChange(event.target.value)
                           }
                         />
                       </label>
@@ -1626,7 +1910,8 @@ const TeacherSchedule = () => {
                             setEditLessonTime(event.target.value)
                           }
                         >
-                          {timeSlots.map((slot) => (
+                          <option value="">{t("teacherSchedule.selectTime")}</option>
+                          {editLessonTimeSlots.map((slot) => (
                             <option key={slot} value={slot}>
                               {slot}
                             </option>
