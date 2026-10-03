@@ -34,6 +34,8 @@ import {
   LESSON_DURATION_STEP,
   MAX_LESSON_DURATION,
   MIN_LESSON_DURATION,
+  MAX_RECURRING_GENERATION_HORIZON_WEEKS,
+  MIN_RECURRING_GENERATION_HORIZON_WEEKS,
   WEEKDAYS,
 } from "../../constants/schedule";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
@@ -62,6 +64,13 @@ const TeacherSettings = () => {
   const [lessonDurationMinutes, setLessonDurationMinutes] = useState(
     DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
   );
+  const [reschedulePricePolicy, setReschedulePricePolicy] = useState(
+    DEFAULT_SCHEDULE_SETTINGS.reschedulePricePolicy,
+  );
+  const [allowOpenEndedRecurringLessons, setAllowOpenEndedRecurringLessons] =
+    useState(DEFAULT_SCHEDULE_SETTINGS.allowOpenEndedRecurringLessons);
+  const [recurringGenerationHorizonWeeks, setRecurringGenerationHorizonWeeks] =
+    useState(DEFAULT_SCHEDULE_SETTINGS.recurringGenerationHorizonWeeks);
   const [teacherToday, setTeacherToday] = useState(getBrowserDateString());
   const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(
     DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
@@ -239,6 +248,20 @@ const TeacherSettings = () => {
           data?.lesson_duration_minutes ??
             DEFAULT_SCHEDULE_SETTINGS.lessonDurationMinutes,
         );
+        setReschedulePricePolicy(
+          data?.reschedule_price_policy ??
+            DEFAULT_SCHEDULE_SETTINGS.reschedulePricePolicy,
+        );
+        setAllowOpenEndedRecurringLessons(
+          data?.allow_open_ended_recurring_lessons ??
+            DEFAULT_SCHEDULE_SETTINGS.allowOpenEndedRecurringLessons,
+        );
+        setRecurringGenerationHorizonWeeks(
+          Number(
+            data?.recurring_generation_horizon_weeks ??
+              DEFAULT_SCHEDULE_SETTINGS.recurringGenerationHorizonWeeks,
+          ),
+        );
 
         setTaxProfiles(profiles);
         setCurrentTaxProfile(current);
@@ -312,12 +335,25 @@ const TeacherSettings = () => {
       return;
     }
 
+    const horizonWeeks = Number(recurringGenerationHorizonWeeks);
+    if (
+      !Number.isInteger(horizonWeeks) ||
+      horizonWeeks < MIN_RECURRING_GENERATION_HORIZON_WEEKS ||
+      horizonWeeks > MAX_RECURRING_GENERATION_HORIZON_WEEKS
+    ) {
+      setErrorMessage(t("teacherSettings.errors.invalidRecurringHorizon"));
+      return;
+    }
+
     try {
       setSaving(true);
       const { error } = await updateMyScheduleSettings({
         timezone,
         workingHours,
         lessonDurationMinutes: duration,
+        reschedulePricePolicy,
+        allowOpenEndedRecurringLessons,
+        recurringGenerationHorizonWeeks: horizonWeeks,
       });
       if (error) throw error;
 
@@ -677,6 +713,54 @@ const TeacherSettings = () => {
             </strong>
             <small>{t("teacherSettings.slotIntervalHint")}</small>
           </div>
+
+          <div className={styles.workingDaysHeader}>
+            <strong>{t("teacherSettings.recurringPreferences.title")}</strong>
+            <small>{t("teacherSettings.recurringPreferences.description")}</small>
+          </div>
+
+          <label className={styles.field}>
+            <span>{t("teacherSettings.recurringPreferences.reschedulePricePolicy")}</span>
+            <select
+              value={reschedulePricePolicy}
+              onChange={(event) => setReschedulePricePolicy(event.target.value)}
+            >
+              <option value="keep_original">
+                {t("teacherSettings.recurringPreferences.keepOriginalPrice")}
+              </option>
+              <option value="target_date_tariff">
+                {t("teacherSettings.recurringPreferences.useTargetDateTariff")}
+              </option>
+            </select>
+            <small>{t("teacherSettings.recurringPreferences.reschedulePriceHint")}</small>
+          </label>
+
+          <label className={styles.workingDayToggle}>
+            <input
+              type="checkbox"
+              checked={allowOpenEndedRecurringLessons}
+              onChange={(event) =>
+                setAllowOpenEndedRecurringLessons(event.target.checked)
+              }
+            />
+            <span>{t("teacherSettings.recurringPreferences.allowOpenEndedLessons")}</span>
+          </label>
+          <small>{t("teacherSettings.recurringPreferences.allowOpenEndedLessonsHint")}</small>
+
+          <label className={styles.field}>
+            <span>{t("teacherSettings.recurringPreferences.horizonWeeks")}</span>
+            <input
+              type="number"
+              min={MIN_RECURRING_GENERATION_HORIZON_WEEKS}
+              max={MAX_RECURRING_GENERATION_HORIZON_WEEKS}
+              step="1"
+              value={recurringGenerationHorizonWeeks}
+              onChange={(event) =>
+                setRecurringGenerationHorizonWeeks(event.target.value)
+              }
+            />
+            <small>{t("teacherSettings.recurringPreferences.horizonWeeksHint")}</small>
+          </label>
 
           {errorMessage && <p className={styles.error}>{errorMessage}</p>}
           {successMessage && <p className={styles.success}>{successMessage}</p>}
@@ -1312,6 +1396,9 @@ const getSettingsError = (error, t) => {
   if (message.includes("INVALID_WORKING_HOURS")) return t("teacherSettings.errors.invalidWorkingHours");
   if (message.includes("INVALID_WORKDAY")) return t("teacherSettings.errors.invalidWorkday");
   if (message.includes("INVALID_LESSON_DURATION")) return t("teacherSettings.errors.invalidDuration");
+  if (message.includes("INVALID_RECURRING_HORIZON")) return t("teacherSettings.errors.invalidRecurringHorizon");
+  if (message.includes("INVALID_RESCHEDULE_PRICE_POLICY")) return t("teacherSettings.errors.save");
+  if (message.includes("INVALID_OPEN_ENDED_RECURRING_POLICY")) return t("teacherSettings.errors.save");
   if (message.includes("WORKDAY_TOO_SHORT")) return t("teacherSettings.errors.workdayTooShort");
   if (message.includes("TEACHER_REQUIRED")) return t("teacherSettings.errors.teacherRequired");
   return t("teacherSettings.errors.save");

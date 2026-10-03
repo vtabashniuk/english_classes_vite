@@ -695,7 +695,7 @@
 
 .createModeSwitch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.35rem;
   margin-bottom: 1.15rem;
   padding: 0.3rem;
@@ -744,9 +744,69 @@
 .lessonStatus {
   width: 100%;
   overflow: hidden;
-  color: var(--color-error-text);
+  color: var(--color-text-secondary);
   font-size: 0.72rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.scheduleBlock {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+  overflow: hidden;
+  padding: 0.4rem 0.5rem;
+  border: 1px dashed var(--color-border);
+  border-left: 3px solid var(--color-text-secondary);
+  border-radius: 8px;
+  color: var(--color-text-primary);
+  background: var(--color-surface-muted);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.scheduleBlock:hover {
+  z-index: 6;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.scheduleBlockTime {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+}
+
+.scheduleBlockLabel {
+  width: 100%;
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduleBlockReason {
+  width: 100%;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectedOccurrence {
+  cursor: default;
+}
+
+.projectedOccurrence:hover {
+  z-index: 5;
+  transform: none;
+  box-shadow: none;
 }

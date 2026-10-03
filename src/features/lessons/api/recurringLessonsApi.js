@@ -17,3 +17,12 @@ export const cancelRecurringSeriesFromLesson = (lessonId) =>
   supabase.rpc("cancel_recurring_series_from_lesson", {
     p_lesson_id: lessonId,
   });
+
+export const listTeacherProjectedRecurringLessonsForRange = ({
+  fromDate,
+  untilDate,
+}) =>
+  supabase.rpc("get_teacher_projected_recurring_lessons", {
+    p_from: fromDate,
+    p_until: untilDate,
+  });

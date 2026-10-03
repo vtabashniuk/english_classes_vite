@@ -719,6 +719,10 @@ const getCancelLessonError = (error, t) => {
 const getExtraLessonRequestError = (error, t) => {
   const message = error?.message ?? "";
 
+  if (message.includes("SCHEDULE_BLOCK_CONFLICT")) {
+    return t("studentSchedule.extraLesson.errors.scheduleBlocked");
+  }
+
   if (message.includes("LESSON_TIME_CONFLICT")) {
     return t("studentSchedule.extraLesson.errors.lessonConflict");
   }

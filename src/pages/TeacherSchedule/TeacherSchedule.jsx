@@ -15,6 +15,7 @@ import {
   createRecurringLessonWithGeneration,
   editRecurringSeriesFromLesson,
   getRecurringLessonById,
+  listTeacherProjectedRecurringLessonsForRange,
 } from "../../features/lessons/api/recurringLessonsApi";
 import { listActiveStudents } from "../../features/profiles/api/profilesApi";
 import {
@@ -22,12 +23,24 @@ import {
   getMyTeacherWorkingHours,
 } from "../../features/settings/api/teacherSettingsApi";
 import {
+  cancelRecurringScheduleBlockSeriesFromBlock,
+  createRecurringScheduleBlockWithGeneration,
+  createScheduleBlock,
+  deleteScheduleBlock,
+  editRecurringScheduleBlockSeriesFromBlock,
+  getRecurringScheduleBlockSeriesById,
+  listMyScheduleBlocksForRange,
+  listTeacherProjectedRecurringBlocksForRange,
+  updateScheduleBlock,
+} from "../../features/schedule/api/scheduleBlocksApi";
+import {
   getCancelLessonError,
   getCancelRecurringSeriesError,
   getCreateLessonError,
   getCreateRecurringLessonError,
   getEditRecurringSeriesError,
   getLessonOutcomeError,
+  getScheduleBlockError,
   getUpdateLessonScheduleError,
   getUpdateLessonZoomError,
 } from "../../features/schedule/lib/scheduleErrors";
@@ -45,9 +58,11 @@ import {
   getDatePartsInTimezone,
   getLessonPosition,
   getMonday,
+  getScheduleBlockPosition,
   isLessonStarted,
   isSameCalendarDate,
   isSlotBlockedByLesson,
+  isSlotBlockedByScheduleBlock,
   minutesToTime,
   pad,
   parseInputDate,
@@ -106,6 +121,17 @@ const fetchTeacherScheduleSettings = async () => {
     slotIntervalMinutes:
       data?.slot_interval_minutes ??
       DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
+    reschedulePricePolicy:
+      data?.reschedule_price_policy ??
+      DEFAULT_SCHEDULE_SETTINGS.reschedulePricePolicy,
+    allowOpenEndedRecurringLessons:
+      data?.allow_open_ended_recurring_lessons ??
+      DEFAULT_SCHEDULE_SETTINGS.allowOpenEndedRecurringLessons,
+    recurringGenerationHorizonWeeks:
+      Number(
+        data?.recurring_generation_horizon_weeks ??
+          DEFAULT_SCHEDULE_SETTINGS.recurringGenerationHorizonWeeks,
+      ),
     workingHours: normalizeWorkingHours(
       workingHoursResult.data,
       legacyStart,
@@ -172,12 +198,142 @@ const fetchTeacherLessonsForWeek = async (weekStart) => {
   return data ?? [];
 };
 
+const fetchTeacherScheduleBlocksForWeek = async (weekStart) => {
+  const start = startOfDay(addDays(weekStart, -1));
+  const end = startOfDay(addDays(weekStart, 8));
+
+  const { data, error } = await listMyScheduleBlocksForRange({
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+};
+
+const fetchProjectedRecurringLessonsForWeek = async (weekStart) => {
+  const fromDate = formatDateForInput(weekStart);
+  const untilDate = formatDateForInput(addDays(weekStart, 6));
+
+  const { data, error } = await listTeacherProjectedRecurringLessonsForRange({
+    fromDate,
+    untilDate,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((item) => ({
+    id: `projected-lesson-${item.recurring_lesson_id}-${item.occurrence_date}`,
+    student_id: item.student_id,
+    starts_at: item.starts_at,
+    ends_at: item.ends_at,
+    duration_minutes: item.duration_minutes,
+    status: "scheduled",
+    recurring_lesson_id: item.recurring_lesson_id,
+    occurrence_date: item.occurrence_date,
+    isProjectedRecurring: true,
+    profiles: {
+      full_name: item.student_full_name,
+      email: item.student_email,
+    },
+  }));
+};
+
+const fetchProjectedRecurringBlocksForWeek = async (weekStart) => {
+  const fromDate = formatDateForInput(weekStart);
+  const untilDate = formatDateForInput(addDays(weekStart, 6));
+
+  const { data, error } = await listTeacherProjectedRecurringBlocksForRange({
+    fromDate,
+    untilDate,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((item) => ({
+    id: `projected-block-${item.recurring_block_series_id}-${item.occurrence_date}`,
+    starts_at: item.starts_at,
+    ends_at: item.ends_at,
+    reason: item.reason,
+    recurring_block_series_id: item.recurring_block_series_id,
+    isProjectedRecurring: true,
+  }));
+};
+
+const getBlockStartSlotsForWeekday = (settings, weekday) => {
+  const workingHours = getWorkingHoursForWeekday(settings, weekday);
+
+  if (!workingHours?.isWorking) return [];
+
+  const slots = createDisplayTimeSlots(
+    workingHours.workdayStart,
+    workingHours.workdayEnd,
+    settings.slotIntervalMinutes,
+  );
+
+  return slots.filter(
+    (slot) =>
+      timeToMinutes(slot) + settings.slotIntervalMinutes <=
+      timeToMinutes(workingHours.workdayEnd),
+  );
+};
+
+const getBlockStartSlotsForDate = (settings, dateValue) => {
+  const date = parseInputDate(dateValue);
+  if (!date) return [];
+  return getBlockStartSlotsForWeekday(settings, getIsoWeekday(date));
+};
+
+const getBlockEndSlotsForWeekday = (settings, weekday, startTime) => {
+  if (!startTime) return [];
+
+  const workingHours = getWorkingHoursForWeekday(settings, weekday);
+  if (!workingHours?.isWorking) return [];
+
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = timeToMinutes(workingHours.workdayEnd);
+  const slots = [];
+
+  for (
+    let current = startMinutes + settings.slotIntervalMinutes;
+    current <= endMinutes;
+    current += settings.slotIntervalMinutes
+  ) {
+    slots.push(minutesToTime(current));
+  }
+
+  if (slots.at(-1) !== workingHours.workdayEnd) {
+    slots.push(workingHours.workdayEnd);
+  }
+
+  return slots.filter((slot, index, items) => items.indexOf(slot) === index);
+};
+
+const getBlockEndSlotsForDate = (settings, dateValue, startTime) => {
+  const date = parseInputDate(dateValue);
+  if (!date) return [];
+  return getBlockEndSlotsForWeekday(settings, getIsoWeekday(date), startTime);
+};
+
 const TeacherSchedule = () => {
   const { t, i18n } = useTranslation();
 
   const [students, setStudents] = useState([]);
 
   const [lessons, setLessons] = useState([]);
+
+  const [projectedRecurringLessons, setProjectedRecurringLessons] = useState([]);
+
+  const [scheduleBlocks, setScheduleBlocks] = useState([]);
+
+  const [projectedRecurringBlocks, setProjectedRecurringBlocks] = useState([]);
 
   const [scheduleSettings, setScheduleSettings] = useState(() => ({
     ...DEFAULT_SCHEDULE_SETTINGS,
@@ -205,6 +361,52 @@ const TeacherSchedule = () => {
   const [recurringIntervalWeeks, setRecurringIntervalWeeks] = useState("1");
 
   const [selectedLesson, setSelectedLesson] = useState(null);
+
+  const [selectedBlock, setSelectedBlock] = useState(null);
+
+  const [blockDate, setBlockDate] = useState("");
+
+  const [blockStartTime, setBlockStartTime] = useState("");
+
+  const [blockEndTime, setBlockEndTime] = useState("");
+
+  const [blockReason, setBlockReason] = useState("");
+
+  const [blockRepeatMode, setBlockRepeatMode] = useState("single");
+
+  const [blockRecurringWeekday, setBlockRecurringWeekday] = useState("1");
+
+  const [blockRecurringValidFrom, setBlockRecurringValidFrom] = useState("");
+
+  const [blockRecurringValidUntil, setBlockRecurringValidUntil] = useState("");
+
+  const [blockRecurringIntervalWeeks, setBlockRecurringIntervalWeeks] = useState("1");
+
+  const [editingBlock, setEditingBlock] = useState(false);
+
+  const [editingRecurringBlockSeries, setEditingRecurringBlockSeries] = useState(false);
+
+  const [loadingRecurringBlockSeries, setLoadingRecurringBlockSeries] = useState(false);
+
+  const [savingRecurringBlockSeries, setSavingRecurringBlockSeries] = useState(false);
+
+  const [cancellingRecurringBlockSeriesId, setCancellingRecurringBlockSeriesId] = useState(null);
+
+  const [blockSeriesWeekday, setBlockSeriesWeekday] = useState("1");
+
+  const [blockSeriesStartTime, setBlockSeriesStartTime] = useState("");
+
+  const [blockSeriesEndTime, setBlockSeriesEndTime] = useState("");
+
+  const [blockSeriesIntervalWeeks, setBlockSeriesIntervalWeeks] = useState("1");
+
+  const [blockSeriesValidUntil, setBlockSeriesValidUntil] = useState("");
+
+  const [blockSeriesReason, setBlockSeriesReason] = useState("");
+
+  const [savingBlock, setSavingBlock] = useState(false);
+
+  const [deletingBlockId, setDeletingBlockId] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -260,6 +462,22 @@ const TeacherSchedule = () => {
 
   const [detailSuccessMessage, setDetailSuccessMessage] = useState("");
 
+  const [currentTimeMs, setCurrentTimeMs] = useState(null);
+
+  useEffect(() => {
+    const updateCurrentTime = () => {
+      setCurrentTimeMs(Date.now());
+    };
+
+    const initialTimerId = window.setTimeout(updateCurrentTime, 0);
+    const intervalId = window.setInterval(updateCurrentTime, 30_000);
+
+    return () => {
+      window.clearTimeout(initialTimerId);
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   useEffect(() => {
     if (!createErrorMessage && !createSuccessMessage) {
       return undefined;
@@ -299,6 +517,16 @@ const TeacherSchedule = () => {
     [scheduleSettings.workingHours],
   );
 
+  const displayedLessons = useMemo(
+    () => [...lessons, ...projectedRecurringLessons],
+    [lessons, projectedRecurringLessons],
+  );
+
+  const displayedScheduleBlocks = useMemo(
+    () => [...scheduleBlocks, ...projectedRecurringBlocks],
+    [scheduleBlocks, projectedRecurringBlocks],
+  );
+
   const calendarBounds = useMemo(() => {
     const fallbackStart = timeToMinutes(DEFAULT_SCHEDULE_SETTINGS.workdayStart);
     const fallbackEnd = timeToMinutes(DEFAULT_SCHEDULE_SETTINGS.workdayEnd);
@@ -312,7 +540,7 @@ const TeacherSchedule = () => {
 
     const displayedDates = new Set(weekDays.map(formatDateForInput));
 
-    lessons.forEach((lesson) => {
+    displayedLessons.forEach((lesson) => {
       if (!displayedDates.has(formatZonedDateForInput(lesson.starts_at, scheduleTimezone))) {
         return;
       }
@@ -326,8 +554,28 @@ const TeacherSchedule = () => {
       endMinutes = Math.max(endMinutes, lessonEndMinutes);
     });
 
+    displayedScheduleBlocks.forEach((block) => {
+      if (!displayedDates.has(formatZonedDateForInput(block.starts_at, scheduleTimezone))) {
+        return;
+      }
+
+      const start = getDatePartsInTimezone(block.starts_at, scheduleTimezone);
+      const end = getDatePartsInTimezone(block.ends_at, scheduleTimezone);
+      const blockStartMinutes = start.hour * 60 + start.minute;
+      const blockEndMinutes = end.hour * 60 + end.minute;
+
+      startMinutes = Math.min(startMinutes, blockStartMinutes);
+      endMinutes = Math.max(endMinutes, blockEndMinutes);
+    });
+
     return { startMinutes, endMinutes };
-  }, [enabledWorkingHours, lessons, scheduleTimezone, weekDays]);
+  }, [
+    enabledWorkingHours,
+    displayedLessons,
+    displayedScheduleBlocks,
+    scheduleTimezone,
+    weekDays,
+  ]);
 
   const calendarStartMinutes = calendarBounds.startMinutes;
   const calendarEndMinutes = calendarBounds.endMinutes;
@@ -354,6 +602,51 @@ const TeacherSchedule = () => {
   const selectedDateSlots = useMemo(
     () => getTimeSlotsForDate(scheduleSettings, selectedDate),
     [scheduleSettings, selectedDate],
+  );
+
+  const blockStartSlots = useMemo(
+    () => getBlockStartSlotsForDate(scheduleSettings, blockDate),
+    [scheduleSettings, blockDate],
+  );
+
+  const blockEndSlots = useMemo(
+    () =>
+      getBlockEndSlotsForDate(
+        scheduleSettings,
+        blockDate,
+        blockStartTime,
+      ),
+    [scheduleSettings, blockDate, blockStartTime],
+  );
+
+  const blockRecurringStartSlots = useMemo(
+    () => getBlockStartSlotsForWeekday(scheduleSettings, Number(blockRecurringWeekday)),
+    [scheduleSettings, blockRecurringWeekday],
+  );
+
+  const blockRecurringEndSlots = useMemo(
+    () =>
+      getBlockEndSlotsForWeekday(
+        scheduleSettings,
+        Number(blockRecurringWeekday),
+        blockStartTime,
+      ),
+    [scheduleSettings, blockRecurringWeekday, blockStartTime],
+  );
+
+  const blockSeriesStartSlots = useMemo(
+    () => getBlockStartSlotsForWeekday(scheduleSettings, Number(blockSeriesWeekday)),
+    [scheduleSettings, blockSeriesWeekday],
+  );
+
+  const blockSeriesEndSlots = useMemo(
+    () =>
+      getBlockEndSlotsForWeekday(
+        scheduleSettings,
+        Number(blockSeriesWeekday),
+        blockSeriesStartTime,
+      ),
+    [scheduleSettings, blockSeriesWeekday, blockSeriesStartTime],
   );
 
   const recurringTimeSlots = useMemo(
@@ -396,15 +689,20 @@ const TeacherSchedule = () => {
             (item) => item.isWorking,
           );
           if (firstWorkingDay) {
-            setRecurringWeekday((current) =>
+            const keepWorkingWeekday = (current) =>
               nextSettings.workingHours.some(
                 (item) => item.isWorking && String(item.weekday) === current,
               )
                 ? current
-                : String(firstWorkingDay.weekday),
-            );
+                : String(firstWorkingDay.weekday);
+
+            setRecurringWeekday(keepWorkingWeekday);
+            setBlockRecurringWeekday(keepWorkingWeekday);
+            setBlockSeriesWeekday(keepWorkingWeekday);
           } else {
             setRecurringWeekday("");
+            setBlockRecurringWeekday("");
+            setBlockSeriesWeekday("");
           }
         }
       } catch (error) {
@@ -432,14 +730,27 @@ const TeacherSchedule = () => {
 
     const refreshWeek = async () => {
       try {
-        const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
+        const [
+          nextLessons,
+          nextBlocks,
+          nextProjectedLessons,
+          nextProjectedBlocks,
+        ] = await Promise.all([
+          fetchTeacherLessonsForWeek(weekStart),
+          fetchTeacherScheduleBlocksForWeek(weekStart),
+          fetchProjectedRecurringLessonsForWeek(weekStart),
+          fetchProjectedRecurringBlocksForWeek(weekStart),
+        ]);
 
         if (!cancelled) {
           setPageErrorMessage("");
           setLessons(nextLessons);
+          setScheduleBlocks(nextBlocks);
+          setProjectedRecurringLessons(nextProjectedLessons);
+          setProjectedRecurringBlocks(nextProjectedBlocks);
         }
       } catch (error) {
-        console.error("Load lessons error:", error);
+        console.error("Load schedule error:", error);
 
         if (!cancelled) {
           setPageErrorMessage(t("teacherSchedule.errors.loadLessons"));
@@ -456,29 +767,45 @@ const TeacherSchedule = () => {
 
   const loadLessons = async () => {
     try {
-      const nextLessons = await fetchTeacherLessonsForWeek(weekStart);
+      const [
+        nextLessons,
+        nextBlocks,
+        nextProjectedLessons,
+        nextProjectedBlocks,
+      ] = await Promise.all([
+        fetchTeacherLessonsForWeek(weekStart),
+        fetchTeacherScheduleBlocksForWeek(weekStart),
+        fetchProjectedRecurringLessonsForWeek(weekStart),
+        fetchProjectedRecurringBlocksForWeek(weekStart),
+      ]);
       setPageErrorMessage("");
       setLessons(nextLessons);
+      setScheduleBlocks(nextBlocks);
+      setProjectedRecurringLessons(nextProjectedLessons);
+      setProjectedRecurringBlocks(nextProjectedBlocks);
     } catch (error) {
-      console.error("Load lessons error:", error);
+      console.error("Load schedule error:", error);
       setPageErrorMessage(t("teacherSchedule.errors.loadLessons"));
     }
   };
 
   const handlePreviousWeek = () => {
     setSelectedLesson(null);
+    setSelectedBlock(null);
 
     setWeekStart((current) => addDays(current, -7));
   };
 
   const handleNextWeek = () => {
     setSelectedLesson(null);
+    setSelectedBlock(null);
 
     setWeekStart((current) => addDays(current, 7));
   };
 
   const handleCurrentWeek = () => {
     setSelectedLesson(null);
+    setSelectedBlock(null);
 
     setWeekStart(getMonday(new Date()));
   };
@@ -525,32 +852,129 @@ const TeacherSchedule = () => {
     }
   };
 
+  const handleBlockDateChange = (value) => {
+    setBlockDate(value);
+
+    const startSlots = getBlockStartSlotsForDate(scheduleSettings, value);
+    const nextStart = startSlots.includes(blockStartTime) ? blockStartTime : "";
+    setBlockStartTime(nextStart);
+
+    const endSlots = getBlockEndSlotsForDate(
+      scheduleSettings,
+      value,
+      nextStart,
+    );
+    setBlockEndTime((current) =>
+      endSlots.includes(current) ? current : endSlots[0] || "",
+    );
+  };
+
+  const handleBlockStartTimeChange = (value) => {
+    setBlockStartTime(value);
+    const endSlots =
+      blockRepeatMode === "recurring"
+        ? getBlockEndSlotsForWeekday(
+            scheduleSettings,
+            Number(blockRecurringWeekday),
+            value,
+          )
+        : getBlockEndSlotsForDate(scheduleSettings, blockDate, value);
+    setBlockEndTime((current) =>
+      endSlots.includes(current) ? current : endSlots[0] || "",
+    );
+  };
+
+  const handleBlockRecurringWeekdayChange = (value) => {
+    setBlockRecurringWeekday(value);
+    const startSlots = getBlockStartSlotsForWeekday(scheduleSettings, Number(value));
+    const nextStart = startSlots.includes(blockStartTime) ? blockStartTime : startSlots[0] || "";
+    setBlockStartTime(nextStart);
+    const endSlots = getBlockEndSlotsForWeekday(
+      scheduleSettings,
+      Number(value),
+      nextStart,
+    );
+    setBlockEndTime((current) =>
+      endSlots.includes(current) ? current : endSlots[0] || "",
+    );
+  };
+
+  const handleBlockSeriesWeekdayChange = (value) => {
+    setBlockSeriesWeekday(value);
+    const startSlots = getBlockStartSlotsForWeekday(scheduleSettings, Number(value));
+    const nextStart = startSlots.includes(blockSeriesStartTime)
+      ? blockSeriesStartTime
+      : startSlots[0] || "";
+    setBlockSeriesStartTime(nextStart);
+    const endSlots = getBlockEndSlotsForWeekday(
+      scheduleSettings,
+      Number(value),
+      nextStart,
+    );
+    setBlockSeriesEndTime((current) =>
+      endSlots.includes(current) ? current : endSlots[0] || "",
+    );
+  };
+
+  const handleBlockSeriesStartTimeChange = (value) => {
+    setBlockSeriesStartTime(value);
+    const endSlots = getBlockEndSlotsForWeekday(
+      scheduleSettings,
+      Number(blockSeriesWeekday),
+      value,
+    );
+    setBlockSeriesEndTime((current) =>
+      endSlots.includes(current) ? current : endSlots[0] || "",
+    );
+  };
+
   const handleSlotClick = (date, slot) => {
     const weekday = getIsoWeekday(date);
     const workingHours = getWorkingHoursForWeekday(scheduleSettings, weekday);
-    const blocked = isSlotBlockedByLesson(
+    const slotDuration =
+      createMode === "block"
+        ? scheduleSettings.slotIntervalMinutes
+        : scheduleSettings.lessonDurationMinutes;
+    const blockedByLesson = isSlotBlockedByLesson(
       date,
       slot,
       lessons,
       scheduleTimezone,
-      scheduleSettings.lessonDurationMinutes,
+      slotDuration,
+    );
+    const blockedByScheduleBlock = isSlotBlockedByScheduleBlock(
+      date,
+      slot,
+      scheduleBlocks,
+      scheduleTimezone,
+      slotDuration,
     );
 
-    if (!workingHours?.isWorking || blocked) {
+    if (!workingHours?.isWorking || blockedByLesson || blockedByScheduleBlock) {
       return;
     }
 
     setSelectedLesson(null);
+    setSelectedBlock(null);
 
     const dateValue = formatDateForInput(date);
 
     setSelectedDate(dateValue);
-
     setSelectedTime(slot);
-
     setRecurringWeekday(String(weekday));
-
     setRecurringValidFrom(dateValue);
+
+    setBlockDate(dateValue);
+    setBlockStartTime(slot);
+    const nextBlockEndSlots = getBlockEndSlotsForDate(
+      scheduleSettings,
+      dateValue,
+      slot,
+    );
+    setBlockEndTime(nextBlockEndSlots[0] || "");
+    setBlockReason("");
+    setBlockRecurringWeekday(String(weekday));
+    setBlockRecurringValidFrom(dateValue);
 
     setCreateErrorMessage("");
     setCreateSuccessMessage("");
@@ -569,6 +993,8 @@ const TeacherSchedule = () => {
     event.stopPropagation();
 
     setSelectedLesson(lesson);
+    setSelectedBlock(null);
+    setEditingBlock(false);
     setLessonZoomDraft(lesson.zoom_url || "");
     setEditingZoom(false);
     setEditingLesson(false);
@@ -582,6 +1008,341 @@ const TeacherSchedule = () => {
         block: "start",
       });
     });
+  };
+
+  const populateBlockDraft = (block) => {
+    const start = getDatePartsInTimezone(block.starts_at, scheduleTimezone);
+    const end = getDatePartsInTimezone(block.ends_at, scheduleTimezone);
+    const dateValue = `${start.year}-${pad(start.month)}-${pad(start.day)}`;
+
+    setBlockDate(dateValue);
+    setBlockStartTime(`${pad(start.hour)}:${pad(start.minute)}`);
+    setBlockEndTime(`${pad(end.hour)}:${pad(end.minute)}`);
+    setBlockReason(block.reason || "");
+  };
+
+  const handleBlockClick = (event, block) => {
+    event.stopPropagation();
+
+    setSelectedBlock(block);
+    setSelectedLesson(null);
+    setEditingBlock(false);
+    setEditingRecurringBlockSeries(false);
+    setEditingZoom(false);
+    setEditingLesson(false);
+    setEditingRecurringSeries(false);
+    setDetailErrorMessage("");
+    setDetailSuccessMessage("");
+
+    requestAnimationFrame(() => {
+      document.getElementById("lesson-details-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
+
+  const handleStartEditBlock = () => {
+    if (!selectedBlock || selectedBlock.recurring_block_series_id) return;
+
+    populateBlockDraft(selectedBlock);
+    setBlockRepeatMode("single");
+    setEditingBlock(true);
+    setDetailErrorMessage("");
+    setDetailSuccessMessage("");
+  };
+
+  const handleCreateScheduleBlock = async (event) => {
+    event.preventDefault();
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
+
+    const isRecurring = blockRepeatMode === "recurring";
+
+    if (
+      !blockStartTime ||
+      !blockEndTime ||
+      (isRecurring
+        ? !blockRecurringWeekday || !blockRecurringValidFrom
+        : !blockDate)
+    ) {
+      setCreateErrorMessage(
+        t("teacherSchedule.scheduleBlock.errors.requiredFields"),
+      );
+      return;
+    }
+
+    try {
+      setSavingBlock(true);
+
+      if (isRecurring) {
+        const { data, error } = await createRecurringScheduleBlockWithGeneration({
+          p_weekday: Number(blockRecurringWeekday),
+          p_start_time: blockStartTime,
+          p_end_time: blockEndTime,
+          p_valid_from: blockRecurringValidFrom,
+          p_valid_until: blockRecurringValidUntil || null,
+          p_reason: blockReason.trim() || null,
+          p_interval_weeks: Number(blockRecurringIntervalWeeks),
+        });
+
+        if (error) throw error;
+
+        const result = Array.isArray(data) ? data[0] : data;
+        const createdCount = result?.created_count ?? 0;
+        const conflictCount = result?.conflict_count ?? 0;
+
+        setCreateSuccessMessage(
+          conflictCount > 0
+            ? t("teacherSchedule.scheduleBlock.recurring.messages.createdWithConflicts", {
+                createdCount,
+                conflictCount,
+              })
+            : t("teacherSchedule.scheduleBlock.recurring.messages.created", {
+                createdCount,
+              }),
+        );
+        setBlockRecurringValidUntil("");
+      } else {
+        const { error } = await createScheduleBlock({
+          blockDate,
+          startTime: blockStartTime,
+          endTime: blockEndTime,
+          reason: blockReason.trim() || null,
+        });
+
+        if (error) throw error;
+        setCreateSuccessMessage(t("teacherSchedule.scheduleBlock.messages.created"));
+      }
+
+      setBlockReason("");
+      setSelectedBlock(null);
+      await loadLessons();
+    } catch (error) {
+      console.error("Create schedule block error:", error);
+      setCreateErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setSavingBlock(false);
+    }
+  };
+
+  const handleSaveScheduleBlock = async () => {
+    if (!selectedBlock || !blockDate || !blockStartTime || !blockEndTime) {
+      return;
+    }
+
+    try {
+      setSavingBlock(true);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const { error } = await updateScheduleBlock({
+        blockId: selectedBlock.id,
+        blockDate,
+        startTime: blockStartTime,
+        endTime: blockEndTime,
+        reason: blockReason.trim() || null,
+      });
+
+      if (error) throw error;
+
+      setEditingBlock(false);
+      setSelectedBlock(null);
+      setDetailSuccessMessage(t("teacherSchedule.scheduleBlock.messages.updated"));
+      await loadLessons();
+    } catch (error) {
+      console.error("Update schedule block error:", error);
+      setDetailErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setSavingBlock(false);
+    }
+  };
+
+  const handleDeleteScheduleBlock = async () => {
+    if (!selectedBlock) return;
+
+    const confirmed = window.confirm(
+      t(
+        selectedBlock.recurring_block_series_id
+          ? "teacherSchedule.scheduleBlock.recurring.deleteOccurrenceConfirm"
+          : "teacherSchedule.scheduleBlock.deleteConfirm",
+      ),
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingBlockId(selectedBlock.id);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const { error } = await deleteScheduleBlock(selectedBlock.id);
+      if (error) throw error;
+
+      setSelectedBlock(null);
+      setEditingBlock(false);
+      setDetailSuccessMessage(
+        t(
+          selectedBlock.recurring_block_series_id
+            ? "teacherSchedule.scheduleBlock.recurring.messages.occurrenceDeleted"
+            : "teacherSchedule.scheduleBlock.messages.deleted",
+        ),
+      );
+      await loadLessons();
+    } catch (error) {
+      console.error("Delete schedule block error:", error);
+      setDetailErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setDeletingBlockId(null);
+    }
+  };
+
+  const handleStartEditRecurringBlockSeries = async () => {
+    if (!selectedBlock?.recurring_block_series_id) return;
+
+    try {
+      setLoadingRecurringBlockSeries(true);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const { data, error } = await getRecurringScheduleBlockSeriesById(
+        selectedBlock.recurring_block_series_id,
+      );
+      if (error) throw error;
+
+      const weekday = Number(data.weekday);
+      const startTime = data.start_time?.slice(0, 5) || "";
+      const endTime = data.end_time?.slice(0, 5) || "";
+      const availableStarts = getBlockStartSlotsForWeekday(
+        scheduleSettings,
+        weekday,
+      );
+      const availableEnds = getBlockEndSlotsForWeekday(
+        scheduleSettings,
+        weekday,
+        startTime,
+      );
+      const firstWorkingDay = scheduleSettings.workingHours.find(
+        (item) => item.isWorking,
+      );
+
+      if (availableStarts.includes(startTime) && availableEnds.includes(endTime)) {
+        setBlockSeriesWeekday(String(weekday));
+        setBlockSeriesStartTime(startTime);
+        setBlockSeriesEndTime(endTime);
+      } else if (firstWorkingDay) {
+        const fallbackStarts = getBlockStartSlotsForWeekday(
+          scheduleSettings,
+          firstWorkingDay.weekday,
+        );
+        const fallbackStart = fallbackStarts[0] || "";
+        const fallbackEnds = getBlockEndSlotsForWeekday(
+          scheduleSettings,
+          firstWorkingDay.weekday,
+          fallbackStart,
+        );
+        setBlockSeriesWeekday(String(firstWorkingDay.weekday));
+        setBlockSeriesStartTime(fallbackStart);
+        setBlockSeriesEndTime(fallbackEnds[0] || "");
+      } else {
+        setBlockSeriesWeekday("");
+        setBlockSeriesStartTime("");
+        setBlockSeriesEndTime("");
+      }
+      setBlockSeriesIntervalWeeks(String(data.interval_weeks ?? 1));
+      setBlockSeriesValidUntil(data.valid_until || "");
+      setBlockSeriesReason(data.reason || "");
+      setEditingRecurringBlockSeries(true);
+      setEditingBlock(false);
+    } catch (error) {
+      console.error("Load recurring block series error:", error);
+      setDetailErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setLoadingRecurringBlockSeries(false);
+    }
+  };
+
+  const handleSaveRecurringBlockSeries = async () => {
+    if (
+      !selectedBlock?.recurring_block_series_id ||
+      !blockSeriesWeekday ||
+      !blockSeriesStartTime ||
+      !blockSeriesEndTime
+    ) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      t("teacherSchedule.scheduleBlock.recurring.editFromHere.confirm"),
+    );
+    if (!confirmed) return;
+
+    try {
+      setSavingRecurringBlockSeries(true);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const { data, error } = await editRecurringScheduleBlockSeriesFromBlock({
+        p_block_id: selectedBlock.id,
+        p_weekday: Number(blockSeriesWeekday),
+        p_start_time: blockSeriesStartTime,
+        p_end_time: blockSeriesEndTime,
+        p_interval_weeks: Number(blockSeriesIntervalWeeks),
+        p_valid_until: blockSeriesValidUntil || null,
+        p_reason: blockSeriesReason.trim() || null,
+      });
+      if (error) throw error;
+
+      const result = Array.isArray(data) ? data[0] : data;
+      setDetailSuccessMessage(
+        t("teacherSchedule.scheduleBlock.recurring.editFromHere.success", {
+          createdCount: result?.created_count ?? 0,
+          conflictCount: result?.conflict_count ?? 0,
+        }),
+      );
+      setEditingRecurringBlockSeries(false);
+      setSelectedBlock(null);
+      await loadLessons();
+    } catch (error) {
+      console.error("Edit recurring block series error:", error);
+      setDetailErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setSavingRecurringBlockSeries(false);
+    }
+  };
+
+  const handleCancelRecurringBlockSeriesFromBlock = async () => {
+    if (!selectedBlock?.recurring_block_series_id) return;
+
+    const confirmed = window.confirm(
+      t("teacherSchedule.scheduleBlock.recurring.cancelFromHere.confirm"),
+    );
+    if (!confirmed) return;
+
+    try {
+      setCancellingRecurringBlockSeriesId(selectedBlock.recurring_block_series_id);
+      setDetailErrorMessage("");
+      setDetailSuccessMessage("");
+
+      const { data, error } = await cancelRecurringScheduleBlockSeriesFromBlock(
+        selectedBlock.id,
+      );
+      if (error) throw error;
+
+      setDetailSuccessMessage(
+        t("teacherSchedule.scheduleBlock.recurring.cancelFromHere.success", {
+          count: data ?? 0,
+        }),
+      );
+      setSelectedBlock(null);
+      setEditingRecurringBlockSeries(false);
+      await loadLessons();
+    } catch (error) {
+      console.error("Cancel recurring block series error:", error);
+      setDetailErrorMessage(getScheduleBlockError(error, t));
+    } finally {
+      setCancellingRecurringBlockSeriesId(null);
+    }
   };
 
   const handleStartEditLesson = () => {
@@ -757,6 +1518,14 @@ const TeacherSchedule = () => {
       return;
     }
 
+    if (
+      !scheduleSettings.allowOpenEndedRecurringLessons &&
+      !seriesValidUntil
+    ) {
+      setDetailErrorMessage(t("teacherSchedule.recurring.errors.endDateRequired"));
+      return;
+    }
+
     const confirmed = window.confirm(
       t("teacherSchedule.recurring.editFromHere.confirm"),
     );
@@ -777,7 +1546,6 @@ const TeacherSchedule = () => {
         p_interval_weeks: Number(seriesIntervalWeeks),
         p_valid_until: seriesValidUntil || null,
         p_zoom_url: seriesZoomUrl.trim() || null,
-        p_generate_weeks: 8,
       });
 
       if (error) {
@@ -1001,6 +1769,64 @@ const TeacherSchedule = () => {
         }
       }
     }
+
+    if (mode === "block" && selectedDate) {
+      const date = parseInputDate(selectedDate);
+      const weekday = date ? getIsoWeekday(date) : null;
+      const startSlots = getBlockStartSlotsForDate(
+        scheduleSettings,
+        selectedDate,
+      );
+      const nextStart = startSlots.includes(selectedTime) ? selectedTime : "";
+
+      setBlockDate(selectedDate);
+      setBlockStartTime(nextStart);
+      setBlockRecurringValidFrom((current) => current || selectedDate);
+      if (weekday) setBlockRecurringWeekday(String(weekday));
+
+      const endSlots = getBlockEndSlotsForDate(
+        scheduleSettings,
+        selectedDate,
+        nextStart,
+      );
+      setBlockEndTime(endSlots[0] || "");
+    }
+  };
+
+  const handleBlockRepeatModeChange = (mode) => {
+    setBlockRepeatMode(mode);
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
+
+    if (mode === "recurring") {
+      const startSlots = getBlockStartSlotsForWeekday(
+        scheduleSettings,
+        Number(blockRecurringWeekday),
+      );
+      const nextStart = startSlots.includes(blockStartTime)
+        ? blockStartTime
+        : startSlots[0] || "";
+      setBlockStartTime(nextStart);
+      const endSlots = getBlockEndSlotsForWeekday(
+        scheduleSettings,
+        Number(blockRecurringWeekday),
+        nextStart,
+      );
+      setBlockEndTime((current) =>
+        endSlots.includes(current) ? current : endSlots[0] || "",
+      );
+      setBlockRecurringValidFrom((current) => current || blockDate || selectedDate);
+    } else {
+      const startSlots = getBlockStartSlotsForDate(scheduleSettings, blockDate);
+      const nextStart = startSlots.includes(blockStartTime)
+        ? blockStartTime
+        : startSlots[0] || "";
+      setBlockStartTime(nextStart);
+      const endSlots = getBlockEndSlotsForDate(scheduleSettings, blockDate, nextStart);
+      setBlockEndTime((current) =>
+        endSlots.includes(current) ? current : endSlots[0] || "",
+      );
+    }
   };
 
   const handleCreateRecurringLesson = async (event) => {
@@ -1019,6 +1845,14 @@ const TeacherSchedule = () => {
       return;
     }
 
+    if (
+      !scheduleSettings.allowOpenEndedRecurringLessons &&
+      !recurringValidUntil
+    ) {
+      setCreateErrorMessage(t("teacherSchedule.recurring.errors.endDateRequired"));
+      return;
+    }
+
     try {
       setCreating(true);
 
@@ -1030,7 +1864,6 @@ const TeacherSchedule = () => {
         p_valid_until: recurringValidUntil || null,
         p_zoom_url: zoomUrl.trim() || null,
         p_interval_weeks: Number(recurringIntervalWeeks),
-        p_generate_weeks: 8,
       });
 
       if (error) {
@@ -1066,10 +1899,26 @@ const TeacherSchedule = () => {
     }
   };
 
+  const getBlocksForDay = (date) => {
+    const dayKey = formatDateForInput(date);
+
+    return displayedScheduleBlocks.filter((block) => {
+      const blockDate = getDatePartsInTimezone(
+        block.starts_at,
+        scheduleTimezone,
+      );
+
+      return (
+        `${blockDate.year}-${pad(blockDate.month)}-${pad(blockDate.day)}` ===
+        dayKey
+      );
+    });
+  };
+
   const getLessonsForDay = (date) => {
     const dayKey = formatDateForInput(date);
 
-    return lessons.filter((lesson) => {
+    return displayedLessons.filter((lesson) => {
       if (lesson.status === "cancelled") {
         const hasPendingLatePaymentDecision =
           lesson.cancelled_by === "student" &&
@@ -1236,16 +2085,17 @@ const TeacherSchedule = () => {
 
             {weekDays.map((date) => {
               const dayLessons = getLessonsForDay(date);
+              const dayBlocks = getBlocksForDay(date);
               const today = isSameCalendarDate(date, new Date());
               const weekday = getIsoWeekday(date);
               const workingHours = getWorkingHoursForWeekday(
                 scheduleSettings,
                 weekday,
               );
-              const dayTimeSlots = getTimeSlotsForWeekday(
-                scheduleSettings,
-                weekday,
-              );
+              const dayTimeSlots =
+                createMode === "block"
+                  ? getBlockStartSlotsForWeekday(scheduleSettings, weekday)
+                  : getTimeSlotsForWeekday(scheduleSettings, weekday);
               const workingStartTop = workingHours?.isWorking
                 ? CALENDAR_TOP_PADDING +
                   (timeToMinutes(workingHours.workdayStart) -
@@ -1320,13 +2170,25 @@ const TeacherSchedule = () => {
                     const height =
                       scheduleSettings.slotIntervalMinutes * PIXELS_PER_MINUTE;
 
-                    const blocked = isSlotBlockedByLesson(
-                      date,
-                      slot,
-                      dayLessons,
-                      scheduleTimezone,
-                      scheduleSettings.lessonDurationMinutes,
-                    );
+                    const slotDuration =
+                      createMode === "block"
+                        ? scheduleSettings.slotIntervalMinutes
+                        : scheduleSettings.lessonDurationMinutes;
+                    const blocked =
+                      isSlotBlockedByLesson(
+                        date,
+                        slot,
+                        dayLessons,
+                        scheduleTimezone,
+                        slotDuration,
+                      ) ||
+                      isSlotBlockedByScheduleBlock(
+                        date,
+                        slot,
+                        dayBlocks,
+                        scheduleTimezone,
+                        slotDuration,
+                      );
 
                     return (
                       <button
@@ -1346,12 +2208,127 @@ const TeacherSchedule = () => {
                     );
                   })}
 
+                  {dayBlocks.map((block) => {
+                    const position = getScheduleBlockPosition(
+                      block,
+                      scheduleTimezone,
+                      calendarStartMinutes,
+                    );
+
+                    const blockContent = (
+                      <>
+                        <strong className={styles.scheduleBlockTime}>
+                          {formatLessonTime(
+                            block.starts_at,
+                            locale,
+                            scheduleTimezone,
+                          )}
+                          {" — "}
+                          {formatLessonTime(
+                            block.ends_at,
+                            locale,
+                            scheduleTimezone,
+                          )}
+                        </strong>
+                        <span className={styles.scheduleBlockLabel}>
+                          🔒 {t("teacherSchedule.scheduleBlock.label")}
+                        </span>
+                        {block.reason && (
+                          <span className={styles.scheduleBlockReason}>
+                            {block.reason}
+                          </span>
+                        )}
+                      </>
+                    );
+
+                    if (block.isProjectedRecurring) {
+                      return (
+                        <button
+                          key={block.id}
+                          type="button"
+                          aria-disabled="true"
+                          tabIndex={-1}
+                          className={`${styles.scheduleBlock} ${styles.projectedOccurrence}`}
+                          style={{
+                            top: `${position.top}px`,
+                            height: `${position.height}px`,
+                          }}
+                        >
+                          {blockContent}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={block.id}
+                        type="button"
+                        className={styles.scheduleBlock}
+                        style={{
+                          top: `${position.top}px`,
+                          height: `${position.height}px`,
+                        }}
+                        onClick={(event) => handleBlockClick(event, block)}
+                      >
+                        {blockContent}
+                      </button>
+                    );
+                  })}
+
                   {dayLessons.map((lesson) => {
                     const position = getLessonPosition(
                       lesson,
                       scheduleTimezone,
                       calendarStartMinutes,
                     );
+
+                    const lessonContent = (
+                      <>
+                        <strong className={styles.lessonTime}>
+                          {formatLessonTime(
+                            lesson.starts_at,
+                            locale,
+                            scheduleTimezone,
+                          )}
+                          {" — "}
+                          {formatLessonTime(
+                            lesson.ends_at,
+                            locale,
+                            scheduleTimezone,
+                          )}
+                        </strong>
+
+                        <span className={styles.lessonStudent}>
+                          {lesson.profiles?.full_name ||
+                            lesson.profiles?.email ||
+                            t("teacherSchedule.unknownStudent")}
+                        </span>
+
+                        <span className={styles.lessonStatus}>
+                          📘 {t(`teacherSchedule.statuses.${lesson.status}`)}
+                        </span>
+                      </>
+                    );
+
+                    if (lesson.isProjectedRecurring) {
+                      return (
+                        <button
+                          key={lesson.id}
+                          type="button"
+                          aria-disabled="true"
+                          tabIndex={-1}
+                          className={`${styles.lesson} ${
+                            styles[lesson.status] || ""
+                          } ${styles.projectedOccurrence}`}
+                          style={{
+                            top: `${position.top}px`,
+                            height: `${position.height}px`,
+                          }}
+                        >
+                          {lessonContent}
+                        </button>
+                      );
+                    }
 
                     return (
                       <button
@@ -1366,25 +2343,7 @@ const TeacherSchedule = () => {
                         }}
                         onClick={(event) => handleLessonClick(event, lesson)}
                       >
-                        <strong className={styles.lessonTime}>
-                          {formatLessonTime(
-                            lesson.starts_at,
-                            locale,
-                            scheduleTimezone,
-                          )}
-                        </strong>
-
-                        <span className={styles.lessonStudent}>
-                          {lesson.profiles?.full_name ||
-                            lesson.profiles?.email ||
-                            t("teacherSchedule.unknownStudent")}
-                        </span>
-
-                        {lesson.status === "cancelled" && (
-                          <span className={styles.lessonStatus}>
-                            {t("teacherSchedule.statuses.cancelled")}
-                          </span>
-                        )}
+                        {lessonContent}
                       </button>
                     );
                   })}
@@ -1398,12 +2357,18 @@ const TeacherSchedule = () => {
       <div className={styles.bottomGrid}>
         <section id="lesson-create-form" className={styles.panel}>
           <div className={styles.panelHeader}>
-            <h2>{t("teacherSchedule.createLesson")}</h2>
+            <h2>
+              {createMode === "block"
+                ? t("teacherSchedule.scheduleBlock.createTitle")
+                : t("teacherSchedule.createLesson")}
+            </h2>
 
             <p>
               {createMode === "single"
                 ? t("teacherSchedule.createLessonHint")
-                : t("teacherSchedule.recurring.hint")}
+                : createMode === "recurring"
+                  ? t("teacherSchedule.recurring.hint")
+                  : t("teacherSchedule.scheduleBlock.hint")}
             </p>
           </div>
 
@@ -1430,6 +2395,16 @@ const TeacherSchedule = () => {
               onClick={() => handleCreateModeChange("recurring")}
             >
               {t("teacherSchedule.createMode.recurring")}
+            </button>
+
+            <button
+              type="button"
+              className={`${styles.modeButton} ${
+                createMode === "block" ? styles.modeButtonActive : ""
+              }`}
+              onClick={() => handleCreateModeChange("block")}
+            >
+              {t("teacherSchedule.createMode.block")}
             </button>
           </div>
 
@@ -1511,7 +2486,7 @@ const TeacherSchedule = () => {
                   : t("teacherSchedule.create")}
               </Button>
             </form>
-          ) : (
+          ) : createMode === "recurring" ? (
             <form
               className={styles.form}
               onSubmit={handleCreateRecurringLesson}
@@ -1610,12 +2585,19 @@ const TeacherSchedule = () => {
                 </label>
 
                 <label className={styles.field}>
-                  <span>{t("teacherSchedule.recurring.validUntil")}</span>
+                  <span>
+                    {t(
+                      scheduleSettings.allowOpenEndedRecurringLessons
+                        ? "teacherSchedule.recurring.validUntil"
+                        : "teacherSchedule.recurring.validUntilRequired",
+                    )}
+                  </span>
 
                   <input
                     type="date"
                     value={recurringValidUntil}
                     min={recurringValidFrom || undefined}
+                    required={!scheduleSettings.allowOpenEndedRecurringLessons}
                     onChange={(event) =>
                       setRecurringValidUntil(event.target.value)
                     }
@@ -1635,7 +2617,9 @@ const TeacherSchedule = () => {
               </label>
 
               <p className={styles.formNote}>
-                {t("teacherSchedule.recurring.generationNote")}
+                {t("teacherSchedule.recurring.generationNote", {
+                  horizonWeeks: scheduleSettings.recurringGenerationHorizonWeeks,
+                })}
               </p>
 
               {createErrorMessage && <p className={styles.error}>{createErrorMessage}</p>}
@@ -1655,14 +2639,225 @@ const TeacherSchedule = () => {
                   : t("teacherSchedule.recurring.create")}
               </Button>
             </form>
+          ) : (
+            <form className={styles.form} onSubmit={handleCreateScheduleBlock}>
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.scheduleBlock.repeatMode.label")}</span>
+                <select
+                  value={blockRepeatMode}
+                  onChange={(event) => handleBlockRepeatModeChange(event.target.value)}
+                >
+                  <option value="single">
+                    {t("teacherSchedule.scheduleBlock.repeatMode.single")}
+                  </option>
+                  <option value="recurring">
+                    {t("teacherSchedule.scheduleBlock.repeatMode.recurring")}
+                  </option>
+                </select>
+              </label>
+
+              {blockRepeatMode === "recurring" ? (
+                <>
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.weekday")}</span>
+                      <select
+                        value={blockRecurringWeekday}
+                        onChange={(event) =>
+                          handleBlockRecurringWeekdayChange(event.target.value)
+                        }
+                      >
+                        <option value="">
+                          {t("teacherSchedule.recurring.selectWeekday")}
+                        </option>
+                        {enabledWorkingHours.map((item) => {
+                          const dayName = WEEKDAYS.find(
+                            (day) => day.value === item.weekday,
+                          )?.key;
+                          return (
+                            <option key={item.weekday} value={item.weekday}>
+                              {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.startTime")}</span>
+                      <select
+                        value={blockStartTime}
+                        onChange={(event) =>
+                          handleBlockStartTimeChange(event.target.value)
+                        }
+                      >
+                        <option value="">{t("teacherSchedule.selectTime")}</option>
+                        {blockRecurringStartSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.endTime")}</span>
+                      <select
+                        value={blockEndTime}
+                        onChange={(event) => setBlockEndTime(event.target.value)}
+                        disabled={!blockStartTime}
+                      >
+                        <option value="">
+                          {t("teacherSchedule.scheduleBlock.selectEndTime")}
+                        </option>
+                        {blockRecurringEndSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.repeat")}</span>
+                      <select
+                        value={blockRecurringIntervalWeeks}
+                        onChange={(event) =>
+                          setBlockRecurringIntervalWeeks(event.target.value)
+                        }
+                      >
+                        <option value="1">{t("teacherSchedule.recurring.everyWeek")}</option>
+                        <option value="2">{t("teacherSchedule.recurring.everyTwoWeeks")}</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.validFrom")}</span>
+                      <input
+                        type="date"
+                        value={blockRecurringValidFrom}
+                        onChange={(event) =>
+                          setBlockRecurringValidFrom(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.recurring.validUntil")}</span>
+                      <input
+                        type="date"
+                        value={blockRecurringValidUntil}
+                        min={blockRecurringValidFrom || undefined}
+                        onChange={(event) =>
+                          setBlockRecurringValidUntil(event.target.value)
+                        }
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.date")}</span>
+                      <input
+                        type="date"
+                        value={blockDate}
+                        onChange={(event) =>
+                          handleBlockDateChange(event.target.value)
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.startTime")}</span>
+                      <select
+                        value={blockStartTime}
+                        onChange={(event) =>
+                          handleBlockStartTimeChange(event.target.value)
+                        }
+                      >
+                        <option value="">{t("teacherSchedule.selectTime")}</option>
+                        {blockStartSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherSchedule.scheduleBlock.endTime")}</span>
+                    <select
+                      value={blockEndTime}
+                      onChange={(event) => setBlockEndTime(event.target.value)}
+                      disabled={!blockStartTime}
+                    >
+                      <option value="">
+                        {t("teacherSchedule.scheduleBlock.selectEndTime")}
+                      </option>
+                      {blockEndSlots.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+
+              <label className={styles.field}>
+                <span>{t("teacherSchedule.scheduleBlock.reason")}</span>
+                <input
+                  type="text"
+                  value={blockReason}
+                  maxLength={200}
+                  onChange={(event) => setBlockReason(event.target.value)}
+                  placeholder={t("teacherSchedule.scheduleBlock.reasonPlaceholder")}
+                />
+              </label>
+
+              {blockRepeatMode === "recurring" && (
+                <p className={styles.formNote}>
+                  {t("teacherSchedule.scheduleBlock.recurring.generationNote", {
+                        horizonWeeks: scheduleSettings.recurringGenerationHorizonWeeks,
+                      })}
+                </p>
+              )}
+
+              {createErrorMessage && (
+                <p className={styles.error}>{createErrorMessage}</p>
+              )}
+              {createSuccessMessage && (
+                <p className={styles.success}>{createSuccessMessage}</p>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="large"
+                disabled={savingBlock}
+              >
+                {savingBlock
+                  ? t("teacherSchedule.scheduleBlock.creating")
+                  : blockRepeatMode === "recurring"
+                    ? t("teacherSchedule.scheduleBlock.recurring.create")
+                    : t("teacherSchedule.scheduleBlock.create")}
+              </Button>
+            </form>
           )}
         </section>
 
         <section id="lesson-details-panel" className={styles.panel}>
           <div className={styles.panelHeader}>
-            <h2>{t("teacherSchedule.lessonDetails")}</h2>
+            <h2>
+              {selectedBlock
+                ? t("teacherSchedule.scheduleBlock.detailsTitle")
+                : t("teacherSchedule.lessonDetails")}
+            </h2>
 
-            <p>{t("teacherSchedule.lessonDetailsHint")}</p>
+            <p>
+              {selectedBlock
+                ? t("teacherSchedule.scheduleBlock.detailsHint")
+                : t("teacherSchedule.lessonDetailsHint")}
+            </p>
           </div>
 
           {detailErrorMessage && (
@@ -1672,9 +2867,301 @@ const TeacherSchedule = () => {
             <p className={styles.success}>{detailSuccessMessage}</p>
           )}
 
-          {!selectedLesson ? (
+          {selectedBlock ? (
+            <div className={styles.lessonDetails}>
+              {editingBlock ? (
+                <div className={styles.recurringSeriesEditor}>
+                  <div>
+                    <h3>{t("teacherSchedule.scheduleBlock.editTitle")}</h3>
+                    <p>{t("teacherSchedule.scheduleBlock.editHint")}</p>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.date")}</span>
+                      <input
+                        type="date"
+                        value={blockDate}
+                        onChange={(event) => handleBlockDateChange(event.target.value)}
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.startTime")}</span>
+                      <select
+                        value={blockStartTime}
+                        onChange={(event) => handleBlockStartTimeChange(event.target.value)}
+                      >
+                        <option value="">{t("teacherSchedule.selectTime")}</option>
+                        {blockStartSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherSchedule.scheduleBlock.endTime")}</span>
+                    <select
+                      value={blockEndTime}
+                      onChange={(event) => setBlockEndTime(event.target.value)}
+                      disabled={!blockStartTime}
+                    >
+                      <option value="">
+                        {t("teacherSchedule.scheduleBlock.selectEndTime")}
+                      </option>
+                      {blockEndSlots.map((slot) => (
+                        <option key={slot} value={slot}>{slot}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherSchedule.scheduleBlock.reason")}</span>
+                    <input
+                      type="text"
+                      value={blockReason}
+                      maxLength={200}
+                      onChange={(event) => setBlockReason(event.target.value)}
+                      placeholder={t("teacherSchedule.scheduleBlock.reasonPlaceholder")}
+                    />
+                  </label>
+
+                  <div className={styles.inlineActions}>
+                    <Button variant="primary" onClick={handleSaveScheduleBlock} disabled={savingBlock}>
+                      {savingBlock
+                        ? t("teacherSchedule.scheduleBlock.saving")
+                        : t("teacherSchedule.scheduleBlock.save")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setEditingBlock(false);
+                        populateBlockDraft(selectedBlock);
+                      }}
+                      disabled={savingBlock}
+                    >
+                      {t("teacherSchedule.scheduleBlock.cancelEdit")}
+                    </Button>
+                  </div>
+                </div>
+              ) : editingRecurringBlockSeries ? (
+                <div className={styles.recurringSeriesEditor}>
+                  <div>
+                    <h3>{t("teacherSchedule.scheduleBlock.recurring.editFromHere.title")}</h3>
+                    <p>{t("teacherSchedule.scheduleBlock.recurring.editFromHere.hint")}</p>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.weekday")}</span>
+                      <select
+                        value={blockSeriesWeekday}
+                        onChange={(event) => handleBlockSeriesWeekdayChange(event.target.value)}
+                      >
+                        <option value="">{t("teacherSchedule.recurring.selectWeekday")}</option>
+                        {enabledWorkingHours.map((item) => {
+                          const dayName = WEEKDAYS.find(
+                            (day) => day.value === item.weekday,
+                          )?.key;
+                          return (
+                            <option key={item.weekday} value={item.weekday}>
+                              {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.startTime")}</span>
+                      <select
+                        value={blockSeriesStartTime}
+                        onChange={(event) => handleBlockSeriesStartTimeChange(event.target.value)}
+                      >
+                        <option value="">{t("teacherSchedule.selectTime")}</option>
+                        {blockSeriesStartSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.scheduleBlock.endTime")}</span>
+                      <select
+                        value={blockSeriesEndTime}
+                        onChange={(event) => setBlockSeriesEndTime(event.target.value)}
+                        disabled={!blockSeriesStartTime}
+                      >
+                        <option value="">
+                          {t("teacherSchedule.scheduleBlock.selectEndTime")}
+                        </option>
+                        {blockSeriesEndSlots.map((slot) => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>{t("teacherSchedule.recurring.repeat")}</span>
+                      <select
+                        value={blockSeriesIntervalWeeks}
+                        onChange={(event) => setBlockSeriesIntervalWeeks(event.target.value)}
+                      >
+                        <option value="1">{t("teacherSchedule.recurring.everyWeek")}</option>
+                        <option value="2">{t("teacherSchedule.recurring.everyTwoWeeks")}</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherSchedule.scheduleBlock.recurring.validUntil")}</span>
+                    <input
+                      type="date"
+                      value={blockSeriesValidUntil}
+                      min={formatZonedDateForInput(selectedBlock.starts_at, scheduleTimezone)}
+                      onChange={(event) => setBlockSeriesValidUntil(event.target.value)}
+                    />
+                  </label>
+
+                  <label className={styles.field}>
+                    <span>{t("teacherSchedule.scheduleBlock.reason")}</span>
+                    <input
+                      type="text"
+                      value={blockSeriesReason}
+                      maxLength={200}
+                      onChange={(event) => setBlockSeriesReason(event.target.value)}
+                      placeholder={t("teacherSchedule.scheduleBlock.reasonPlaceholder")}
+                    />
+                  </label>
+
+                  <div className={styles.inlineActions}>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveRecurringBlockSeries}
+                      disabled={savingRecurringBlockSeries}
+                    >
+                      {savingRecurringBlockSeries
+                        ? t("teacherSchedule.scheduleBlock.recurring.editFromHere.saving")
+                        : t("teacherSchedule.scheduleBlock.recurring.editFromHere.save")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setEditingRecurringBlockSeries(false)}
+                      disabled={savingRecurringBlockSeries}
+                    >
+                      {t("teacherSchedule.scheduleBlock.recurring.editFromHere.cancel")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.date")}</span>
+                    <strong>
+                      {formatFullDate(selectedBlock.starts_at, locale, scheduleTimezone)}
+                    </strong>
+                  </div>
+
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.time")}</span>
+                    <strong>
+                      {formatLessonTime(selectedBlock.starts_at, locale, scheduleTimezone)}
+                      {" — "}
+                      {formatLessonTime(selectedBlock.ends_at, locale, scheduleTimezone)}
+                    </strong>
+                  </div>
+
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.scheduleBlock.type")}</span>
+                    <strong>
+                      {selectedBlock.recurring_block_series_id
+                        ? t("teacherSchedule.scheduleBlock.repeatMode.recurring")
+                        : t("teacherSchedule.scheduleBlock.repeatMode.single")}
+                    </strong>
+                  </div>
+
+                  <div className={styles.detailItem}>
+                    <span>{t("teacherSchedule.scheduleBlock.reason")}</span>
+                    <strong>{selectedBlock.reason || "—"}</strong>
+                  </div>
+
+                  <div className={styles.lessonActions}>
+                    {currentTimeMs !== null &&
+                      new Date(selectedBlock.starts_at).getTime() > currentTimeMs && (
+                        <>
+                          {selectedBlock.recurring_block_series_id ? (
+                            <Button
+                              variant="secondary"
+                              onClick={handleStartEditRecurringBlockSeries}
+                              disabled={
+                                loadingRecurringBlockSeries ||
+                                savingRecurringBlockSeries ||
+                                cancellingRecurringBlockSeriesId ===
+                                  selectedBlock.recurring_block_series_id ||
+                                deletingBlockId === selectedBlock.id
+                              }
+                            >
+                              {loadingRecurringBlockSeries
+                                ? t("teacherSchedule.scheduleBlock.recurring.editFromHere.loading")
+                                : t("teacherSchedule.scheduleBlock.recurring.editFromHere.button")}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              onClick={handleStartEditBlock}
+                              disabled={savingBlock || deletingBlockId === selectedBlock.id}
+                            >
+                              {t("teacherSchedule.scheduleBlock.edit")}
+                            </Button>
+                          )}
+                        </>
+                      )}
+
+                    <Button
+                      variant="danger"
+                      onClick={handleDeleteScheduleBlock}
+                      disabled={
+                        savingBlock ||
+                        deletingBlockId === selectedBlock.id ||
+                        savingRecurringBlockSeries ||
+                        cancellingRecurringBlockSeriesId === selectedBlock.recurring_block_series_id
+                      }
+                    >
+                      {deletingBlockId === selectedBlock.id
+                        ? t("teacherSchedule.scheduleBlock.deleting")
+                        : selectedBlock.recurring_block_series_id
+                          ? t("teacherSchedule.scheduleBlock.recurring.deleteOccurrence")
+                          : t("teacherSchedule.scheduleBlock.delete")}
+                    </Button>
+
+                    {selectedBlock.recurring_block_series_id &&
+                      currentTimeMs !== null &&
+                      new Date(selectedBlock.starts_at).getTime() > currentTimeMs && (
+                        <Button
+                          variant="danger"
+                          onClick={handleCancelRecurringBlockSeriesFromBlock}
+                          disabled={
+                            cancellingRecurringBlockSeriesId ===
+                              selectedBlock.recurring_block_series_id ||
+                            deletingBlockId === selectedBlock.id ||
+                            savingRecurringBlockSeries
+                          }
+                        >
+                          {cancellingRecurringBlockSeriesId ===
+                          selectedBlock.recurring_block_series_id
+                            ? t("teacherSchedule.scheduleBlock.recurring.cancelFromHere.cancelling")
+                            : t("teacherSchedule.scheduleBlock.recurring.cancelFromHere.button")}
+                        </Button>
+                      )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : !selectedLesson ? (
             <div className={styles.emptyDetails}>
-              {t("teacherSchedule.selectLessonHint")}
+              {t("teacherSchedule.selectScheduleItemHint")}
             </div>
           ) : (
             <div className={styles.lessonDetails}>
@@ -1832,7 +3319,13 @@ const TeacherSchedule = () => {
                     </label>
 
                     <label className={styles.field}>
-                      <span>{t("teacherSchedule.recurring.validUntil")}</span>
+                      <span>
+                    {t(
+                      scheduleSettings.allowOpenEndedRecurringLessons
+                        ? "teacherSchedule.recurring.validUntil"
+                        : "teacherSchedule.recurring.validUntilRequired",
+                    )}
+                  </span>
                       <input
                         type="date"
                         value={seriesValidUntil}
@@ -1840,6 +3333,7 @@ const TeacherSchedule = () => {
                           selectedLesson.starts_at,
                           scheduleTimezone,
                         )}
+                        required={!scheduleSettings.allowOpenEndedRecurringLessons}
                         onChange={(event) =>
                           setSeriesValidUntil(event.target.value)
                         }

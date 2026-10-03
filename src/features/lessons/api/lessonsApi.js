@@ -4,7 +4,7 @@ export const listStudentLessons = () =>
   supabase
     .from("lessons")
     .select(
-      "id, starts_at, ends_at, duration_minutes, status, zoom_url, pricing_date, price_amount_minor, price_currency, price_rate_id, cancelled_by, cancelled_at, cancellation_reason, cancellation_request_id, cancellation_charge_mode, cancellation_waiver_reason",
+      "id, starts_at, ends_at, duration_minutes, status, zoom_url, occurrence_date, pricing_date, price_amount_minor, price_currency, price_rate_id, cancelled_by, cancelled_at, cancellation_reason, cancellation_request_id, cancellation_charge_mode, cancellation_waiver_reason",
     )
     .order("starts_at", { ascending: true });
 
@@ -30,6 +30,7 @@ export const listTeacherLessonsForRange = ({ startIso, endIso }) =>
         cancellation_charge_mode,
         cancellation_waiver_reason,
         recurring_lesson_id,
+        occurrence_date,
         pricing_date,
         price_amount_minor,
         price_currency,

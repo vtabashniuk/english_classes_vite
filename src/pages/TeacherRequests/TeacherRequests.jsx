@@ -268,7 +268,8 @@ const TeacherRequests = () => {
     if (
       message.includes("NON_WORKING_DAY") ||
       message.includes("OUTSIDE_WORKING_HOURS") ||
-      message.includes("INVALID_TIME_SLOT")
+      message.includes("INVALID_TIME_SLOT") ||
+      message.includes("SCHEDULE_BLOCK_CONFLICT")
     ) {
       return t("teacherRequests.errors.scheduleUnavailable");
     }

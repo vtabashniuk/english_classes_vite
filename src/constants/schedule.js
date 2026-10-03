@@ -4,6 +4,9 @@ export const DEFAULT_SCHEDULE_SETTINGS = {
   workdayEnd: "19:00",
   lessonDurationMinutes: 50,
   slotIntervalMinutes: 30,
+  reschedulePricePolicy: "keep_original",
+  allowOpenEndedRecurringLessons: true,
+  recurringGenerationHorizonWeeks: 8,
 };
 
 export const WEEKDAYS = [
@@ -28,3 +31,6 @@ export const MIN_LESSON_DURATION = 30;
 export const MAX_LESSON_DURATION = 120;
 
 export const LESSON_DURATION_STEP = 5;
+
+export const MIN_RECURRING_GENERATION_HORIZON_WEEKS = 1;
+export const MAX_RECURRING_GENERATION_HORIZON_WEEKS = 52;

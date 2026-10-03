@@ -188,6 +188,49 @@ export const getLessonPosition = (lesson, timezone, workdayStartMinutes) => {
   };
 };
 
+export const getScheduleBlockPosition = (block, timezone, workdayStartMinutes) => {
+  const start = getDatePartsInTimezone(block.starts_at, timezone);
+  const end = getDatePartsInTimezone(block.ends_at, timezone);
+  const startMinutes = start.hour * 60 + start.minute;
+  const endMinutes = end.hour * 60 + end.minute;
+
+  return {
+    top:
+      CALENDAR_TOP_PADDING +
+      (startMinutes - workdayStartMinutes) * PIXELS_PER_MINUTE,
+    height: (endMinutes - startMinutes) * PIXELS_PER_MINUTE,
+  };
+};
+
+export const isSlotBlockedByScheduleBlock = (
+  date,
+  slot,
+  blocks,
+  timezone,
+  durationMinutes,
+) => {
+  const slotStart = timeToMinutes(slot);
+  const slotEnd = slotStart + durationMinutes;
+  const dateKey = formatDateForInput(date);
+
+  return blocks.some((block) => {
+    const blockStart = getDatePartsInTimezone(block.starts_at, timezone);
+    const blockEnd = getDatePartsInTimezone(block.ends_at, timezone);
+    const blockDate = `${blockStart.year}-${pad(blockStart.month)}-${pad(
+      blockStart.day,
+    )}`;
+
+    if (blockDate !== dateKey) {
+      return false;
+    }
+
+    const blockStartMinutes = blockStart.hour * 60 + blockStart.minute;
+    const blockEndMinutes = blockEnd.hour * 60 + blockEnd.minute;
+
+    return slotStart < blockEndMinutes && slotEnd > blockStartMinutes;
+  });
+};
+
 export const isSlotBlockedByLesson = (
   date,
   slot,

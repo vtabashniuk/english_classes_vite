@@ -12,7 +12,10 @@ const teacherScheduleSettingsQuery = () =>
         slot_interval_minutes,
         low_balance_threshold_lessons,
         free_cancellation_hours,
-        finance_history_page_size
+        finance_history_page_size,
+        reschedule_price_policy,
+        allow_open_ended_recurring_lessons,
+        recurring_generation_horizon_weeks
       `,
     );
 
@@ -52,8 +55,11 @@ export const updateMyScheduleSettings = ({
   timezone,
   lessonDurationMinutes,
   workingHours,
+  reschedulePricePolicy,
+  allowOpenEndedRecurringLessons,
+  recurringGenerationHorizonWeeks,
 }) =>
-  supabase.rpc("update_my_schedule_settings", {
+  supabase.rpc("update_my_schedule_settings_v2", {
     p_schedule_timezone: timezone,
     p_lesson_duration_minutes: lessonDurationMinutes,
     p_working_hours: workingHours.map((item) => ({
@@ -62,6 +68,9 @@ export const updateMyScheduleSettings = ({
       workday_start: item.workdayStart,
       workday_end: item.workdayEnd,
     })),
+    p_reschedule_price_policy: reschedulePricePolicy,
+    p_allow_open_ended_recurring_lessons: allowOpenEndedRecurringLessons,
+    p_recurring_generation_horizon_weeks: recurringGenerationHorizonWeeks,
   });
 
 export const updateMyFinancePreferences = ({

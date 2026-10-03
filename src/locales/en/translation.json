@@ -143,7 +143,8 @@
         "outsideHours": "The selected time is outside the teacher’s working hours.",
         "invalidSlot": "The selected time does not match the available schedule grid.",
         "past": "You cannot request a lesson in the past.",
-        "generic": "Could not send the request."
+        "generic": "Could not send the request.",
+        "scheduleBlocked": "This time has been blocked by the teacher. Refresh available slots and choose another one."
       },
       "cancel": {
         "button": "Cancel request",
@@ -346,7 +347,7 @@
     },
     "errors": {
       "load": "Could not load the schedule.",
-      "loadLessons": "Could not load lessons.",
+      "loadLessons": "Could not load lessons and blocked time.",
       "requiredFields": "Select a student, date and time.",
       "workingHours": "The lesson falls outside working hours.",
       "invalidSlot": "The lesson must start on an allowed time slot.",
@@ -354,7 +355,8 @@
       "past": "A lesson cannot be created in the past.",
       "studentNotFound": "The student was not found or the account is inactive.",
       "create": "Could not create the lesson.",
-      "nonWorkingDay": "This day is not part of the teacher’s working schedule."
+      "nonWorkingDay": "This day is not part of the teacher’s working schedule.",
+      "scheduleBlockConflict": "This time is blocked in the teacher’s schedule."
     },
     "cancel": {
       "button": "Cancel lesson",
@@ -370,19 +372,20 @@
       }
     },
     "createMode": {
-      "label": "Lesson creation type",
+      "label": "Schedule action",
       "single": "One-time lesson",
-      "recurring": "Recurring lesson"
+      "recurring": "Recurring lesson",
+      "block": "Block time"
     },
     "recurring": {
-      "hint": "Create a lesson series on the selected weekday and time. The first lessons will be generated 8 weeks ahead.",
+      "hint": "Create a lesson series on the selected weekday and time. With an end date, all lessons are created immediately; without one, a rolling horizon is used.",
       "weekday": "Weekday",
       "repeat": "Repeat",
       "everyWeek": "Every week",
       "everyTwoWeeks": "Every 2 weeks",
       "validFrom": "Starting from",
       "validUntil": "Until date (optional)",
-      "generationNote": "The system will immediately create concrete lessons 8 weeks ahead. If one date conflicts with an existing one-time lesson, that date will be skipped while the series remains active.",
+      "generationNote": "With an end date, the system immediately creates all concrete lessons through that date. Without an end date, it keeps {{horizonWeeks}} weeks of lessons materialized ahead while the series itself reserves the slot indefinitely.",
       "create": "Create recurring lesson",
       "creating": "Creating series...",
       "series": "Lesson type",
@@ -409,7 +412,9 @@
         "noOccurrence": "There is no occurrence on this weekday within the selected date range.",
         "teacherConflict": "Another recurring lesson series already occupies this time.",
         "studentConflict": "This student already has a recurring lesson at this time.",
-        "create": "Could not create the recurring lesson."
+        "create": "Could not create the recurring lesson.",
+        "blockSeriesConflict": "This time is covered by a recurring teacher block.",
+        "endDateRequired": "An end date is required for this recurring lesson series."
       },
       "cancelFromHere": {
         "button": "Cancel this and following",
@@ -443,7 +448,8 @@
           "generic": "Could not update the recurring series."
         }
       },
-      "selectWeekday": "Select a working day"
+      "selectWeekday": "Select a working day",
+      "validUntilRequired": "Until date"
     },
     "zoomEdit": {
       "button": "Edit Zoom",
@@ -491,7 +497,96 @@
         "cancellationPending": "Resolve the student cancellation request for this lesson first."
       }
     },
-    "weeklyAvailability": "Individual hours by weekday"
+    "weeklyAvailability": "Individual hours by weekday",
+    "selectScheduleItemHint": "Select a lesson or blocked time range in the calendar.",
+    "scheduleBlock": {
+      "createTitle": "Block time",
+      "hint": "Mark a time range where lessons cannot be created or rescheduled.",
+      "label": "Unavailable",
+      "startTime": "Start",
+      "endTime": "End",
+      "selectEndTime": "Select an end time",
+      "reason": "Reason",
+      "reasonPlaceholder": "Optional, visible only to the teacher",
+      "create": "Block time",
+      "creating": "Blocking...",
+      "detailsTitle": "Blocked time",
+      "detailsHint": "Review, edit or delete this blocked time range.",
+      "editTitle": "Edit blocked time",
+      "editHint": "Change the date, time or private reason for this block.",
+      "edit": "Edit",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancelEdit": "Keep unchanged",
+      "delete": "Delete block",
+      "deleting": "Deleting...",
+      "deleteConfirm": "Delete this blocked time range?",
+      "messages": {
+        "created": "Time blocked successfully.",
+        "updated": "Blocked time updated successfully.",
+        "deleted": "Blocked time deleted."
+      },
+      "errors": {
+        "requiredFields": "Select a date, start time and end time.",
+        "lessonConflict": "A lesson already exists in this time range. Reschedule or cancel it first.",
+        "blockConflict": "This time range overlaps another blocked period.",
+        "notFound": "The blocked time range was not found.",
+        "past": "Blocked time cannot be created or moved into the past.",
+        "range": "The end time must be later than the start time.",
+        "reasonTooLong": "The block reason cannot exceed 200 characters.",
+        "workingHours": "The blocked time must stay within this day’s working hours.",
+        "invalidSlot": "The start and end must match the schedule grid.",
+        "generic": "Could not save the blocked time."
+      },
+      "type": "Block type",
+      "repeatMode": {
+        "label": "Block type",
+        "single": "One-time",
+        "recurring": "Recurring"
+      },
+      "recurring": {
+        "validUntil": "End date (optional)",
+        "generationNote": "With an end date, the system immediately creates all blocks through that date. Without an end date, it keeps {{horizonWeeks}} weeks of blocks materialized ahead while the series itself reserves the slot indefinitely.",
+        "create": "Create recurring block",
+        "deleteOccurrence": "Delete this block",
+        "deleteOccurrenceConfirm": "Delete only this block? The other blocks in the series will remain unchanged.",
+        "messages": {
+          "created": "Recurring block created. Blocks created: {{createdCount}}.",
+          "createdWithConflicts": "Recurring block created. Created: {{createdCount}}. Skipped because of conflicts: {{conflictCount}}.",
+          "occurrenceDeleted": "This block was deleted. The other blocks in the series remain unchanged."
+        },
+        "errors": {
+          "lessonSeriesConflict": "This time overlaps a recurring lesson series.",
+          "seriesConflict": "This time overlaps another recurring block series.",
+          "useSeriesEdit": "Use series editing for a recurring block.",
+          "notRecurring": "This block does not belong to a recurring series.",
+          "notFound": "The recurring block or its series was not found.",
+          "past": "A recurring series cannot be changed or ended from a block that has already started.",
+          "interval": "Invalid repeat interval.",
+          "validFromPast": "The recurring block start date cannot be in the past.",
+          "endDateRequired": "An end date is required for a recurring block series.",
+          "dateRange": "The end date cannot be earlier than the start date.",
+          "noOccurrence": "There is no block on this weekday in the selected date range."
+        },
+        "editFromHere": {
+          "button": "Edit this and following",
+          "loading": "Loading series...",
+          "title": "Edit this and following blocks",
+          "hint": "The new settings apply from the selected block onward. Earlier blocks remain unchanged.",
+          "save": "Save changes",
+          "saving": "Saving...",
+          "cancel": "Keep unchanged",
+          "confirm": "Edit this recurring block and all following blocks? The earlier part of the series will remain unchanged.",
+          "success": "Series updated. New blocks created: {{createdCount}}. Skipped because of conflicts: {{conflictCount}}."
+        },
+        "cancelFromHere": {
+          "button": "Delete this and following",
+          "cancelling": "Deleting series...",
+          "confirm": "Delete this recurring block and all following blocks? Earlier blocks will remain unchanged.",
+          "success": "Series ended. Future blocks deleted: {{count}}."
+        }
+      }
+    }
   },
   "teacherSettings": {
     "title": "Settings",
@@ -521,7 +616,8 @@
       "invalidDuration": "The lesson duration is invalid.",
       "workdayTooShort": "The workday is shorter than one lesson.",
       "teacherRequired": "This operation is available to teachers only.",
-      "invalidWorkingHours": "Check the working hours: every enabled day must end after it starts and be long enough for one lesson."
+      "invalidWorkingHours": "Check the working hours: every enabled day must end after it starts and be long enough for one lesson.",
+      "invalidRecurringHorizon": "The open-ended series horizon must be a whole number from 1 to 52 weeks."
     },
     "tax": {
       "title": "Taxation",
@@ -651,6 +747,18 @@
       "friday": "Friday",
       "saturday": "Saturday",
       "sunday": "Sunday"
+    },
+    "recurringPreferences": {
+      "title": "Recurring series and rescheduling",
+      "description": "Configure lesson pricing on reschedule and open-ended recurring-series behavior.",
+      "reschedulePricePolicy": "Lesson price when rescheduled",
+      "keepOriginalPrice": "Keep the lesson’s current price",
+      "useTargetDateTariff": "Use the tariff for the new date",
+      "reschedulePriceHint": "This rule is applied each time a lesson is rescheduled.",
+      "allowOpenEndedLessons": "Allow recurring lessons without an end date",
+      "allowOpenEndedLessonsHint": "When disabled, an end date is required for new or edited lesson series. Existing open-ended series are not changed.",
+      "horizonWeeks": "Open-ended series horizon, weeks",
+      "horizonWeeksHint": "For series without an end date, the system keeps this many weeks of concrete lessons and blocks materialized ahead. The series rule continues reserving the slot beyond the horizon."
     }
   },
   "teacherStudentDetails": {
