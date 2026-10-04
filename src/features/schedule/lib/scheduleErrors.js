@@ -113,6 +113,10 @@ export const getUpdateLessonScheduleError = (error, t) => {
     return t("teacherSchedule.lessonEdit.errors.cancellationPending");
   }
 
+  if (message.includes("RESCHEDULE_REQUEST_PENDING")) {
+    return t("teacherSchedule.lessonEdit.errors.reschedulePending");
+  }
+
   if (
     message.includes("NON_WORKING_DAY") ||
     message.includes("WEEKEND_NOT_ALLOWED")

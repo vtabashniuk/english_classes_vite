@@ -1349,7 +1349,6 @@ const TeacherSchedule = () => {
     if (
       !selectedLesson ||
       selectedLesson.status !== "scheduled" ||
-      selectedLesson.recurring_lesson_id ||
       isLessonStarted(selectedLesson)
     ) {
       return;
@@ -1382,7 +1381,6 @@ const TeacherSchedule = () => {
     if (
       !selectedLesson ||
       selectedLesson.status !== "scheduled" ||
-      selectedLesson.recurring_lesson_id ||
       !editLessonDate ||
       !editLessonTime
     ) {
@@ -3374,13 +3372,25 @@ const TeacherSchedule = () => {
                 )}
 
               {selectedLesson.status === "scheduled" &&
-                !selectedLesson.recurring_lesson_id &&
                 !isLessonStarted(selectedLesson) &&
                 editingLesson && (
                   <div className={styles.recurringSeriesEditor}>
                     <div>
-                      <h3>{t("teacherSchedule.lessonEdit.title")}</h3>
-                      <p>{t("teacherSchedule.lessonEdit.hint")}</p>
+                      <h3>
+                        {t(
+                          selectedLesson.recurring_lesson_id
+                            ? "teacherSchedule.lessonEdit.recurringOccurrenceTitle"
+                            : "teacherSchedule.lessonEdit.title",
+                        )}
+                      </h3>
+                      <p>
+                        {t(
+                          scheduleSettings.reschedulePricePolicy ===
+                            "target_date_tariff"
+                            ? "teacherSchedule.lessonEdit.hintTargetDateTariff"
+                            : "teacherSchedule.lessonEdit.hintKeepOriginal",
+                        )}
+                      </p>
                     </div>
 
                     <div className={styles.formRow}>
@@ -3551,18 +3561,25 @@ const TeacherSchedule = () => {
                   !isLessonStarted(selectedLesson) &&
                   !editingLesson && (
                     <>
-                      {!selectedLesson.recurring_lesson_id && (
-                        <Button
-                          variant="secondary"
-                          onClick={handleStartEditLesson}
-                          disabled={
-                            savingLesson ||
-                            cancellingLessonId === selectedLesson.id
-                          }
-                        >
-                          {t("teacherSchedule.lessonEdit.button")}
-                        </Button>
-                      )}
+                      <Button
+                        variant="secondary"
+                        onClick={handleStartEditLesson}
+                        disabled={
+                          savingLesson ||
+                          cancellingLessonId === selectedLesson.id ||
+                          (Boolean(selectedLesson.recurring_lesson_id) &&
+                            (loadingRecurringSeries ||
+                              savingRecurringSeries ||
+                              cancellingSeriesId ===
+                                selectedLesson.recurring_lesson_id))
+                        }
+                      >
+                        {t(
+                          selectedLesson.recurring_lesson_id
+                            ? "teacherSchedule.lessonEdit.recurringOccurrenceButton"
+                            : "teacherSchedule.lessonEdit.button",
+                        )}
+                      </Button>
 
                       {selectedLesson.recurring_lesson_id && (
                         <Button

@@ -5,9 +5,13 @@ import { getTimezone } from "../../constants/timezones";
 import { useAuth } from "../../context/useAuth";
 import {
   cancelExtraLessonRequest,
+  cancelLessonRescheduleRequest,
   createExtraLessonRequest,
+  createLessonRescheduleRequest,
   getExtraLessonAvailability,
+  getLessonRescheduleAvailability,
   listStudentLessonRequests,
+  previewLessonReschedule,
 } from "../../features/lessonRequests/api/lessonRequestsApi";
 import {
   listMyLessonCancellationRequests,
@@ -82,6 +86,16 @@ const StudentSchedule = () => {
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState("");
   const [cancellingRequestId, setCancellingRequestId] = useState(null);
+
+  const [rescheduleLessonId, setRescheduleLessonId] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState(getTodayValue());
+  const [rescheduleAvailability, setRescheduleAvailability] = useState([]);
+  const [rescheduleAvailabilityLoading, setRescheduleAvailabilityLoading] = useState(false);
+  const [rescheduleSelectedSlot, setRescheduleSelectedSlot] = useState("");
+  const [rescheduleMessage, setRescheduleMessage] = useState("");
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
+  const [cancellingRescheduleRequestId, setCancellingRescheduleRequestId] = useState(null);
 
   const timezone = profile?.timezone || "Europe/Kyiv";
   const timezoneConfig = getTimezone(timezone);
@@ -170,9 +184,27 @@ const StudentSchedule = () => {
       .reverse();
   }, [lessons]);
 
-  const pendingRequests = useMemo(
-    () => requests.filter((request) => request.status === "pending"),
+  const pendingExtraRequests = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status === "pending" && request.request_type === "extra_lesson",
+      ),
     [requests],
+  );
+
+  const pendingRescheduleRequests = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status === "pending" && request.request_type === "reschedule",
+      ),
+    [requests],
+  );
+
+  const pendingRescheduleLessonIds = useMemo(
+    () => new Set(pendingRescheduleRequests.map((request) => request.lesson_id)),
+    [pendingRescheduleRequests],
   );
 
   const pendingCancellationLessonIds = useMemo(
@@ -201,6 +233,17 @@ const StudentSchedule = () => {
       minute: "2-digit",
       hour12: false,
     }).format(new Date(value));
+
+  const formatDateInput = (value) => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(value));
+    const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+    return `${map.year}-${map.month}-${map.day}`;
+  };
 
   const getLessonDuration = (lesson) => {
     if (lesson.duration_minutes) {
@@ -291,6 +334,136 @@ const StudentSchedule = () => {
       setErrorMessage(getCancelLessonError(error, t));
     } finally {
       setCancellingLessonId(null);
+    }
+  };
+
+  const resetRescheduleForm = () => {
+    setRescheduleLessonId(null);
+    setRescheduleAvailability([]);
+    setRescheduleSelectedSlot("");
+    setRescheduleMessage("");
+    setRescheduleError("");
+  };
+
+  const loadRescheduleAvailability = async (lessonId, dateValue) => {
+    if (!lessonId || !dateValue) {
+      setRescheduleAvailability([]);
+      setRescheduleSelectedSlot("");
+      return;
+    }
+
+    try {
+      setRescheduleAvailabilityLoading(true);
+      setRescheduleError("");
+      setRescheduleSelectedSlot("");
+
+      const { data, error } = await getLessonRescheduleAvailability({
+        lessonId,
+        date: dateValue,
+      });
+
+      if (error) throw error;
+      setRescheduleAvailability(data ?? []);
+    } catch (error) {
+      console.error("Reschedule availability load error:", error);
+      setRescheduleAvailability([]);
+      setRescheduleError(getLessonRescheduleError(error, t));
+    } finally {
+      setRescheduleAvailabilityLoading(false);
+    }
+  };
+
+  const handleOpenRescheduleForm = async (lesson) => {
+    if (rescheduleLessonId === lesson.id) {
+      resetRescheduleForm();
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+      setRescheduleError("");
+
+      const { data: preview, error } = await previewLessonReschedule(lesson.id);
+      if (error) throw error;
+
+      if (!preview?.canRequest) {
+        setErrorMessage(
+          getLessonReschedulePreviewError(preview?.reason, preview?.noticeHours, t),
+        );
+        return;
+      }
+
+      const initialDate = formatDateInput(lesson.starts_at);
+      setRescheduleLessonId(lesson.id);
+      setRescheduleDate(initialDate);
+      setRescheduleMessage("");
+      await loadRescheduleAvailability(lesson.id, initialDate);
+    } catch (error) {
+      console.error("Preview lesson reschedule error:", error);
+      setErrorMessage(getLessonRescheduleError(error, t));
+    }
+  };
+
+  const handleRescheduleDateChange = async (lessonId, event) => {
+    const value = event.target.value;
+    setRescheduleDate(value);
+    await loadRescheduleAvailability(lessonId, value);
+  };
+
+  const handleCreateRescheduleRequest = async (event, lesson) => {
+    event.preventDefault();
+
+    if (!rescheduleSelectedSlot) {
+      setRescheduleError(t("studentSchedule.reschedule.errors.selectSlot"));
+      return;
+    }
+
+    try {
+      setRescheduleSubmitting(true);
+      setRescheduleError("");
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { error } = await createLessonRescheduleRequest({
+        lessonId: lesson.id,
+        requestedStartsAt: rescheduleSelectedSlot,
+        message: rescheduleMessage.trim() || null,
+      });
+      if (error) throw error;
+
+      setSuccessMessage(t("studentSchedule.reschedule.success"));
+      resetRescheduleForm();
+      await loadRequests();
+      window.dispatchEvent(new Event("lesson-requests-changed"));
+      window.dispatchEvent(new Event("notifications-changed"));
+    } catch (error) {
+      console.error("Create lesson reschedule request error:", error);
+      setRescheduleError(getLessonRescheduleError(error, t));
+    } finally {
+      setRescheduleSubmitting(false);
+    }
+  };
+
+  const handleCancelRescheduleRequest = async (request) => {
+    if (!window.confirm(t("studentSchedule.reschedule.cancel.confirm"))) return;
+
+    try {
+      setCancellingRescheduleRequestId(request.id);
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const { error } = await cancelLessonRescheduleRequest(request.id);
+      if (error) throw error;
+
+      setSuccessMessage(t("studentSchedule.reschedule.cancel.success"));
+      await loadRequests();
+      window.dispatchEvent(new Event("lesson-requests-changed"));
+    } catch (error) {
+      console.error("Cancel lesson reschedule request error:", error);
+      setErrorMessage(getLessonRescheduleError(error, t));
+    } finally {
+      setCancellingRescheduleRequestId(null);
     }
   };
 
@@ -533,11 +706,11 @@ const StudentSchedule = () => {
           </form>
         )}
 
-        {pendingRequests.length > 0 && (
+        {pendingExtraRequests.length > 0 && (
           <div className={styles.pendingRequests}>
             <h3>{t("studentSchedule.extraLesson.pendingTitle")}</h3>
 
-            {pendingRequests.map((request) => (
+            {pendingExtraRequests.map((request) => (
               <article key={request.id} className={styles.requestCard}>
                 <div>
                   <strong>{formatDate(request.requested_starts_at)}</strong>
@@ -568,11 +741,59 @@ const StudentSchedule = () => {
                       : t("studentSchedule.extraLesson.cancel.button")}
                   </button>
                 </div>
+
               </article>
             ))}
           </div>
         )}
       </section>
+
+      {pendingRescheduleRequests.length > 0 && (
+        <section className={styles.extraLessonSection}>
+          <div className={styles.extraLessonHeading}>
+            <div>
+              <h2>{t("studentSchedule.reschedule.pendingTitle")}</h2>
+              <p>{t("studentSchedule.reschedule.pendingDescription")}</p>
+            </div>
+          </div>
+
+          <div className={styles.pendingRequests}>
+            {pendingRescheduleRequests.map((request) => (
+              <article key={request.id} className={styles.requestCard}>
+                <div>
+                  <strong>
+                    {t("studentSchedule.reschedule.from")}: {formatDate(request.original_starts_at)}
+                  </strong>
+                  <p>{formatTime(request.original_starts_at)}</p>
+                  <strong className={styles.rescheduleTarget}>
+                    {t("studentSchedule.reschedule.to")}: {formatDate(request.requested_starts_at)}
+                  </strong>
+                  <p>{formatTime(request.requested_starts_at)}</p>
+                  {request.message && (
+                    <p className={styles.requestMessage}>{request.message}</p>
+                  )}
+                </div>
+
+                <div className={styles.requestCardActions}>
+                  <span className={styles.pendingStatus}>
+                    {t("studentSchedule.reschedule.pending")}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.cancelRequestButton}
+                    onClick={() => handleCancelRescheduleRequest(request)}
+                    disabled={cancellingRescheduleRequestId === request.id}
+                  >
+                    {cancellingRescheduleRequestId === request.id
+                      ? t("studentSchedule.reschedule.cancel.cancelling")
+                      : t("studentSchedule.reschedule.cancel.button")}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
@@ -630,24 +851,125 @@ const StudentSchedule = () => {
 
                     {currentTimeMs !== null &&
                       new Date(lesson.starts_at).getTime() > currentTimeMs && (
-                      <button
-                        type="button"
-                        className={styles.cancelButton}
-                        onClick={() => handleCancelLesson(lesson)}
-                        disabled={
-                          cancellingLessonId === lesson.id ||
-                          pendingCancellationLessonIds.has(lesson.id)
-                        }
-                      >
-                        {cancellingLessonId === lesson.id
-                          ? t("studentSchedule.cancel.cancelling")
-                          : pendingCancellationLessonIds.has(lesson.id)
-                            ? t("studentSchedule.cancel.pending")
-                            : t("studentSchedule.cancel.button")}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className={styles.rescheduleButton}
+                          onClick={() => handleOpenRescheduleForm(lesson)}
+                          disabled={
+                            pendingCancellationLessonIds.has(lesson.id) ||
+                            pendingRescheduleLessonIds.has(lesson.id)
+                          }
+                        >
+                          {pendingRescheduleLessonIds.has(lesson.id)
+                            ? t("studentSchedule.reschedule.pending")
+                            : rescheduleLessonId === lesson.id
+                              ? t("studentSchedule.reschedule.close")
+                              : t("studentSchedule.reschedule.button")}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={styles.cancelButton}
+                          onClick={() => handleCancelLesson(lesson)}
+                          disabled={
+                            cancellingLessonId === lesson.id ||
+                            pendingCancellationLessonIds.has(lesson.id) ||
+                            pendingRescheduleLessonIds.has(lesson.id)
+                          }
+                        >
+                          {cancellingLessonId === lesson.id
+                            ? t("studentSchedule.cancel.cancelling")
+                            : pendingCancellationLessonIds.has(lesson.id)
+                              ? t("studentSchedule.cancel.pending")
+                              : t("studentSchedule.cancel.button")}
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
+
+                {rescheduleLessonId === lesson.id && (
+                  <form
+                    className={styles.requestForm}
+                    onSubmit={(event) => handleCreateRescheduleRequest(event, lesson)}
+                  >
+                    <div className={styles.rescheduleCurrent}>
+                      <span>{t("studentSchedule.reschedule.currentLesson")}</span>
+                      <strong>
+                        {formatDate(lesson.starts_at)} · {formatTime(lesson.starts_at)}
+                      </strong>
+                    </div>
+
+                    <label className={`${styles.formField} ${styles.dateField}`}>
+                      <span>{t("studentSchedule.reschedule.date")}</span>
+                      <input
+                        type="date"
+                        value={rescheduleDate}
+                        min={getTodayValue()}
+                        onChange={(event) =>
+                          handleRescheduleDateChange(lesson.id, event)
+                        }
+                      />
+                    </label>
+
+                    <div className={styles.formField}>
+                      <span>{t("studentSchedule.reschedule.availableTime")}</span>
+                      {rescheduleAvailabilityLoading ? (
+                        <p className={styles.helperText}>
+                          {t("studentSchedule.reschedule.loadingAvailability")}
+                        </p>
+                      ) : rescheduleAvailability.length === 0 ? (
+                        <p className={styles.helperText}>
+                          {t("studentSchedule.reschedule.noAvailability")}
+                        </p>
+                      ) : (
+                        <div className={styles.slotGrid}>
+                          {rescheduleAvailability.map((slot) => (
+                            <button
+                              key={slot.starts_at}
+                              type="button"
+                              className={`${styles.slotButton} ${
+                                rescheduleSelectedSlot === slot.starts_at
+                                  ? styles.slotButtonSelected
+                                  : ""
+                              }`}
+                              onClick={() =>
+                                setRescheduleSelectedSlot(slot.starts_at)
+                              }
+                            >
+                              {formatTime(slot.starts_at)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <label className={styles.formField}>
+                      <span>{t("studentSchedule.reschedule.message")}</span>
+                      <textarea
+                        rows="3"
+                        value={rescheduleMessage}
+                        onChange={(event) => setRescheduleMessage(event.target.value)}
+                        placeholder={t("studentSchedule.reschedule.messagePlaceholder")}
+                      />
+                    </label>
+
+                    {rescheduleError && (
+                      <div className={styles.error}>{rescheduleError}</div>
+                    )}
+
+                    <button
+                      type="submit"
+                      className={styles.submitRequestButton}
+                      disabled={!rescheduleSelectedSlot || rescheduleSubmitting}
+                    >
+                      {rescheduleSubmitting
+                        ? t("studentSchedule.reschedule.submitting")
+                        : t("studentSchedule.reschedule.submit")}
+                    </button>
+                  </form>
+                )}
               </article>
             ))}
           </div>
@@ -703,6 +1025,10 @@ const getCancelLessonError = (error, t) => {
 
   if (message.includes("CANCELLATION_REQUEST_ALREADY_PENDING")) {
     return t("studentSchedule.cancel.errors.alreadyPending");
+  }
+
+  if (message.includes("RESCHEDULE_REQUEST_PENDING")) {
+    return t("studentSchedule.cancel.errors.reschedulePending");
   }
 
   if (message.includes("LESSON_NOT_SCHEDULED")) {
@@ -762,6 +1088,57 @@ const getCancelExtraLessonRequestError = (error, t) => {
   }
 
   return t("studentSchedule.extraLesson.cancel.errors.generic");
+};
+
+const getLessonReschedulePreviewError = (reason, noticeHours, t) => {
+  if (reason === "RESCHEDULE_WINDOW_CLOSED") {
+    return t("studentSchedule.reschedule.errors.windowClosed", {
+      hours: noticeHours ?? 6,
+    });
+  }
+  if (reason === "CANCELLATION_REQUEST_PENDING") {
+    return t("studentSchedule.reschedule.errors.cancellationPending");
+  }
+  if (reason === "RESCHEDULE_REQUEST_PENDING") {
+    return t("studentSchedule.reschedule.errors.alreadyPending");
+  }
+  if (reason === "LESSON_ALREADY_STARTED") {
+    return t("studentSchedule.reschedule.errors.started");
+  }
+  if (reason === "LESSON_NOT_SCHEDULED") {
+    return t("studentSchedule.reschedule.errors.notScheduled");
+  }
+  return t("studentSchedule.reschedule.errors.generic");
+};
+
+const getLessonRescheduleError = (error, t) => {
+  const message = error?.message ?? "";
+
+  if (message.includes("RESCHEDULE_WINDOW_CLOSED")) {
+    return t("studentSchedule.reschedule.errors.windowClosedGeneric");
+  }
+  if (message.includes("CANCELLATION_REQUEST_PENDING")) {
+    return t("studentSchedule.reschedule.errors.cancellationPending");
+  }
+  if (message.includes("RESCHEDULE_REQUEST_PENDING")) {
+    return t("studentSchedule.reschedule.errors.alreadyPending");
+  }
+  if (message.includes("RESCHEDULE_TARGET_UNAVAILABLE")) {
+    return t("studentSchedule.reschedule.errors.targetUnavailable");
+  }
+  if (message.includes("LESSON_ALREADY_STARTED")) {
+    return t("studentSchedule.reschedule.errors.started");
+  }
+  if (message.includes("LESSON_NOT_SCHEDULED")) {
+    return t("studentSchedule.reschedule.errors.notScheduled");
+  }
+  if (message.includes("LESSON_NOT_FOUND")) {
+    return t("studentSchedule.reschedule.errors.notFound");
+  }
+  if (message.includes("REQUEST_ALREADY_RESOLVED")) {
+    return t("studentSchedule.reschedule.errors.alreadyResolved");
+  }
+  return t("studentSchedule.reschedule.errors.generic");
 };
 
 export default StudentSchedule;

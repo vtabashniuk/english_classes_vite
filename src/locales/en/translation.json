@@ -103,7 +103,8 @@
         "notFound": "Lesson not found.",
         "generic": "Could not send the cancellation request.",
         "alreadyPending": "A cancellation request for this lesson is already awaiting the teacher’s decision.",
-        "notScheduled": "Cancellation can only be requested for a scheduled lesson."
+        "notScheduled": "Cancellation can only be requested for a scheduled lesson.",
+        "reschedulePending": "Cancel the reschedule request or wait for it to be resolved first."
       },
       "pending": "Cancellation requested",
       "leadTime": "{{hours}} h {{minutes}} min",
@@ -156,6 +157,44 @@
           "notPending": "This request is no longer pending.",
           "generic": "Could not cancel the request."
         }
+      }
+    },
+    "reschedule": {
+      "button": "Request reschedule",
+      "close": "Close",
+      "pending": "Pending",
+      "currentLesson": "Current lesson",
+      "date": "New date",
+      "availableTime": "Available time",
+      "loadingAvailability": "Loading available times...",
+      "noAvailability": "No available times on this date.",
+      "message": "Comment",
+      "messagePlaceholder": "Optionally add a note for your teacher",
+      "submit": "Send request",
+      "submitting": "Sending...",
+      "success": "Reschedule request sent to your teacher.",
+      "pendingTitle": "Reschedule requests",
+      "pendingDescription": "Requests waiting for your teacher’s decision.",
+      "from": "Current",
+      "to": "Requested",
+      "cancel": {
+        "button": "Cancel request",
+        "cancelling": "Cancelling...",
+        "confirm": "Cancel this reschedule request?",
+        "success": "Reschedule request cancelled."
+      },
+      "errors": {
+        "selectSlot": "Choose a new lesson time.",
+        "windowClosed": "Rescheduling is available no later than {{hours}} hours before the lesson. Use cancellation if needed.",
+        "windowClosedGeneric": "The reschedule request window has closed. Use cancellation if needed.",
+        "cancellationPending": "Wait for the cancellation request to be resolved first.",
+        "alreadyPending": "This lesson already has a pending reschedule request.",
+        "targetUnavailable": "The selected time is no longer available. Choose another slot.",
+        "started": "The lesson has already started and cannot be rescheduled.",
+        "notScheduled": "Only a scheduled lesson can be rescheduled.",
+        "notFound": "Lesson not found.",
+        "alreadyResolved": "This request has already been resolved.",
+        "generic": "Could not process the reschedule request."
       }
     }
   },
@@ -483,7 +522,7 @@
     "lessonEdit": {
       "button": "Edit lesson",
       "title": "Edit lesson",
-      "hint": "Change the date, time, or Zoom link. This lesson keeps its original price snapshot.",
+      "hint": "Change the date, time, or Zoom link. When rescheduled, this lesson keeps its original price.",
       "save": "Save changes",
       "saving": "Saving...",
       "cancel": "Cancel editing",
@@ -494,8 +533,13 @@
         "notScheduled": "Only a scheduled lesson can be edited.",
         "past": "A lesson that has already started cannot be edited.",
         "recurring": "Use series editing for a recurring lesson.",
-        "cancellationPending": "Resolve the student cancellation request for this lesson first."
-      }
+        "cancellationPending": "Resolve the student cancellation request for this lesson first.",
+        "reschedulePending": "Resolve the student reschedule request for this lesson first."
+      },
+      "hintKeepOriginal": "Change the date, time, or Zoom link. When rescheduled, this lesson keeps its original price.",
+      "hintTargetDateTariff": "Change the date, time, or Zoom link. When rescheduled, the price is recalculated using the tariff effective on the new date.",
+      "recurringOccurrenceButton": "Reschedule this lesson only",
+      "recurringOccurrenceTitle": "Reschedule this series lesson only"
     },
     "weeklyAvailability": "Individual hours by weekday",
     "selectScheduleItemHint": "Select a lesson or blocked time range in the calendar.",
@@ -1027,7 +1071,12 @@
     },
     "lessonRescheduled": {
       "title": "Lesson rescheduled",
-      "body": "The teacher moved your lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}}."
+      "body": "The teacher moved your lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}}. {{priceInfo}}"
+    },
+    "reschedulePrice": {
+      "unchanged": "Lesson price: {{amount}} (unchanged).",
+      "changed": "Lesson price: {{oldAmount}} → {{amount}}.",
+      "notSet": "Lesson price is not set."
     },
     "lessonStatusChanged": {
       "missed": {
@@ -1110,6 +1159,22 @@
       "teacherLateBody": "The late cancellation request for the lesson on {{date}} at {{time}} automatically cancelled the lesson. In Requests, decide whether to charge {{amount}} or make an exception.",
       "studentLateTitle": "Lesson cancelled",
       "studentLateBody": "Your lesson on {{date}} at {{time}} was cancelled based on your late request. The teacher will confirm separately whether {{amount}} will be charged."
+    },
+    "lessonRescheduleRequest": {
+      "title": "Lesson reschedule request",
+      "body": "{{studentName}} wants to move the lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}}. Review the request on the Requests page."
+    },
+    "lessonRescheduleRequestApproved": {
+      "title": "Reschedule approved",
+      "body": "Your request to move the lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}} was approved. {{priceInfo}}"
+    },
+    "lessonRescheduleRequestRejected": {
+      "title": "Reschedule not approved",
+      "body": "The teacher rejected your request to move the lesson from {{oldDate}} at {{oldTime}} to {{date}} at {{time}}."
+    },
+    "lessonRescheduleRequestExpired": {
+      "title": "Reschedule request closed",
+      "body": "The request to move the lesson from {{oldDate}} at {{oldTime}} was closed because the requested time passed, the lesson started, or its schedule changed. The lesson was not moved by this request."
     }
   },
   "teacherRequests": {
@@ -1118,7 +1183,7 @@
     "timezone": "Schedule time",
     "loading": "Loading requests...",
     "emptyTitle": "No new requests",
-    "emptyDescription": "Extra-lesson and cancellation requests from students will appear here.",
+    "emptyDescription": "Student requests for extra lessons, rescheduling, and cancellation will appear here.",
     "student": "Student",
     "unknownStudent": "Unknown student",
     "date": "Date",
@@ -1183,6 +1248,22 @@
       "paymentDecisionPending": "The lesson has already been cancelled automatically. Choose the financial decision: charge the lesson or waive the charge as an exception.",
       "chargeAfterAutoCancellation": "Charge lesson",
       "waiveAfterAutoCancellation": "Waive charge"
+    },
+    "reschedule": {
+      "sectionTitle": "Reschedule requests",
+      "sectionDescription": "Students are asking to move existing scheduled lessons.",
+      "current": "Current time",
+      "requested": "Requested time",
+      "approve": "Approve reschedule",
+      "approveConfirm": "Move {{student}}’s lesson from {{oldDate}} {{oldTime}} to {{date}} {{time}}?",
+      "approveSuccess": "Lesson rescheduled.",
+      "rejectSuccess": "Reschedule request rejected.",
+      "errors": {
+        "stale": "This request is stale because the lesson time has already changed.",
+        "targetUnavailable": "The requested time is no longer available.",
+        "started": "The lesson has already started and cannot be rescheduled.",
+        "cancellationPending": "This lesson has a pending cancellation request."
+      }
     }
   },
   "teacherMaterials": {

@@ -5,8 +5,10 @@ import { getTimezone } from "../../constants/timezones";
 import { useAuth } from "../../context/useAuth";
 import {
   approveLessonRequest,
+  approveLessonRescheduleRequest,
   listPendingTeacherLessonRequests,
   rejectLessonRequest,
+  rejectLessonRescheduleRequest,
 } from "../../features/lessonRequests/api/lessonRequestsApi";
 import {
   listPendingTeacherLessonCancellationRequests,
@@ -114,8 +116,21 @@ const TeacherRequests = () => {
     ? t(timezoneConfig.labelKey)
     : scheduleTimezone;
 
-  const pendingRequests = useMemo(
-    () => requests.filter((request) => request.status === "pending"),
+  const pendingExtraRequests = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status === "pending" && request.request_type === "extra_lesson",
+      ),
+    [requests],
+  );
+
+  const pendingRescheduleRequests = useMemo(
+    () =>
+      requests.filter(
+        (request) =>
+          request.status === "pending" && request.request_type === "reschedule",
+      ),
     [requests],
   );
 
@@ -265,6 +280,22 @@ const TeacherRequests = () => {
       return t("teacherRequests.errors.timePassed");
     }
 
+    if (message.includes("RESCHEDULE_REQUEST_STALE")) {
+      return t("teacherRequests.reschedule.errors.stale");
+    }
+
+    if (message.includes("RESCHEDULE_TARGET_UNAVAILABLE")) {
+      return t("teacherRequests.reschedule.errors.targetUnavailable");
+    }
+
+    if (message.includes("LESSON_ALREADY_STARTED")) {
+      return t("teacherRequests.reschedule.errors.started");
+    }
+
+    if (message.includes("CANCELLATION_REQUEST_PENDING")) {
+      return t("teacherRequests.reschedule.errors.cancellationPending");
+    }
+
     if (
       message.includes("NON_WORKING_DAY") ||
       message.includes("OUTSIDE_WORKING_HOURS") ||
@@ -309,17 +340,24 @@ const TeacherRequests = () => {
   };
 
   const handleApprove = async (request) => {
+    const isReschedule = request.request_type === "reschedule";
     const confirmed = window.confirm(
-      t("teacherRequests.approveConfirm", {
-        student: getStudentName(request),
-        date: formatDate(request.requested_starts_at),
-        time: formatTime(request.requested_starts_at),
-      }),
+      isReschedule
+        ? t("teacherRequests.reschedule.approveConfirm", {
+            student: getStudentName(request),
+            oldDate: formatDate(request.original_starts_at),
+            oldTime: formatTime(request.original_starts_at),
+            date: formatDate(request.requested_starts_at),
+            time: formatTime(request.requested_starts_at),
+          })
+        : t("teacherRequests.approveConfirm", {
+            student: getStudentName(request),
+            date: formatDate(request.requested_starts_at),
+            time: formatTime(request.requested_starts_at),
+          }),
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     try {
       setProcessingId(request.id);
@@ -328,15 +366,22 @@ const TeacherRequests = () => {
       setRejectingId(null);
       setRejectionComment("");
 
-      const { error } = await approveLessonRequest(request.id);
+      const { error } = isReschedule
+        ? await approveLessonRescheduleRequest(request.id)
+        : await approveLessonRequest(request.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      setSuccessMessage(t("teacherRequests.approveSuccess"));
+      setSuccessMessage(
+        t(
+          isReschedule
+            ? "teacherRequests.reschedule.approveSuccess"
+            : "teacherRequests.approveSuccess",
+        ),
+      );
       await loadRequests();
       window.dispatchEvent(new Event("lesson-requests-changed"));
+      window.dispatchEvent(new Event("notifications-changed"));
     } catch (error) {
       console.error("Approve lesson request error:", error);
       setErrorMessage(getRequestError(error));
@@ -363,7 +408,12 @@ const TeacherRequests = () => {
       setErrorMessage("");
       setSuccessMessage("");
 
-      const { error } = await rejectLessonRequest({
+      const rejectAction =
+        request.request_type === "reschedule"
+          ? rejectLessonRescheduleRequest
+          : rejectLessonRequest;
+
+      const { error } = await rejectAction({
         requestId: request.id,
         comment: rejectionComment.trim() || null,
       });
@@ -372,7 +422,13 @@ const TeacherRequests = () => {
         throw error;
       }
 
-      setSuccessMessage(t("teacherRequests.rejectSuccess"));
+      setSuccessMessage(
+        t(
+          request.request_type === "reschedule"
+            ? "teacherRequests.reschedule.rejectSuccess"
+            : "teacherRequests.rejectSuccess",
+        ),
+      );
       closeRejectForm();
       await loadRequests();
       window.dispatchEvent(new Event("lesson-requests-changed"));
@@ -441,7 +497,9 @@ const TeacherRequests = () => {
   }
 
   const hasAnyRequests =
-    pendingRequests.length > 0 || pendingCancellationRequests.length > 0;
+    pendingExtraRequests.length > 0 ||
+    pendingRescheduleRequests.length > 0 ||
+    pendingCancellationRequests.length > 0;
 
   return (
     <section className={styles.page}>
@@ -741,18 +799,147 @@ const TeacherRequests = () => {
         </section>
       )}
 
-      {pendingRequests.length > 0 && (
+      {pendingRescheduleRequests.length > 0 && (
+        <section className={styles.requestSection}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2>{t("teacherRequests.reschedule.sectionTitle")}</h2>
+              <p>{t("teacherRequests.reschedule.sectionDescription")}</p>
+            </div>
+            <span className={styles.sectionCount}>
+              {pendingRescheduleRequests.length}
+            </span>
+          </div>
+
+          <div className={styles.list}>
+            {pendingRescheduleRequests.map((request) => {
+              const isProcessing = processingId === request.id;
+              const isRejecting = rejectingId === request.id;
+
+              return (
+                <article key={request.id} className={styles.card}>
+                  <div className={styles.cardMain}>
+                    <div className={styles.studentRow}>
+                      <div>
+                        <span className={styles.eyebrow}>
+                          {t("teacherRequests.student")}
+                        </span>
+                        <h2>{getStudentName(request)}</h2>
+                      </div>
+                      <span className={styles.status}>
+                        {t("teacherRequests.pending")}
+                      </span>
+                    </div>
+
+                    <div className={styles.lessonMeta}>
+                      <div>
+                        <span>{t("teacherRequests.reschedule.current")}</span>
+                        <strong>{formatDate(request.original_starts_at)}</strong>
+                        <small>{formatTime(request.original_starts_at)}</small>
+                      </div>
+                      <div>
+                        <span>{t("teacherRequests.reschedule.requested")}</span>
+                        <strong>{formatDate(request.requested_starts_at)}</strong>
+                        <small>{formatTime(request.requested_starts_at)}</small>
+                      </div>
+                      <div>
+                        <span>{t("teacherRequests.duration")}</span>
+                        <strong>
+                          {t("teacherRequests.minutes", {
+                            count: request.duration_minutes,
+                          })}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {request.message && (
+                      <div className={styles.studentComment}>
+                        <span>{t("teacherRequests.studentComment")}</span>
+                        <p>{request.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {!isRejecting ? (
+                    <div className={styles.actions}>
+                      <button
+                        type="button"
+                        className={styles.approveButton}
+                        onClick={() => handleApprove(request)}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing
+                          ? t("teacherRequests.processing")
+                          : t("teacherRequests.reschedule.approve")}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.rejectButton}
+                        onClick={() => openRejectForm(request.id)}
+                        disabled={isProcessing}
+                      >
+                        {t("teacherRequests.reject")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.rejectPanel}>
+                      <label className={styles.commentField}>
+                        <span>{t("teacherRequests.rejectionComment")}</span>
+                        <textarea
+                          value={rejectionComment}
+                          onChange={(event) =>
+                            setRejectionComment(event.target.value.slice(0, 500))
+                          }
+                          maxLength={500}
+                          rows={3}
+                          placeholder={t("teacherRequests.rejectionCommentPlaceholder")}
+                          disabled={isProcessing}
+                        />
+                      </label>
+                      <div className={styles.commentCounter}>
+                        {rejectionComment.length}/500
+                      </div>
+                      <div className={styles.actions}>
+                        <button
+                          type="button"
+                          className={styles.rejectConfirmButton}
+                          onClick={() => handleReject(request)}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing
+                            ? t("teacherRequests.processing")
+                            : t("teacherRequests.rejectConfirm")}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.cancelButton}
+                          onClick={closeRejectForm}
+                          disabled={isProcessing}
+                        >
+                          {t("teacherRequests.cancel")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {pendingExtraRequests.length > 0 && (
         <section className={styles.requestSection}>
           <div className={styles.sectionHeading}>
             <div>
               <h2>{t("teacherRequests.extraLessonSectionTitle")}</h2>
               <p>{t("teacherRequests.extraLessonSectionDescription")}</p>
             </div>
-            <span className={styles.sectionCount}>{pendingRequests.length}</span>
+            <span className={styles.sectionCount}>{pendingExtraRequests.length}</span>
           </div>
 
           <div className={styles.list}>
-            {pendingRequests.map((request) => {
+            {pendingExtraRequests.map((request) => {
               const isProcessing = processingId === request.id;
               const isRejecting = rejectingId === request.id;
 

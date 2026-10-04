@@ -141,12 +141,55 @@ const Notifications = () => {
   const getBody = (notification) => {
     const startsAt = notification.data?.startsAt;
     const oldStartsAt = notification.data?.oldStartsAt;
-    const priceAmountMinor = Number(notification.data?.priceAmountMinor);
+    const rawPriceAmountMinor = notification.data?.priceAmountMinor;
+    const priceAmountMinor = Number(rawPriceAmountMinor);
     const priceCurrency = notification.data?.priceCurrency;
     const amount =
-      Number.isFinite(priceAmountMinor) && priceCurrency
+      rawPriceAmountMinor !== null &&
+      rawPriceAmountMinor !== undefined &&
+      Number.isFinite(priceAmountMinor) &&
+      priceCurrency
         ? formatFinanceMoney(priceAmountMinor, priceCurrency, language)
         : "—";
+
+    const rawOldPriceAmountMinor = notification.data?.oldPriceAmountMinor;
+    const oldPriceAmountMinor = Number(rawOldPriceAmountMinor);
+    const oldPriceCurrency = notification.data?.oldPriceCurrency;
+    const oldAmount =
+      rawOldPriceAmountMinor !== null &&
+      rawOldPriceAmountMinor !== undefined &&
+      Number.isFinite(oldPriceAmountMinor) &&
+      oldPriceCurrency
+        ? formatFinanceMoney(oldPriceAmountMinor, oldPriceCurrency, language)
+        : "—";
+
+    const hasCurrentPrice = amount !== "—";
+    const hasOldPrice = oldAmount !== "—";
+    const priceUnchanged =
+      hasCurrentPrice &&
+      hasOldPrice &&
+      priceAmountMinor === oldPriceAmountMinor &&
+      priceCurrency === oldPriceCurrency;
+
+    const hasReschedulePriceSnapshot =
+      Object.prototype.hasOwnProperty.call(
+        notification.data ?? {},
+        "oldPriceAmountMinor",
+      ) ||
+      Object.prototype.hasOwnProperty.call(
+        notification.data ?? {},
+        "priceAmountMinor",
+      );
+
+    let reschedulePriceInfo = "";
+
+    if (hasReschedulePriceSnapshot && (hasCurrentPrice || hasOldPrice)) {
+      reschedulePriceInfo = priceUnchanged
+        ? t("notifications.reschedulePrice.unchanged", { amount })
+        : t("notifications.reschedulePrice.changed", { oldAmount, amount });
+    } else if (hasReschedulePriceSnapshot) {
+      reschedulePriceInfo = t("notifications.reschedulePrice.notSet");
+    }
 
     return t(notification.body_key, {
       studentName: notification.data?.studentName || t("notifications.student"),
@@ -161,6 +204,7 @@ const Notifications = () => {
       rateCurrency: notification.data?.newCurrency || "—",
       effectiveDate: formatCalendarDate(notification.data?.effectiveFrom),
       amount,
+      priceInfo: reschedulePriceInfo,
       waiverReason: notification.data?.waiverReason || "—",
       graceHours: notification.data?.graceHours ?? 18,
     });

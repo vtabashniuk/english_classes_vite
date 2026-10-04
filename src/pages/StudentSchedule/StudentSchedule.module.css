@@ -642,3 +642,57 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.rescheduleButton {
+  min-height: 40px;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-primary-blue);
+  border-radius: var(--border-radius);
+  color: var(--color-primary-blue);
+  background: rgba(var(--color-primary-blue-rgb), 0.08);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.rescheduleButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.rescheduleButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rescheduleCurrent {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.rescheduleCurrent span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.rescheduleCurrent strong,
+.rescheduleTarget {
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 700px) {
+  .rescheduleButton {
+    width: 100%;
+  }
+
+  .rescheduleCurrent {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
