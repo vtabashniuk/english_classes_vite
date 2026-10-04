@@ -496,7 +496,8 @@
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
 
   min-height: 46px;
@@ -517,7 +518,8 @@
 }
 
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   border-color: var(--color-primary-blue);
 
   outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.12);
@@ -685,6 +687,36 @@
   display: grid;
   gap: 0.75rem;
   padding-top: 0.2rem;
+}
+
+.lessonNoteEditor {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.lessonNoteEditor textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.lessonNoteMeta {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.mutedText {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
 }
 
 .inlineActions {

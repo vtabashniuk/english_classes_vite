@@ -5,9 +5,11 @@ import { useTranslation } from "react-i18next";
 import {
   cancelLesson,
   createLesson,
+  getLessonTeacherNote,
   listTeacherLessonsForRange,
   setLessonOutcome,
   updateLessonSchedule,
+  updateLessonTeacherNote,
   updateLessonZoom,
 } from "../../features/lessons/api/lessonsApi";
 import {
@@ -82,6 +84,7 @@ import {
 } from "../../constants/schedule";
 
 import Button from "../../components/common/ui/Button/Button";
+import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherSchedule.module.css";
 
@@ -324,6 +327,7 @@ const getBlockEndSlotsForDate = (settings, dateValue, startTime) => {
 
 const TeacherSchedule = () => {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
 
   const [students, setStudents] = useState([]);
 
@@ -450,6 +454,16 @@ const TeacherSchedule = () => {
 
   const [savingZoom, setSavingZoom] = useState(false);
 
+  const [lessonTeacherNote, setLessonTeacherNote] = useState("");
+
+  const [lessonTeacherNoteDraft, setLessonTeacherNoteDraft] = useState("");
+
+  const [lessonTeacherNoteLoading, setLessonTeacherNoteLoading] = useState(false);
+
+  const [lessonTeacherNoteSaving, setLessonTeacherNoteSaving] = useState(false);
+
+  const [lessonTeacherNoteError, setLessonTeacherNoteError] = useState("");
+
   const [updatingOutcome, setUpdatingOutcome] = useState(false);
 
   const [pageErrorMessage, setPageErrorMessage] = useState("");
@@ -503,6 +517,46 @@ const TeacherSchedule = () => {
 
     return () => window.clearTimeout(timeoutId);
   }, [detailErrorMessage, detailSuccessMessage]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLessonTeacherNote = async () => {
+      if (!selectedLesson?.id) {
+        setLessonTeacherNote("");
+        setLessonTeacherNoteDraft("");
+        setLessonTeacherNoteError("");
+        setLessonTeacherNoteLoading(false);
+        return;
+      }
+
+      try {
+        setLessonTeacherNoteLoading(true);
+        setLessonTeacherNoteError("");
+
+        const { data, error } = await getLessonTeacherNote(selectedLesson.id);
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        const note = data?.teacher_note ?? "";
+        setLessonTeacherNote(note);
+        setLessonTeacherNoteDraft(note);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Lesson teacher note load error:", error);
+        setLessonTeacherNoteError(t("teacherSchedule.lessonNote.errors.load"));
+      } finally {
+        if (!cancelled) setLessonTeacherNoteLoading(false);
+      }
+    };
+
+    loadLessonTeacherNote();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLesson?.id, t]);
 
   const locale = getIntlLocale(i18n.language);
 
@@ -996,6 +1050,10 @@ const TeacherSchedule = () => {
     setSelectedBlock(null);
     setEditingBlock(false);
     setLessonZoomDraft(lesson.zoom_url || "");
+    setLessonTeacherNote("");
+    setLessonTeacherNoteDraft("");
+    setLessonTeacherNoteError("");
+    setLessonTeacherNoteSuccess("");
     setEditingZoom(false);
     setEditingLesson(false);
     setEditingRecurringSeries(false);
@@ -1654,6 +1712,32 @@ const TeacherSchedule = () => {
       setDetailErrorMessage(getUpdateLessonZoomError(error, t));
     } finally {
       setSavingZoom(false);
+    }
+  };
+
+  const handleSaveLessonTeacherNote = async () => {
+    if (!selectedLesson) return;
+
+    try {
+      setLessonTeacherNoteSaving(true);
+      setLessonTeacherNoteError("");
+
+      const { data, error } = await updateLessonTeacherNote({
+        lessonId: selectedLesson.id,
+        teacherNote: lessonTeacherNoteDraft,
+      });
+
+      if (error) throw error;
+
+      const savedNote = data?.teacher_note ?? "";
+      setLessonTeacherNote(savedNote);
+      setLessonTeacherNoteDraft(savedNote);
+      toast.success(t("teacherSchedule.lessonNote.saved"));
+    } catch (error) {
+      console.error("Update lesson teacher note error:", error);
+      toast.error(t("teacherSchedule.lessonNote.errors.save"));
+    } finally {
+      setLessonTeacherNoteSaving(false);
     }
   };
 
@@ -3530,6 +3614,55 @@ const TeacherSchedule = () => {
                   )}
                 </div>
               )}
+
+              <div className={styles.lessonNoteEditor}>
+                <label className={styles.field}>
+                  <span>{t("teacherSchedule.lessonNote.label")}</span>
+                  <textarea
+                    rows="5"
+                    maxLength={5000}
+                    value={lessonTeacherNoteDraft}
+                    onChange={(event) => {
+                      setLessonTeacherNoteDraft(event.target.value);
+                      setLessonTeacherNoteError("");
+                    }}
+                    placeholder={t("teacherSchedule.lessonNote.placeholder")}
+                    disabled={
+                      lessonTeacherNoteLoading || lessonTeacherNoteSaving
+                    }
+                  />
+                </label>
+
+                <div className={styles.lessonNoteMeta}>
+                  <span>{lessonTeacherNoteDraft.length} / 5000</span>
+                  <span>{t("teacherSchedule.lessonNote.privateHint")}</span>
+                </div>
+
+                {lessonTeacherNoteLoading && (
+                  <p className={styles.mutedText}>
+                    {t("teacherSchedule.lessonNote.loading")}
+                  </p>
+                )}
+                {lessonTeacherNoteError && (
+                  <p className={styles.error}>{lessonTeacherNoteError}</p>
+                )}
+
+                <div className={styles.inlineActions}>
+                  <Button
+                    variant="secondary"
+                    onClick={handleSaveLessonTeacherNote}
+                    disabled={
+                      lessonTeacherNoteLoading ||
+                      lessonTeacherNoteSaving ||
+                      lessonTeacherNoteDraft === lessonTeacherNote
+                    }
+                  >
+                    {lessonTeacherNoteSaving
+                      ? t("teacherSchedule.lessonNote.saving")
+                      : t("teacherSchedule.lessonNote.save")}
+                  </Button>
+                </div>
+              </div>
 
               <div className={styles.lessonActions}>
                 {isLessonStarted(selectedLesson) &&

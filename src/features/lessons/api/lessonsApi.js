@@ -170,3 +170,18 @@ export const updateLessonZoom = ({ lessonId, zoomUrl }) =>
     p_lesson_id: lessonId,
     p_zoom_url: zoomUrl,
   });
+
+export const getLessonTeacherNote = (lessonId) =>
+  supabase
+    .rpc("get_my_lesson_teacher_note", {
+      p_lesson_id: lessonId,
+    })
+    .maybeSingle();
+
+export const updateLessonTeacherNote = ({ lessonId, teacherNote }) =>
+  supabase
+    .rpc("update_my_lesson_teacher_note", {
+      p_lesson_id: lessonId,
+      p_teacher_note: teacherNote,
+    })
+    .single();

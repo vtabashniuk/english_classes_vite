@@ -503,6 +503,19 @@
         "generic": "Could not update the Zoom link."
       }
     },
+    "lessonNote": {
+      "label": "Lesson notes (teacher only)",
+      "placeholder": "Add a private note for this lesson...",
+      "privateHint": "Only the teacher can see this note.",
+      "loading": "Loading note...",
+      "save": "Save note",
+      "saving": "Saving...",
+      "saved": "Lesson note saved.",
+      "errors": {
+        "load": "Could not load the lesson note.",
+        "save": "Could not save the lesson note."
+      }
+    },
     "outcome": {
       "completed": "Mark as completed",
       "missed": "Mark as missed",
@@ -813,12 +826,53 @@
     "balancePlaceholder": "Financial data is not connected yet",
     "recurringSchedule": "Recurring schedule",
     "recurringPlaceholder": "Recurring lessons have not been configured yet",
-    "upcomingLessons": "Upcoming lessons",
+    "upcomingLessons": "Next lesson",
     "upcomingPlaceholder": "No upcoming lessons scheduled",
     "assignments": "Assignments",
     "assignmentsPlaceholder": "No assignments yet",
     "privateNotes": "Private notes",
     "notesPlaceholder": "No teacher notes yet",
+    "schedule": {
+      "everyWeek": "Every week",
+      "everyTwoWeeks": "Every two weeks",
+      "everyNWeeks": "Every {{count}} weeks",
+      "from": "Effective from {{date}}",
+      "until": "Effective until {{date}}",
+      "openEnded": "No end date"
+    },
+    "lesson": {
+      "duration": "{{count}} min",
+      "zoomLabel": "Zoom",
+      "openZoom": "Open Zoom"
+    },
+    "lessonNote": {
+      "label": "Lesson notes (teacher only)",
+      "placeholder": "Add a private note for this lesson...",
+      "save": "Save lesson note",
+      "saving": "Saving...",
+      "saved": "Lesson note saved.",
+      "errors": {
+        "save": "Could not save the lesson note."
+      }
+    },
+    "assignment": {
+      "due": "Due: {{date}}",
+      "noDeadline": "No deadline"
+    },
+    "notes": {
+      "placeholder": "Add a private note about the student...",
+      "counter": "{{count}} / {{max}}",
+      "updated": "Updated: {{date}}",
+      "save": "Save note",
+      "saving": "Saving...",
+      "saved": "Private note saved.",
+      "errors": {
+        "save": "Could not save the private note."
+      }
+    },
+    "detailsErrors": {
+      "load": "Could not load the schedule, next lesson, assignments, or private notes."
+    },
     "errors": {
       "notFound": "Student not found.",
       "load": "Could not load student information."

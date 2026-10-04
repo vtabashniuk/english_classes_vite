@@ -21,23 +21,61 @@ import {
   FINANCE_CURRENCIES,
 } from "../../constants/finance";
 import { getStudentById } from "../../features/profiles/api/profilesApi";
+import {
+  getLessonTeacherNote,
+  updateLessonTeacherNote,
+} from "../../features/lessons/api/lessonsApi";
+import {
+  getTeacherStudentNextLesson,
+  getTeacherStudentPrivateNote,
+  listTeacherStudentAssignments,
+  listTeacherStudentRecurringLessons,
+  saveTeacherStudentPrivateNote,
+} from "../../features/students/api/studentDetailsApi";
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
+import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherStudentDetails.module.css";
 
 const DEFAULT_CURRENCY = "UAH";
 const MINOR_UNIT_FACTOR = 100;
+const PRIVATE_NOTE_MAX_LENGTH = 5000;
+const LESSON_NOTE_MAX_LENGTH = 5000;
+const WEEKDAY_KEYS = {
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+  7: "sunday",
+};
 
 const TeacherStudentDetails = () => {
   const { studentId } = useParams();
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const [student, setStudent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [detailsError, setDetailsError] = useState("");
+  const [recurringLessons, setRecurringLessons] = useState([]);
+  const [nextLesson, setNextLesson] = useState(null);
+  const [nextLessonNote, setNextLessonNote] = useState("");
+  const [nextLessonNoteDraft, setNextLessonNoteDraft] = useState("");
+  const [nextLessonNoteUpdatedAt, setNextLessonNoteUpdatedAt] = useState(null);
+  const [nextLessonNoteSaving, setNextLessonNoteSaving] = useState(false);
+  const [assignments, setAssignments] = useState([]);
+  const [privateNote, setPrivateNote] = useState("");
+  const [privateNoteUpdatedAt, setPrivateNoteUpdatedAt] = useState(null);
+  const [privateNoteDraft, setPrivateNoteDraft] = useState("");
+  const [privateNoteSaving, setPrivateNoteSaving] = useState(false);
 
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeError, setFinanceError] = useState("");
@@ -120,6 +158,69 @@ const TeacherStudentDetails = () => {
     };
 
     loadStudent();
+  }, [studentId, t]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadDetails = async () => {
+      try {
+        setDetailsLoading(true);
+        setDetailsError("");
+
+        const today = getLocalDateString();
+        const [recurringResult, nextLessonResult, assignmentsResult, noteResult] =
+          await Promise.all([
+            listTeacherStudentRecurringLessons({ studentId, today }),
+            getTeacherStudentNextLesson({
+              studentId,
+              fromIso: new Date().toISOString(),
+            }),
+            listTeacherStudentAssignments(studentId),
+            getTeacherStudentPrivateNote(studentId),
+          ]);
+
+        const firstError =
+          recurringResult.error ||
+          nextLessonResult.error ||
+          assignmentsResult.error ||
+          noteResult.error;
+
+        if (firstError) throw firstError;
+
+        const lessonNoteResult = nextLessonResult.data?.id
+          ? await getLessonTeacherNote(nextLessonResult.data.id)
+          : { data: null, error: null };
+
+        if (lessonNoteResult.error) throw lessonNoteResult.error;
+        if (cancelled) return;
+
+        const note = noteResult.data?.note ?? "";
+        const lessonNote = lessonNoteResult.data?.teacher_note ?? "";
+
+        setRecurringLessons(recurringResult.data ?? []);
+        setNextLesson(nextLessonResult.data ?? null);
+        setNextLessonNote(lessonNote);
+        setNextLessonNoteDraft(lessonNote);
+        setNextLessonNoteUpdatedAt(lessonNoteResult.data?.updated_at ?? null);
+        setAssignments(assignmentsResult.data ?? []);
+        setPrivateNote(note);
+        setPrivateNoteDraft(note);
+        setPrivateNoteUpdatedAt(noteResult.data?.updated_at ?? null);
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Student learning details load error:", error);
+        setDetailsError(t("teacherStudentDetails.detailsErrors.load"));
+      } finally {
+        if (!cancelled) setDetailsLoading(false);
+      }
+    };
+
+    loadDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [studentId, t]);
 
   useEffect(() => {
@@ -313,6 +414,31 @@ const TeacherStudentDetails = () => {
       hour: "2-digit",
       minute: "2-digit",
     }).format(new Date(dateString));
+
+  const formatDateOnly = (dateString) =>
+    new Intl.DateTimeFormat(intlLocale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(`${dateString}T12:00:00`));
+
+  const formatRecurringLesson = (lesson) => {
+    const weekdayKey = WEEKDAY_KEYS[Number(lesson.weekday)];
+    const weekday = weekdayKey
+      ? t(`teacherSchedule.recurring.weekdays.${weekdayKey}`)
+      : String(lesson.weekday);
+    const time = lesson.start_time?.slice(0, 5) ?? "—";
+    const repeat =
+      Number(lesson.interval_weeks) === 1
+        ? t("teacherStudentDetails.schedule.everyWeek")
+        : Number(lesson.interval_weeks) === 2
+          ? t("teacherStudentDetails.schedule.everyTwoWeeks")
+          : t("teacherStudentDetails.schedule.everyNWeeks", {
+              count: Number(lesson.interval_weeks),
+            });
+
+    return { weekday, time, repeat };
+  };
 
   const formatMoney = (amountMinor, currency) =>
     formatFinanceMoney(
@@ -717,6 +843,59 @@ const TeacherStudentDetails = () => {
       );
     } finally {
       setTaxRetryingPaymentId("");
+    }
+  };
+
+  const handleNextLessonNoteSave = async (event) => {
+    event.preventDefault();
+
+    if (!nextLesson) return;
+
+    try {
+      setNextLessonNoteSaving(true);
+
+      const { data, error } = await updateLessonTeacherNote({
+        lessonId: nextLesson.id,
+        teacherNote: nextLessonNoteDraft,
+      });
+
+      if (error) throw error;
+
+      const savedNote = data?.teacher_note ?? "";
+      setNextLessonNote(savedNote);
+      setNextLessonNoteDraft(savedNote);
+      setNextLessonNoteUpdatedAt(data?.updated_at ?? new Date().toISOString());
+      toast.success(t("teacherStudentDetails.lessonNote.saved"));
+    } catch (error) {
+      console.error("Next lesson teacher note save error:", error);
+      toast.error(t("teacherStudentDetails.lessonNote.errors.save"));
+    } finally {
+      setNextLessonNoteSaving(false);
+    }
+  };
+
+  const handlePrivateNoteSave = async (event) => {
+    event.preventDefault();
+    try {
+      setPrivateNoteSaving(true);
+
+      const { error } = await saveTeacherStudentPrivateNote({
+        studentId,
+        note: privateNoteDraft,
+      });
+
+      if (error) throw error;
+
+      const savedNote = privateNoteDraft.trim() ? privateNoteDraft : "";
+      setPrivateNote(savedNote);
+      setPrivateNoteDraft(savedNote);
+      setPrivateNoteUpdatedAt(savedNote ? new Date().toISOString() : null);
+      toast.success(t("teacherStudentDetails.notes.saved"));
+    } catch (error) {
+      console.error("Private note save error:", error);
+      toast.error(t("teacherStudentDetails.notes.errors.save"));
+    } finally {
+      setPrivateNoteSaving(false);
     }
   };
 
@@ -1720,36 +1899,230 @@ const TeacherStudentDetails = () => {
           <div className={styles.cardHeader}>
             <h2>{t("teacherStudentDetails.recurringSchedule")}</h2>
           </div>
-          <div className={styles.placeholder}>
-            <span>{t("teacherStudentDetails.recurringPlaceholder")}</span>
-          </div>
+
+          {detailsLoading ? (
+            <div className={styles.placeholder}>
+              <span>{t("common.loading")}</span>
+            </div>
+          ) : detailsError ? (
+            <p className={styles.error}>{detailsError}</p>
+          ) : recurringLessons.length === 0 ? (
+            <div className={styles.placeholder}>
+              <span>{t("teacherStudentDetails.recurringPlaceholder")}</span>
+            </div>
+          ) : (
+            <div className={styles.compactList}>
+              {recurringLessons.map((lesson) => {
+                const formatted = formatRecurringLesson(lesson);
+
+                return (
+                  <div key={lesson.id} className={styles.compactItem}>
+                    <div className={styles.compactItemTop}>
+                      <strong>{formatted.weekday}</strong>
+                      <span className={styles.timeBadge}>{formatted.time}</span>
+                    </div>
+                    <span>{formatted.repeat}</span>
+                    <small>
+                      {lesson.valid_from > today
+                        ? t("teacherStudentDetails.schedule.from", {
+                            date: formatDateOnly(lesson.valid_from),
+                          })
+                        : lesson.valid_until
+                          ? t("teacherStudentDetails.schedule.until", {
+                              date: formatDateOnly(lesson.valid_until),
+                            })
+                          : t("teacherStudentDetails.schedule.openEnded")}
+                    </small>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <h2>{t("teacherStudentDetails.upcomingLessons")}</h2>
           </div>
-          <div className={styles.placeholder}>
-            <span>{t("teacherStudentDetails.upcomingPlaceholder")}</span>
-          </div>
+
+          {detailsLoading ? (
+            <div className={styles.placeholder}>
+              <span>{t("common.loading")}</span>
+            </div>
+          ) : detailsError ? (
+            <p className={styles.error}>{detailsError}</p>
+          ) : !nextLesson ? (
+            <div className={styles.placeholder}>
+              <span>{t("teacherStudentDetails.upcomingPlaceholder")}</span>
+            </div>
+          ) : (
+            <div className={styles.nextLesson}>
+              <strong>{formatDateTime(nextLesson.starts_at)}</strong>
+              <span>
+                {t("teacherStudentDetails.lesson.duration", {
+                  count: nextLesson.duration_minutes,
+                })}
+              </span>
+
+              <div className={styles.lessonZoomRow}>
+                <span>{t("teacherStudentDetails.lesson.zoomLabel")}</span>
+                {nextLesson.zoom_url ? (
+                  <a
+                    href={nextLesson.zoom_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.inlineLink}
+                  >
+                    {t("teacherStudentDetails.lesson.openZoom")}
+                  </a>
+                ) : (
+                  <strong>—</strong>
+                )}
+              </div>
+
+              <form
+                className={styles.lessonNoteForm}
+                onSubmit={handleNextLessonNoteSave}
+              >
+                <label htmlFor="next-lesson-teacher-note">
+                  {t("teacherStudentDetails.lessonNote.label")}
+                </label>
+                <textarea
+                  id="next-lesson-teacher-note"
+                  rows="4"
+                  maxLength={LESSON_NOTE_MAX_LENGTH}
+                  value={nextLessonNoteDraft}
+                  onChange={(event) =>
+                    setNextLessonNoteDraft(event.target.value)
+                  }
+                  placeholder={t(
+                    "teacherStudentDetails.lessonNote.placeholder",
+                  )}
+                  disabled={nextLessonNoteSaving}
+                />
+
+                <div className={styles.notesMeta}>
+                  <span>
+                    {t("teacherStudentDetails.notes.counter", {
+                      count: nextLessonNoteDraft.length,
+                      max: LESSON_NOTE_MAX_LENGTH,
+                    })}
+                  </span>
+                  {nextLessonNoteUpdatedAt && nextLessonNote && (
+                    <span>
+                      {t("teacherStudentDetails.notes.updated", {
+                        date: formatDateTime(nextLessonNoteUpdatedAt),
+                      })}
+                    </span>
+                  )}
+                </div>
+
+                <div className={styles.notesActions}>
+                  <button
+                    type="submit"
+                    className={styles.primaryButton}
+                    disabled={
+                      nextLessonNoteSaving ||
+                      nextLessonNoteDraft === nextLessonNote
+                    }
+                  >
+                    {nextLessonNoteSaving
+                      ? t("teacherStudentDetails.lessonNote.saving")
+                      : t("teacherStudentDetails.lessonNote.save")}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </article>
 
         <article className={styles.card}>
           <div className={styles.cardHeader}>
             <h2>{t("teacherStudentDetails.assignments")}</h2>
           </div>
-          <div className={styles.placeholder}>
-            <span>{t("teacherStudentDetails.assignmentsPlaceholder")}</span>
-          </div>
+
+          {detailsLoading ? (
+            <div className={styles.placeholder}>
+              <span>{t("common.loading")}</span>
+            </div>
+          ) : detailsError ? (
+            <p className={styles.error}>{detailsError}</p>
+          ) : assignments.length === 0 ? (
+            <div className={styles.placeholder}>
+              <span>{t("teacherStudentDetails.assignmentsPlaceholder")}</span>
+            </div>
+          ) : (
+            <div className={styles.compactList}>
+              {assignments.map((assignment) => (
+                <div key={assignment.id} className={styles.compactItem}>
+                  <strong>{assignment.title}</strong>
+                  {assignment.description && <span>{assignment.description}</span>}
+                  <small>
+                    {assignment.due_date
+                      ? t("teacherStudentDetails.assignment.due", {
+                          date: formatDateOnly(assignment.due_date),
+                        })
+                      : t("teacherStudentDetails.assignment.noDeadline")}
+                  </small>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
 
         <article className={`${styles.card} ${styles.notesCard}`}>
           <div className={styles.cardHeader}>
             <h2>{t("teacherStudentDetails.privateNotes")}</h2>
           </div>
-          <div className={styles.placeholder}>
-            <span>{t("teacherStudentDetails.notesPlaceholder")}</span>
-          </div>
+
+          {detailsLoading ? (
+            <div className={styles.placeholder}>
+              <span>{t("common.loading")}</span>
+            </div>
+          ) : detailsError ? (
+            <p className={styles.error}>{detailsError}</p>
+          ) : (
+            <form className={styles.notesForm} onSubmit={handlePrivateNoteSave}>
+              <textarea
+                rows="6"
+                maxLength={PRIVATE_NOTE_MAX_LENGTH}
+                value={privateNoteDraft}
+                onChange={(event) => setPrivateNoteDraft(event.target.value)}
+                placeholder={t("teacherStudentDetails.notes.placeholder")}
+                disabled={privateNoteSaving}
+              />
+
+              <div className={styles.notesMeta}>
+                <span>
+                  {t("teacherStudentDetails.notes.counter", {
+                    count: privateNoteDraft.length,
+                    max: PRIVATE_NOTE_MAX_LENGTH,
+                  })}
+                </span>
+                {privateNoteUpdatedAt && privateNote && (
+                  <span>
+                    {t("teacherStudentDetails.notes.updated", {
+                      date: formatDateTime(privateNoteUpdatedAt),
+                    })}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.notesActions}>
+                <button
+                  type="submit"
+                  className={styles.primaryButton}
+                  disabled={
+                    privateNoteSaving || privateNoteDraft === privateNote
+                  }
+                >
+                  {privateNoteSaving
+                    ? t("teacherStudentDetails.notes.saving")
+                    : t("teacherStudentDetails.notes.save")}
+                </button>
+              </div>
+            </form>
+          )}
         </article>
       </div>
     </section>
