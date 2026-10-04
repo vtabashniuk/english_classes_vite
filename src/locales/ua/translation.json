@@ -1008,7 +1008,8 @@
           "reversal": "Сторно через перенесення до {{target}}",
           "replacement": "Перенесено від {{source}}"
         }
-      }
+      },
+      "lessonChargeRecordedAt": "Зафіксовано: {{date}}"
     }
   },
   "languageSwitcher": {

@@ -1008,7 +1008,8 @@
           "reversal": "Сторно из-за переноса ученику {{target}}",
           "replacement": "Перенесено от {{source}}"
         }
-      }
+      },
+      "lessonChargeRecordedAt": "Зафиксировано: {{date}}"
     }
   },
   "languageSwitcher": {

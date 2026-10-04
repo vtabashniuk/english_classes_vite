@@ -1303,6 +1303,15 @@ const TeacherStudentDetails = () => {
                                 </strong>
                                 <span>{formatDateTime(transaction.display_at ?? transaction.created_at)}</span>
 
+                                {transaction.transaction_type === "lesson_charge" &&
+                                  transaction.created_at && (
+                                    <small>
+                                      {t("teacherStudentDetails.finance.lessonChargeRecordedAt", {
+                                        date: formatDateTime(transaction.created_at),
+                                      })}
+                                    </small>
+                                  )}
+
                                 {transaction.paymentAccount && (
                                   <span>
                                     {transaction.paymentAccount.name} · {t(

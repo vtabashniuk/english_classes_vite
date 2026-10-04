@@ -71,6 +71,7 @@ export const getStudentFinanceTransactions = async (
     )
     .eq("student_id", studentId)
     .order("display_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .order("id", { ascending: false });
 
   if (dateFrom) transactionsQuery = transactionsQuery.gte("display_date", dateFrom);

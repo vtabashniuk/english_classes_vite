@@ -1008,7 +1008,8 @@
           "reversal": "Reversal for transfer to {{target}}",
           "replacement": "Transferred from {{source}}"
         }
-      }
+      },
+      "lessonChargeRecordedAt": "Recorded: {{date}}"
     }
   },
   "languageSwitcher": {
