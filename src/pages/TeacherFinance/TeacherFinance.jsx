@@ -19,6 +19,7 @@ import {
 } from "../../constants/finance";
 import { formatFinanceMoney, formatPercentValue } from "../../utils/formatFinanceMoney";
 import { sortFinanceOperationsNewestFirst } from "../../features/finance/lib/financeSort";
+import { buildFinanceReceiptSummary } from "../../features/finance/lib/financeSummary";
 
 import styles from "./TeacherFinance.module.css";
 
@@ -155,26 +156,15 @@ const TeacherFinance = () => {
     [currentParameters],
   );
 
-  const receiptTotals = useMemo(() => sumReceiptsByCurrency(receipts), [receipts]);
+  const receiptSummary = useMemo(
+    () => buildFinanceReceiptSummary(receipts),
+    [receipts],
+  );
+  const receiptTotals = receiptSummary.totalsByCurrency;
+  const periodNetIncome = receiptSummary.netIncomeUahMinor;
+  const profitabilityPending = receiptSummary.profitabilityPending;
   const paidStudentCount = useMemo(
     () => new Set(receipts.map((item) => item.student_id)).size,
-    [receipts],
-  );
-
-  const periodNetIncome = useMemo(
-    () =>
-      receipts.reduce(
-        (total, item) =>
-          item.profitability_status === "ready" && item.net_income_uah_minor != null
-            ? total + Number(item.net_income_uah_minor)
-            : total,
-        0,
-      ),
-    [receipts],
-  );
-
-  const profitabilityPending = useMemo(
-    () => receipts.some((item) => item.profitability_status !== "ready"),
     [receipts],
   );
 
@@ -833,11 +823,6 @@ const renderCurrencyTotals = (totals, language, css) => {
   ));
 };
 
-const sumReceiptsByCurrency = (rows) =>
-  rows.reduce((totals, row) => {
-    totals[row.currency] = Number(totals[row.currency] ?? 0) + Number(row.amount_minor ?? 0);
-    return totals;
-  }, {});
 
 const groupReceipts = (rows, mode, formatAccount) => {
   const groups = new Map();

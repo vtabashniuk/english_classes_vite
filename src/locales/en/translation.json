@@ -316,6 +316,34 @@
         "title": "Settings",
         "description": "Working hours, time zone, and lesson duration."
       }
+    },
+    "loading": "Loading overview…",
+    "loadError": "Could not load overview data.",
+    "openFinance": "Open finance",
+    "openSchedule": "Open schedule",
+    "finance": {
+      "title": "Finance",
+      "currentMonth": "Current month",
+      "income": "Income",
+      "netIncome": "Net income",
+      "netIncomePending": "Waiting for NBU exchange rate",
+      "noIncome": "No receipts yet this month.",
+      "totalIncomeUah": "Total in UAH",
+      "totalIncomePending": "Waiting for NBU exchange rate"
+    },
+    "debtors": {
+      "title": "Debtors",
+      "description": "Students with a negative balance.",
+      "unpaidLessons": "Unpaid lessons: {{count}}",
+      "empty": "No debtors."
+    },
+    "upcomingLessons": {
+      "title": "Upcoming lessons",
+      "description": "The next 3 days that have scheduled lessons.",
+      "lessonCount": "Lessons: {{count}}",
+      "unknownStudent": "Student",
+      "empty": "No upcoming scheduled lessons.",
+      "openStudent": "Student card"
     }
   },
   "teacherStudents": {
@@ -395,7 +423,9 @@
       "studentNotFound": "The student was not found or the account is inactive.",
       "create": "Could not create the lesson.",
       "nonWorkingDay": "This day is not part of the teacher’s working schedule.",
-      "scheduleBlockConflict": "This time is blocked in the teacher’s schedule."
+      "scheduleBlockConflict": "This time is blocked in the teacher’s schedule.",
+      "lessonNotFound": "The lesson was not found or is unavailable.",
+      "loadLesson": "Could not open the selected lesson."
     },
     "cancel": {
       "button": "Cancel lesson",
@@ -514,7 +544,8 @@
       "errors": {
         "load": "Could not load the lesson note.",
         "save": "Could not save the lesson note."
-      }
+      },
+      "updated": "Updated: {{date}}"
     },
     "outcome": {
       "completed": "Mark as completed",

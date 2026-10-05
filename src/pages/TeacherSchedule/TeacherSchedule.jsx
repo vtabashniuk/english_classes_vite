@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 
 import {
   cancelLesson,
   createLesson,
-  getLessonTeacherNote,
+  getTeacherLessonById,
   listTeacherLessonsForRange,
   setLessonOutcome,
   updateLessonSchedule,
-  updateLessonTeacherNote,
   updateLessonZoom,
 } from "../../features/lessons/api/lessonsApi";
 import {
@@ -84,7 +84,7 @@ import {
 } from "../../constants/schedule";
 
 import Button from "../../components/common/ui/Button/Button";
-import useToast from "../../shared/toast/useToast";
+import LessonDetails from "../../features/lessons/components/LessonDetails/LessonDetails";
 
 import styles from "./TeacherSchedule.module.css";
 
@@ -327,7 +327,8 @@ const getBlockEndSlotsForDate = (settings, dateValue, startTime) => {
 
 const TeacherSchedule = () => {
   const { t, i18n } = useTranslation();
-  const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedLessonId = searchParams.get("lessonId");
 
   const [students, setStudents] = useState([]);
 
@@ -454,16 +455,6 @@ const TeacherSchedule = () => {
 
   const [savingZoom, setSavingZoom] = useState(false);
 
-  const [lessonTeacherNote, setLessonTeacherNote] = useState("");
-
-  const [lessonTeacherNoteDraft, setLessonTeacherNoteDraft] = useState("");
-
-  const [lessonTeacherNoteLoading, setLessonTeacherNoteLoading] = useState(false);
-
-  const [lessonTeacherNoteSaving, setLessonTeacherNoteSaving] = useState(false);
-
-  const [lessonTeacherNoteError, setLessonTeacherNoteError] = useState("");
-
   const [updatingOutcome, setUpdatingOutcome] = useState(false);
 
   const [pageErrorMessage, setPageErrorMessage] = useState("");
@@ -518,49 +509,72 @@ const TeacherSchedule = () => {
     return () => window.clearTimeout(timeoutId);
   }, [detailErrorMessage, detailSuccessMessage]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadLessonTeacherNote = async () => {
-      if (!selectedLesson?.id) {
-        setLessonTeacherNote("");
-        setLessonTeacherNoteDraft("");
-        setLessonTeacherNoteError("");
-        setLessonTeacherNoteLoading(false);
-        return;
-      }
-
-      try {
-        setLessonTeacherNoteLoading(true);
-        setLessonTeacherNoteError("");
-
-        const { data, error } = await getLessonTeacherNote(selectedLesson.id);
-
-        if (error) throw error;
-        if (cancelled) return;
-
-        const note = data?.teacher_note ?? "";
-        setLessonTeacherNote(note);
-        setLessonTeacherNoteDraft(note);
-      } catch (error) {
-        if (cancelled) return;
-        console.error("Lesson teacher note load error:", error);
-        setLessonTeacherNoteError(t("teacherSchedule.lessonNote.errors.load"));
-      } finally {
-        if (!cancelled) setLessonTeacherNoteLoading(false);
-      }
-    };
-
-    loadLessonTeacherNote();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedLesson?.id, t]);
 
   const locale = getIntlLocale(i18n.language);
 
   const scheduleTimezone = scheduleSettings.timezone;
+
+  useEffect(() => {
+    if (loading || !requestedLessonId) return undefined;
+
+    let cancelled = false;
+
+    const openLinkedLesson = async () => {
+      try {
+        setDetailErrorMessage("");
+
+        const { data, error } = await getTeacherLessonById(requestedLessonId);
+        if (error) throw error;
+        if (cancelled) return;
+
+        if (!data) {
+          setSelectedLesson(null);
+          setDetailErrorMessage(t("teacherSchedule.errors.lessonNotFound"));
+          return;
+        }
+
+        const parts = getDatePartsInTimezone(data.starts_at, scheduleTimezone);
+        const lessonDate = new Date(
+          parts.year,
+          parts.month - 1,
+          parts.day,
+          12,
+          0,
+          0,
+          0,
+        );
+
+        setWeekStart(getMonday(lessonDate));
+        setSelectedLesson(data);
+        setSelectedBlock(null);
+        setEditingBlock(false);
+        setLessonZoomDraft(data.zoom_url || "");
+        setEditingZoom(false);
+        setEditingLesson(false);
+        setEditingRecurringSeries(false);
+        setDetailSuccessMessage("");
+
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            document.getElementById("lesson-details-panel")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        });
+      } catch (error) {
+        if (cancelled) return;
+        console.error("Open linked lesson error:", error);
+        setDetailErrorMessage(t("teacherSchedule.errors.loadLesson"));
+      }
+    };
+
+    openLinkedLesson();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, requestedLessonId, scheduleTimezone, t]);
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
@@ -846,6 +860,7 @@ const TeacherSchedule = () => {
   const handlePreviousWeek = () => {
     setSelectedLesson(null);
     setSelectedBlock(null);
+    setSearchParams({}, { replace: true });
 
     setWeekStart((current) => addDays(current, -7));
   };
@@ -853,6 +868,7 @@ const TeacherSchedule = () => {
   const handleNextWeek = () => {
     setSelectedLesson(null);
     setSelectedBlock(null);
+    setSearchParams({}, { replace: true });
 
     setWeekStart((current) => addDays(current, 7));
   };
@@ -860,6 +876,7 @@ const TeacherSchedule = () => {
   const handleCurrentWeek = () => {
     setSelectedLesson(null);
     setSelectedBlock(null);
+    setSearchParams({}, { replace: true });
 
     setWeekStart(getMonday(new Date()));
   };
@@ -1010,6 +1027,7 @@ const TeacherSchedule = () => {
 
     setSelectedLesson(null);
     setSelectedBlock(null);
+    setSearchParams({}, { replace: true });
 
     const dateValue = formatDateForInput(date);
 
@@ -1048,12 +1066,9 @@ const TeacherSchedule = () => {
 
     setSelectedLesson(lesson);
     setSelectedBlock(null);
+    setSearchParams({ lessonId: lesson.id }, { replace: true });
     setEditingBlock(false);
     setLessonZoomDraft(lesson.zoom_url || "");
-    setLessonTeacherNote("");
-    setLessonTeacherNoteDraft("");
-    setLessonTeacherNoteError("");
-    setLessonTeacherNoteSuccess("");
     setEditingZoom(false);
     setEditingLesson(false);
     setEditingRecurringSeries(false);
@@ -1084,6 +1099,7 @@ const TeacherSchedule = () => {
 
     setSelectedBlock(block);
     setSelectedLesson(null);
+    setSearchParams({}, { replace: true });
     setEditingBlock(false);
     setEditingRecurringBlockSeries(false);
     setEditingZoom(false);
@@ -1465,6 +1481,7 @@ const TeacherSchedule = () => {
 
       setEditingLesson(false);
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
       setDetailSuccessMessage(t("teacherSchedule.lessonEdit.success"));
       await loadLessons();
     } catch (error) {
@@ -1504,6 +1521,7 @@ const TeacherSchedule = () => {
       setDetailSuccessMessage(t("teacherSchedule.cancel.success"));
 
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
 
       await loadLessons();
     } catch (error) {
@@ -1619,6 +1637,7 @@ const TeacherSchedule = () => {
 
       setEditingRecurringSeries(false);
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
       await loadLessons();
     } catch (error) {
       console.error("Edit recurring series error:", error);
@@ -1665,6 +1684,7 @@ const TeacherSchedule = () => {
       );
 
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
       await loadLessons();
     } catch (error) {
       console.error("Cancel recurring series error:", error);
@@ -1715,31 +1735,6 @@ const TeacherSchedule = () => {
     }
   };
 
-  const handleSaveLessonTeacherNote = async () => {
-    if (!selectedLesson) return;
-
-    try {
-      setLessonTeacherNoteSaving(true);
-      setLessonTeacherNoteError("");
-
-      const { data, error } = await updateLessonTeacherNote({
-        lessonId: selectedLesson.id,
-        teacherNote: lessonTeacherNoteDraft,
-      });
-
-      if (error) throw error;
-
-      const savedNote = data?.teacher_note ?? "";
-      setLessonTeacherNote(savedNote);
-      setLessonTeacherNoteDraft(savedNote);
-      toast.success(t("teacherSchedule.lessonNote.saved"));
-    } catch (error) {
-      console.error("Update lesson teacher note error:", error);
-      toast.error(t("teacherSchedule.lessonNote.errors.save"));
-    } finally {
-      setLessonTeacherNoteSaving(false);
-    }
-  };
 
   const handleSetLessonOutcome = async (status) => {
     if (!selectedLesson || selectedLesson.status === "cancelled") {
@@ -1819,6 +1814,7 @@ const TeacherSchedule = () => {
       setZoomUrl("");
 
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
 
       await loadLessons();
     } catch (error) {
@@ -1971,6 +1967,7 @@ const TeacherSchedule = () => {
       setRecurringValidUntil("");
       setZoomUrl("");
       setSelectedLesson(null);
+      setSearchParams({}, { replace: true });
 
       await loadLessons();
     } catch (error) {
@@ -3246,530 +3243,57 @@ const TeacherSchedule = () => {
               {t("teacherSchedule.selectScheduleItemHint")}
             </div>
           ) : (
-            <div className={styles.lessonDetails}>
-              <div className={styles.detailItem}>
-                <span>{t("teacherSchedule.student")}</span>
-
-                <strong>
-                  {selectedLesson.profiles?.full_name ||
-                    selectedLesson.profiles?.email ||
-                    "—"}
-                </strong>
-              </div>
-
-              <div className={styles.detailItem}>
-                <span>{t("teacherSchedule.date")}</span>
-
-                <strong>
-                  {formatFullDate(
-                    selectedLesson.starts_at,
-                    locale,
-                    scheduleTimezone,
-                  )}
-                </strong>
-              </div>
-
-              <div className={styles.detailItem}>
-                <span>{t("teacherSchedule.time")}</span>
-
-                <strong>
-                  {formatLessonTime(
-                    selectedLesson.starts_at,
-                    locale,
-                    scheduleTimezone,
-                  )}
-                  {" — "}
-                  {formatLessonTime(
-                    selectedLesson.ends_at,
-                    locale,
-                    scheduleTimezone,
-                  )}
-                </strong>
-              </div>
-
-              <div className={styles.detailItem}>
-                <span>{t("teacherSchedule.status")}</span>
-
-                <strong>
-                  {t(`teacherSchedule.statuses.${selectedLesson.status}`)}
-                </strong>
-              </div>
-
-              {selectedLesson.price_amount_minor != null &&
-                selectedLesson.price_currency && (
-                  <div className={styles.detailItem}>
-                    <span>{t("teacherSchedule.lessonPrice")}</span>
-                    <strong>
-                      {new Intl.NumberFormat(locale, {
-                        style: "currency",
-                        currency: selectedLesson.price_currency,
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      }).format(Number(selectedLesson.price_amount_minor) / 100)}
-                    </strong>
-                  </div>
-                )}
-
-              {selectedLesson.pricing_date &&
-                selectedLesson.pricing_date !==
-                  formatZonedDateForInput(
-                    selectedLesson.starts_at,
-                    scheduleTimezone,
-                  ) && (
-                  <div className={styles.detailItem}>
-                    <span>{t("teacherSchedule.pricingDate")}</span>
-                    <strong>{selectedLesson.pricing_date}</strong>
-                  </div>
-                )}
-
-              {selectedLesson.recurring_lesson_id && (
-                <div className={styles.detailItem}>
-                  <span>{t("teacherSchedule.recurring.series")}</span>
-
-                  <strong>{t("teacherSchedule.recurring.seriesYes")}</strong>
-                </div>
-              )}
-
-              {selectedLesson.recurring_lesson_id &&
-                selectedLesson.status === "scheduled" &&
-                !isLessonStarted(selectedLesson) &&
-                !editingLesson &&
-                editingRecurringSeries && (
-                  <div className={styles.recurringSeriesEditor}>
-                    <div>
-                      <h3>{t("teacherSchedule.recurring.editFromHere.title")}</h3>
-                      <p>{t("teacherSchedule.recurring.editFromHere.hint")}</p>
-                    </div>
-
-                    <div className={styles.formRow}>
-                      <label className={styles.field}>
-                        <span>{t("teacherSchedule.recurring.weekday")}</span>
-                        <select
-                          value={seriesWeekday}
-                          onChange={(event) =>
-                            handleSeriesWeekdayChange(event.target.value)
-                          }
-                        >
-                          <option value="">
-                            {t("teacherSchedule.recurring.selectWeekday")}
-                          </option>
-                          {enabledWorkingHours.map((item) => {
-                      const dayName = WEEKDAYS.find(
-                        (day) => day.value === item.weekday,
-                      )?.key;
-
-                      return (
-                        <option key={item.weekday} value={item.weekday}>
-                          {t(`teacherSchedule.recurring.weekdays.${dayName}`)}
-                        </option>
-                      );
-                    })}
-                        </select>
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{t("teacherSchedule.time")}</span>
-                        <select
-                          value={seriesTime}
-                          onChange={(event) => setSeriesTime(event.target.value)}
-                        >
-                          <option value="">{t("teacherSchedule.selectTime")}</option>
-                          {seriesTimeSlots.map((slot) => (
-                            <option key={slot} value={slot}>
-                              {slot}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className={styles.field}>
-                      <span>{t("teacherSchedule.recurring.repeat")}</span>
-                      <select
-                        value={seriesIntervalWeeks}
-                        onChange={(event) =>
-                          setSeriesIntervalWeeks(event.target.value)
-                        }
-                      >
-                        <option value="1">
-                          {t("teacherSchedule.recurring.everyWeek")}
-                        </option>
-                        <option value="2">
-                          {t("teacherSchedule.recurring.everyTwoWeeks")}
-                        </option>
-                      </select>
-                    </label>
-
-                    <label className={styles.field}>
-                      <span>
-                    {t(
-                      scheduleSettings.allowOpenEndedRecurringLessons
-                        ? "teacherSchedule.recurring.validUntil"
-                        : "teacherSchedule.recurring.validUntilRequired",
-                    )}
-                  </span>
-                      <input
-                        type="date"
-                        value={seriesValidUntil}
-                        min={formatZonedDateForInput(
-                          selectedLesson.starts_at,
-                          scheduleTimezone,
-                        )}
-                        required={!scheduleSettings.allowOpenEndedRecurringLessons}
-                        onChange={(event) =>
-                          setSeriesValidUntil(event.target.value)
-                        }
-                      />
-                    </label>
-
-                    <label className={styles.field}>
-                      <span>{t("teacherSchedule.zoomUrl")}</span>
-                      <input
-                        type="url"
-                        value={seriesZoomUrl}
-                        onChange={(event) => setSeriesZoomUrl(event.target.value)}
-                        placeholder="https://..."
-                      />
-                    </label>
-
-                    <div className={styles.inlineActions}>
-                      <Button
-                        variant="primary"
-                        size="large"
-                        onClick={handleSaveRecurringSeries}
-                        disabled={savingRecurringSeries}
-                      >
-                        {savingRecurringSeries
-                          ? t("teacherSchedule.recurring.editFromHere.saving")
-                          : t("teacherSchedule.recurring.editFromHere.save")}
-                      </Button>
-
-                      <Button
-                        variant="secondary"
-                        onClick={() => setEditingRecurringSeries(false)}
-                        disabled={savingRecurringSeries}
-                      >
-                        {t("teacherSchedule.recurring.editFromHere.cancel")}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-              {selectedLesson.status === "scheduled" &&
-                !isLessonStarted(selectedLesson) &&
-                editingLesson && (
-                  <div className={styles.recurringSeriesEditor}>
-                    <div>
-                      <h3>
-                        {t(
-                          selectedLesson.recurring_lesson_id
-                            ? "teacherSchedule.lessonEdit.recurringOccurrenceTitle"
-                            : "teacherSchedule.lessonEdit.title",
-                        )}
-                      </h3>
-                      <p>
-                        {t(
-                          scheduleSettings.reschedulePricePolicy ===
-                            "target_date_tariff"
-                            ? "teacherSchedule.lessonEdit.hintTargetDateTariff"
-                            : "teacherSchedule.lessonEdit.hintKeepOriginal",
-                        )}
-                      </p>
-                    </div>
-
-                    <div className={styles.formRow}>
-                      <label className={styles.field}>
-                        <span>{t("teacherSchedule.date")}</span>
-                        <input
-                          type="date"
-                          value={editLessonDate}
-                          min={editLessonMinDate}
-                          onChange={(event) =>
-                            handleEditLessonDateChange(event.target.value)
-                          }
-                        />
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>{t("teacherSchedule.time")}</span>
-                        <select
-                          value={editLessonTime}
-                          onChange={(event) =>
-                            setEditLessonTime(event.target.value)
-                          }
-                        >
-                          <option value="">{t("teacherSchedule.selectTime")}</option>
-                          {editLessonTimeSlots.map((slot) => (
-                            <option key={slot} value={slot}>
-                              {slot}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className={styles.field}>
-                      <span>{t("teacherSchedule.zoomUrl")}</span>
-                      <input
-                        type="url"
-                        value={editLessonZoom}
-                        onChange={(event) =>
-                          setEditLessonZoom(event.target.value)
-                        }
-                        placeholder="https://..."
-                      />
-                    </label>
-
-                    <div className={styles.inlineActions}>
-                      <Button
-                        variant="primary"
-                        size="large"
-                        onClick={handleSaveLesson}
-                        disabled={savingLesson}
-                      >
-                        {savingLesson
-                          ? t("teacherSchedule.lessonEdit.saving")
-                          : t("teacherSchedule.lessonEdit.save")}
-                      </Button>
-
-                      <Button
-                        variant="secondary"
-                        onClick={() => setEditingLesson(false)}
-                        disabled={savingLesson}
-                      >
-                        {t("teacherSchedule.lessonEdit.cancel")}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-              <div className={styles.detailItem}>
-                <span>Zoom</span>
-
-                {selectedLesson.zoom_url ? (
-                  <a
-                    href={selectedLesson.zoom_url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {t("teacherSchedule.openZoom")}
-                  </a>
-                ) : (
-                  <strong>—</strong>
-                )}
-              </div>
-
-              {selectedLesson.status !== "cancelled" &&
-                !editingRecurringSeries &&
-                !editingLesson && (
-                <div className={styles.zoomEditor}>
-                  {editingZoom ? (
-                    <>
-                      <label className={styles.field}>
-                        <span>{t("teacherSchedule.zoomEdit.label")}</span>
-                        <input
-                          type="url"
-                          value={lessonZoomDraft}
-                          onChange={(event) =>
-                            setLessonZoomDraft(event.target.value)
-                          }
-                          placeholder="https://..."
-                        />
-                      </label>
-
-                      <div className={styles.inlineActions}>
-                        <Button
-                          variant="primary"
-                          size="large"
-                          onClick={handleSaveLessonZoom}
-                          disabled={savingZoom}
-                        >
-                          {savingZoom
-                            ? t("teacherSchedule.zoomEdit.saving")
-                            : t("teacherSchedule.zoomEdit.save")}
-                        </Button>
-
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setLessonZoomDraft(selectedLesson.zoom_url || "");
-                            setEditingZoom(false);
-                          }}
-                          disabled={savingZoom}
-                        >
-                          {t("teacherSchedule.zoomEdit.cancel")}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setLessonZoomDraft(selectedLesson.zoom_url || "");
-                        setEditingZoom(true);
-                      }}
-                    >
-                      {t("teacherSchedule.zoomEdit.button")}
-                    </Button>
-                  )}
-                </div>
-              )}
-
-              <div className={styles.lessonNoteEditor}>
-                <label className={styles.field}>
-                  <span>{t("teacherSchedule.lessonNote.label")}</span>
-                  <textarea
-                    rows="5"
-                    maxLength={5000}
-                    value={lessonTeacherNoteDraft}
-                    onChange={(event) => {
-                      setLessonTeacherNoteDraft(event.target.value);
-                      setLessonTeacherNoteError("");
-                    }}
-                    placeholder={t("teacherSchedule.lessonNote.placeholder")}
-                    disabled={
-                      lessonTeacherNoteLoading || lessonTeacherNoteSaving
-                    }
-                  />
-                </label>
-
-                <div className={styles.lessonNoteMeta}>
-                  <span>{lessonTeacherNoteDraft.length} / 5000</span>
-                  <span>{t("teacherSchedule.lessonNote.privateHint")}</span>
-                </div>
-
-                {lessonTeacherNoteLoading && (
-                  <p className={styles.mutedText}>
-                    {t("teacherSchedule.lessonNote.loading")}
-                  </p>
-                )}
-                {lessonTeacherNoteError && (
-                  <p className={styles.error}>{lessonTeacherNoteError}</p>
-                )}
-
-                <div className={styles.inlineActions}>
-                  <Button
-                    variant="secondary"
-                    onClick={handleSaveLessonTeacherNote}
-                    disabled={
-                      lessonTeacherNoteLoading ||
-                      lessonTeacherNoteSaving ||
-                      lessonTeacherNoteDraft === lessonTeacherNote
-                    }
-                  >
-                    {lessonTeacherNoteSaving
-                      ? t("teacherSchedule.lessonNote.saving")
-                      : t("teacherSchedule.lessonNote.save")}
-                  </Button>
-                </div>
-              </div>
-
-              <div className={styles.lessonActions}>
-                {isLessonStarted(selectedLesson) &&
-                  selectedLesson.status !== "cancelled" && (
-                    <>
-                      {selectedLesson.status !== "completed" && (
-                        <Button
-                          variant="success"
-                          onClick={() => handleSetLessonOutcome("completed")}
-                          disabled={updatingOutcome}
-                        >
-                          {t("teacherSchedule.outcome.completed")}
-                        </Button>
-                      )}
-
-                      {selectedLesson.status !== "missed" && (
-                        <Button
-                          variant="warning"
-                          onClick={() => handleSetLessonOutcome("missed")}
-                          disabled={updatingOutcome}
-                        >
-                          {t("teacherSchedule.outcome.missed")}
-                        </Button>
-                      )}
-                    </>
-                  )}
-
-                {selectedLesson.status === "scheduled" &&
-                  !isLessonStarted(selectedLesson) &&
-                  !editingLesson && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={handleStartEditLesson}
-                        disabled={
-                          savingLesson ||
-                          cancellingLessonId === selectedLesson.id ||
-                          (Boolean(selectedLesson.recurring_lesson_id) &&
-                            (loadingRecurringSeries ||
-                              savingRecurringSeries ||
-                              cancellingSeriesId ===
-                                selectedLesson.recurring_lesson_id))
-                        }
-                      >
-                        {t(
-                          selectedLesson.recurring_lesson_id
-                            ? "teacherSchedule.lessonEdit.recurringOccurrenceButton"
-                            : "teacherSchedule.lessonEdit.button",
-                        )}
-                      </Button>
-
-                      {selectedLesson.recurring_lesson_id && (
-                        <Button
-                          variant="secondary"
-                          onClick={handleStartEditRecurringSeries}
-                          disabled={
-                            loadingRecurringSeries ||
-                            savingRecurringSeries ||
-                            cancellingSeriesId === selectedLesson.recurring_lesson_id ||
-                            cancellingLessonId === selectedLesson.id ||
-                            savingRecurringSeries
-                          }
-                        >
-                          {loadingRecurringSeries
-                            ? t("teacherSchedule.recurring.editFromHere.loading")
-                            : t("teacherSchedule.recurring.editFromHere.button")}
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="danger"
-                        onClick={handleCancelLesson}
-                        disabled={
-                          cancellingLessonId === selectedLesson.id ||
-                          (Boolean(selectedLesson.recurring_lesson_id) &&
-                            cancellingSeriesId === selectedLesson.recurring_lesson_id) ||
-                          savingRecurringSeries ||
-                          savingLesson
-                        }
-                      >
-                        {cancellingLessonId === selectedLesson.id
-                          ? t("teacherSchedule.cancel.cancelling")
-                          : t("teacherSchedule.cancel.button")}
-                      </Button>
-
-                      {selectedLesson.recurring_lesson_id && (
-                        <Button
-                          variant="danger"
-                          onClick={handleCancelRecurringSeriesFromLesson}
-                          disabled={
-                            cancellingSeriesId === selectedLesson.recurring_lesson_id ||
-                            cancellingLessonId === selectedLesson.id
-                          }
-                        >
-                          {cancellingSeriesId === selectedLesson.recurring_lesson_id
-                            ? t(
-                                "teacherSchedule.recurring.cancelFromHere.cancelling",
-                              )
-                            : t(
-                                "teacherSchedule.recurring.cancelFromHere.button",
-                              )}
-                        </Button>
-                      )}
-                    </>
-                  )}
-              </div>
-            </div>
+            <LessonDetails
+              lesson={selectedLesson}
+              locale={locale}
+              scheduleTimezone={scheduleTimezone}
+              scheduleSettings={scheduleSettings}
+              enabledWorkingHours={enabledWorkingHours}
+              editingRecurringSeries={editingRecurringSeries}
+              setEditingRecurringSeries={setEditingRecurringSeries}
+              seriesWeekday={seriesWeekday}
+              handleSeriesWeekdayChange={handleSeriesWeekdayChange}
+              seriesTime={seriesTime}
+              setSeriesTime={setSeriesTime}
+              seriesTimeSlots={seriesTimeSlots}
+              seriesIntervalWeeks={seriesIntervalWeeks}
+              setSeriesIntervalWeeks={setSeriesIntervalWeeks}
+              seriesValidUntil={seriesValidUntil}
+              setSeriesValidUntil={setSeriesValidUntil}
+              seriesZoomUrl={seriesZoomUrl}
+              setSeriesZoomUrl={setSeriesZoomUrl}
+              handleSaveRecurringSeries={handleSaveRecurringSeries}
+              savingRecurringSeries={savingRecurringSeries}
+              editingLesson={editingLesson}
+              setEditingLesson={setEditingLesson}
+              editLessonDate={editLessonDate}
+              editLessonMinDate={editLessonMinDate}
+              handleEditLessonDateChange={handleEditLessonDateChange}
+              editLessonTime={editLessonTime}
+              setEditLessonTime={setEditLessonTime}
+              editLessonTimeSlots={editLessonTimeSlots}
+              editLessonZoom={editLessonZoom}
+              setEditLessonZoom={setEditLessonZoom}
+              handleSaveLesson={handleSaveLesson}
+              savingLesson={savingLesson}
+              editingZoom={editingZoom}
+              setEditingZoom={setEditingZoom}
+              lessonZoomDraft={lessonZoomDraft}
+              setLessonZoomDraft={setLessonZoomDraft}
+              handleSaveLessonZoom={handleSaveLessonZoom}
+              savingZoom={savingZoom}
+              handleSetLessonOutcome={handleSetLessonOutcome}
+              updatingOutcome={updatingOutcome}
+              handleStartEditLesson={handleStartEditLesson}
+              cancellingLessonId={cancellingLessonId}
+              loadingRecurringSeries={loadingRecurringSeries}
+              cancellingSeriesId={cancellingSeriesId}
+              handleStartEditRecurringSeries={handleStartEditRecurringSeries}
+              handleCancelLesson={handleCancelLesson}
+              handleCancelRecurringSeriesFromLesson={
+                handleCancelRecurringSeriesFromLesson
+              }
+            />
           )}
         </section>
       </div>

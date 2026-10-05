@@ -12,49 +12,56 @@
   font-size: clamp(1.8rem, 3vw, 2.4rem);
 }
 
-.header p {
+.header p,
+.sectionHeader p,
+.muted,
+.emptyCard p {
   margin: 0;
   color: var(--color-text-secondary);
 }
 
-.grid {
+.actionsGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
-.card {
+.actionCard,
+.summaryCard,
+.dayCard,
+.stateCard,
+.emptyCard {
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.actionCard {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-
   min-height: 130px;
   padding: 1.25rem;
-
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
-
   color: inherit;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-soft);
   text-decoration: none;
-
   transition: var(--transition);
 }
 
-.card:hover {
+.actionCard:hover {
   transform: translateY(-2px);
   border-color: rgba(var(--color-primary-blue-rgb), 0.35);
 }
 
-.card h2 {
+.actionCard h2,
+.sectionHeader h2 {
   margin: 0 0 0.35rem;
   color: var(--color-text-primary);
   font-size: 1.05rem;
 }
 
-.card p {
+.actionCard p {
   margin: 0;
   color: var(--color-text-secondary);
   font-size: 0.9rem;
@@ -67,8 +74,326 @@
   font-size: 1.5rem;
 }
 
-@media (max-width: 900px) {
-  .grid {
+.overviewContent {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.summaryCard,
+.stateCard,
+.emptyCard {
+  padding: 1.25rem;
+}
+
+.stateCard {
+  margin-top: 1.25rem;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sectionHeader p {
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.sectionLink {
+  flex-shrink: 0;
+  color: var(--color-primary-blue);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sectionLink:hover,
+.lessonStudent a:hover {
+  text-decoration: underline;
+}
+
+.incomeList {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.incomeRow,
+.netIncomeBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.incomeRow {
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.incomeRow span,
+.netIncomeBox span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.incomeRow strong,
+.netIncomeBox strong {
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.netIncomeBox {
+  margin-top: 0;
+  padding: 0.9rem;
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.countBadge {
+  min-width: 2rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  color: var(--color-primary-blue);
+  background: rgba(var(--color-primary-blue-rgb), 0.1);
+  text-align: center;
+}
+
+.debtorsList,
+.lessonList {
+  display: grid;
+}
+
+.debtorRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-divider);
+  color: inherit;
+  text-decoration: none;
+}
+
+.debtorRow:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.debtorRow:last-child {
+  padding-bottom: 0;
+}
+
+.debtorRow > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.debtorRow small {
+  color: var(--color-text-secondary);
+}
+
+.debtValue {
+  flex-shrink: 0;
+  color: var(--color-error-text);
+}
+
+.lessonsSection {
+  min-width: 0;
+}
+
+.daysGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.dayCard {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--color-divider);
+  background: var(--color-surface-muted);
+}
+
+.dayHeader strong {
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.dayHeader span {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+}
+
+.lessonRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  border-top: 1px solid var(--color-divider);
+}
+
+.lessonRow:first-child {
+  border-top: 0;
+}
+
+.lessonOpenButton {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.lessonOpenButton:hover,
+.lessonOpenButton:focus-visible {
+  background: var(--color-surface-muted);
+}
+
+.lessonOpenButton:focus-visible {
+  outline: 2px solid var(--color-primary-blue);
+  outline-offset: 1px;
+}
+
+.lessonTime {
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.lessonStudentName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lessonActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.studentCardLink,
+.zoomLink {
+  flex-shrink: 0;
+  color: var(--color-primary-blue);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.studentCardLink:hover,
+.zoomLink:hover {
+  text-decoration: underline;
+}
+
+.emptyCard {
+  box-shadow: none;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error-text);
+}
+
+@media (max-width: 1050px) {
+  .daysGrid {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 900px) {
+  .actionsGrid,
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .sectionHeader,
+  .incomeRow,
+  .netIncomeBox,
+  .debtorRow,
+  .dayHeader {
+    align-items: flex-start;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+  }
+
+  .incomeRow,
+  .netIncomeBox,
+  .debtorRow {
+    gap: 0.5rem;
+  }
+
+  .lessonRow {
+    grid-template-columns: 1fr;
+  }
+
+  .lessonActions {
+    justify-content: flex-start;
+    padding: 0 0.45rem 0.35rem;
+  }
+}
+
+.financeTotals {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.9rem;
+}
+
+.totalIncomeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border-radius: 10px;
+  background: var(--color-surface-muted);
+}
+
+.totalIncomeRow span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.totalIncomeRow strong {
+  color: var(--color-text-primary);
+  text-align: right;
+}
+

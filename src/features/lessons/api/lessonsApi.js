@@ -1,5 +1,35 @@
 import { supabase } from "../../../shared/api/supabaseClient";
 
+const TEACHER_LESSON_SELECT = `
+  id,
+  teacher_id,
+  student_id,
+  starts_at,
+  ends_at,
+  duration_minutes,
+  status,
+  zoom_url,
+  completed_at,
+  missed_at,
+  cancelled_by,
+  cancelled_at,
+  cancellation_reason,
+  cancellation_request_id,
+  cancellation_charge_mode,
+  cancellation_waiver_reason,
+  recurring_lesson_id,
+  occurrence_date,
+  pricing_date,
+  price_amount_minor,
+  price_currency,
+  price_rate_id,
+  profiles:student_id (
+    id,
+    full_name,
+    email
+  )
+`;
+
 export const listStudentLessons = () =>
   supabase
     .from("lessons")
@@ -11,30 +41,30 @@ export const listStudentLessons = () =>
 export const listTeacherLessonsForRange = ({ startIso, endIso }) =>
   supabase
     .from("lessons")
+    .select(TEACHER_LESSON_SELECT)
+    .gte("starts_at", startIso)
+    .lt("starts_at", endIso)
+    .order("starts_at", { ascending: true });
+
+export const getTeacherLessonById = (lessonId) =>
+  supabase
+    .from("lessons")
+    .select(TEACHER_LESSON_SELECT)
+    .eq("id", lessonId)
+    .maybeSingle();
+
+export const listTeacherUpcomingLessons = ({ fromIso, limit = 500 }) =>
+  supabase
+    .from("lessons")
     .select(
       `
         id,
-        teacher_id,
         student_id,
         starts_at,
         ends_at,
         duration_minutes,
         status,
         zoom_url,
-        completed_at,
-        missed_at,
-        cancelled_by,
-        cancelled_at,
-        cancellation_reason,
-        cancellation_request_id,
-        cancellation_charge_mode,
-        cancellation_waiver_reason,
-        recurring_lesson_id,
-        occurrence_date,
-        pricing_date,
-        price_amount_minor,
-        price_currency,
-        price_rate_id,
         profiles:student_id (
           id,
           full_name,
@@ -42,9 +72,10 @@ export const listTeacherLessonsForRange = ({ startIso, endIso }) =>
         )
       `,
     )
-    .gte("starts_at", startIso)
-    .lt("starts_at", endIso)
-    .order("starts_at", { ascending: true });
+    .eq("status", "scheduled")
+    .gte("starts_at", fromIso)
+    .order("starts_at", { ascending: true })
+    .limit(limit);
 
 export const listStudentLessonsForAssignment = ({ studentId, fromIso, toIso }) =>
   supabase

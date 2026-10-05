@@ -1,0 +1,121 @@
+.lessonDetails {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.detailItem span {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.detailItem strong {
+  color: var(--color-text-primary);
+  text-align: right;
+}
+
+.detailItem a {
+  color: var(--color-primary-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.detailItem a:hover {
+  text-decoration: underline;
+}
+
+.editorBox {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.editorBox h3 {
+  margin: 0 0 0.25rem;
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.editorBox p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--color-primary-blue);
+  outline: 2px solid rgba(var(--color-primary-blue-rgb), 0.12);
+}
+
+.zoomEditor {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.2rem;
+}
+
+.inlineActions,
+.lessonActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.lessonActions {
+  justify-content: flex-end;
+  padding-top: 0.35rem;
+}
+
+@media (max-width: 700px) {
+  .formRow {
+    grid-template-columns: 1fr;
+  }
+
+  .detailItem {
+    align-items: flex-start;
+  }
+}

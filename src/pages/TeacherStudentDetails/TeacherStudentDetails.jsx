@@ -22,10 +22,6 @@ import {
 } from "../../constants/finance";
 import { getStudentById } from "../../features/profiles/api/profilesApi";
 import {
-  getLessonTeacherNote,
-  updateLessonTeacherNote,
-} from "../../features/lessons/api/lessonsApi";
-import {
   getTeacherStudentNextLesson,
   getTeacherStudentPrivateNote,
   listTeacherStudentAssignments,
@@ -35,6 +31,7 @@ import {
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
+import LessonTeacherNote from "../../features/lessons/components/LessonTeacherNote/LessonTeacherNote";
 import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherStudentDetails.module.css";
@@ -42,7 +39,6 @@ import styles from "./TeacherStudentDetails.module.css";
 const DEFAULT_CURRENCY = "UAH";
 const MINOR_UNIT_FACTOR = 100;
 const PRIVATE_NOTE_MAX_LENGTH = 5000;
-const LESSON_NOTE_MAX_LENGTH = 5000;
 const WEEKDAY_KEYS = {
   1: "monday",
   2: "tuesday",
@@ -67,10 +63,6 @@ const TeacherStudentDetails = () => {
   const [detailsError, setDetailsError] = useState("");
   const [recurringLessons, setRecurringLessons] = useState([]);
   const [nextLesson, setNextLesson] = useState(null);
-  const [nextLessonNote, setNextLessonNote] = useState("");
-  const [nextLessonNoteDraft, setNextLessonNoteDraft] = useState("");
-  const [nextLessonNoteUpdatedAt, setNextLessonNoteUpdatedAt] = useState(null);
-  const [nextLessonNoteSaving, setNextLessonNoteSaving] = useState(false);
   const [assignments, setAssignments] = useState([]);
   const [privateNote, setPrivateNote] = useState("");
   const [privateNoteUpdatedAt, setPrivateNoteUpdatedAt] = useState(null);
@@ -188,21 +180,12 @@ const TeacherStudentDetails = () => {
 
         if (firstError) throw firstError;
 
-        const lessonNoteResult = nextLessonResult.data?.id
-          ? await getLessonTeacherNote(nextLessonResult.data.id)
-          : { data: null, error: null };
-
-        if (lessonNoteResult.error) throw lessonNoteResult.error;
         if (cancelled) return;
 
         const note = noteResult.data?.note ?? "";
-        const lessonNote = lessonNoteResult.data?.teacher_note ?? "";
 
         setRecurringLessons(recurringResult.data ?? []);
         setNextLesson(nextLessonResult.data ?? null);
-        setNextLessonNote(lessonNote);
-        setNextLessonNoteDraft(lessonNote);
-        setNextLessonNoteUpdatedAt(lessonNoteResult.data?.updated_at ?? null);
         setAssignments(assignmentsResult.data ?? []);
         setPrivateNote(note);
         setPrivateNoteDraft(note);
@@ -843,34 +826,6 @@ const TeacherStudentDetails = () => {
       );
     } finally {
       setTaxRetryingPaymentId("");
-    }
-  };
-
-  const handleNextLessonNoteSave = async (event) => {
-    event.preventDefault();
-
-    if (!nextLesson) return;
-
-    try {
-      setNextLessonNoteSaving(true);
-
-      const { data, error } = await updateLessonTeacherNote({
-        lessonId: nextLesson.id,
-        teacherNote: nextLessonNoteDraft,
-      });
-
-      if (error) throw error;
-
-      const savedNote = data?.teacher_note ?? "";
-      setNextLessonNote(savedNote);
-      setNextLessonNoteDraft(savedNote);
-      setNextLessonNoteUpdatedAt(data?.updated_at ?? new Date().toISOString());
-      toast.success(t("teacherStudentDetails.lessonNote.saved"));
-    } catch (error) {
-      console.error("Next lesson teacher note save error:", error);
-      toast.error(t("teacherStudentDetails.lessonNote.errors.save"));
-    } finally {
-      setNextLessonNoteSaving(false);
     }
   };
 
@@ -1980,58 +1935,11 @@ const TeacherStudentDetails = () => {
                 )}
               </div>
 
-              <form
-                className={styles.lessonNoteForm}
-                onSubmit={handleNextLessonNoteSave}
-              >
-                <label htmlFor="next-lesson-teacher-note">
-                  {t("teacherStudentDetails.lessonNote.label")}
-                </label>
-                <textarea
-                  id="next-lesson-teacher-note"
-                  rows="4"
-                  maxLength={LESSON_NOTE_MAX_LENGTH}
-                  value={nextLessonNoteDraft}
-                  onChange={(event) =>
-                    setNextLessonNoteDraft(event.target.value)
-                  }
-                  placeholder={t(
-                    "teacherStudentDetails.lessonNote.placeholder",
-                  )}
-                  disabled={nextLessonNoteSaving}
-                />
-
-                <div className={styles.notesMeta}>
-                  <span>
-                    {t("teacherStudentDetails.notes.counter", {
-                      count: nextLessonNoteDraft.length,
-                      max: LESSON_NOTE_MAX_LENGTH,
-                    })}
-                  </span>
-                  {nextLessonNoteUpdatedAt && nextLessonNote && (
-                    <span>
-                      {t("teacherStudentDetails.notes.updated", {
-                        date: formatDateTime(nextLessonNoteUpdatedAt),
-                      })}
-                    </span>
-                  )}
-                </div>
-
-                <div className={styles.notesActions}>
-                  <button
-                    type="submit"
-                    className={styles.primaryButton}
-                    disabled={
-                      nextLessonNoteSaving ||
-                      nextLessonNoteDraft === nextLessonNote
-                    }
-                  >
-                    {nextLessonNoteSaving
-                      ? t("teacherStudentDetails.lessonNote.saving")
-                      : t("teacherStudentDetails.lessonNote.save")}
-                  </button>
-                </div>
-              </form>
+              <LessonTeacherNote
+                lessonId={nextLesson.id}
+                rows={4}
+                formatUpdatedAt={formatDateTime}
+              />
             </div>
           )}
         </article>
