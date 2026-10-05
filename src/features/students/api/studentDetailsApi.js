@@ -15,7 +15,7 @@ export const listTeacherStudentRecurringLessons = ({ studentId, today }) =>
 export const getTeacherStudentNextLesson = ({ studentId, fromIso }) =>
   supabase
     .from("lessons")
-    .select("id, starts_at, ends_at, duration_minutes, status, zoom_url")
+    .select("id, starts_at, ends_at, duration_minutes, status, meeting_url")
     .eq("student_id", studentId)
     .eq("status", "scheduled")
     .gte("starts_at", fromIso)

@@ -3,7 +3,7 @@ import { supabase } from "../../../shared/api/supabaseClient";
 export const getRecurringLessonById = (recurringLessonId) =>
   supabase
     .from("recurring_lessons")
-    .select("weekday, start_time, interval_weeks, valid_until, zoom_url")
+    .select("weekday, start_time, interval_weeks, valid_until, meeting_url")
     .eq("id", recurringLessonId)
     .single();
 

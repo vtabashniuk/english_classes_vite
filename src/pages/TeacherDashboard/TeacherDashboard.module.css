@@ -307,7 +307,7 @@
 }
 
 .studentCardLink,
-.zoomLink {
+.meetingLink {
   flex-shrink: 0;
   color: var(--color-primary-blue);
   font-size: 0.8rem;
@@ -316,7 +316,7 @@
 }
 
 .studentCardLink:hover,
-.zoomLink:hover {
+.meetingLink:hover {
   text-decoration: underline;
 }
 

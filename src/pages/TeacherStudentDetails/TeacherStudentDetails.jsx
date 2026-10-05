@@ -32,6 +32,7 @@ import { getMyTeacherScheduleSettings } from "../../features/settings/api/teache
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import LessonTeacherNote from "../../features/lessons/components/LessonTeacherNote/LessonTeacherNote";
+import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
 import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherStudentDetails.module.css";
@@ -1919,16 +1920,16 @@ const TeacherStudentDetails = () => {
                 })}
               </span>
 
-              <div className={styles.lessonZoomRow}>
-                <span>{t("teacherStudentDetails.lesson.zoomLabel")}</span>
-                {nextLesson.zoom_url ? (
+              <div className={styles.lessonMeetingRow}>
+                <span>{t("teacherStudentDetails.lesson.meetingLabel")}</span>
+                {nextLesson.meeting_url ? (
                   <a
-                    href={nextLesson.zoom_url}
+                    href={nextLesson.meeting_url}
                     target="_blank"
                     rel="noreferrer"
                     className={styles.inlineLink}
                   >
-                    {t("teacherStudentDetails.lesson.openZoom")}
+                    {getMeetingProviderLabel(nextLesson.meeting_url, t)} ↗
                   </a>
                 ) : (
                   <strong>—</strong>

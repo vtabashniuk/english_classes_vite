@@ -19,6 +19,7 @@ import {
   previewLessonCancellation,
   requestLessonCancellation,
 } from "../../features/lessons/api/lessonsApi";
+import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
@@ -834,18 +835,20 @@ const StudentSchedule = () => {
                   </span>
 
                   <div className={styles.lessonActions}>
-                    {lesson.zoom_url ? (
+                    {lesson.meeting_url ? (
                       <a
-                        href={lesson.zoom_url}
+                        href={lesson.meeting_url}
                         target="_blank"
                         rel="noreferrer"
-                        className={styles.zoomButton}
+                        className={styles.meetingButton}
                       >
-                        {t("studentSchedule.joinZoom")}
+                        {t("studentSchedule.joinMeeting", {
+                          provider: getMeetingProviderLabel(lesson.meeting_url, t),
+                        })}
                       </a>
                     ) : (
-                      <span className={styles.noZoom}>
-                        {t("studentSchedule.noZoom")}
+                      <span className={styles.noMeeting}>
+                        {t("studentSchedule.noMeeting")}
                       </span>
                     )}
 

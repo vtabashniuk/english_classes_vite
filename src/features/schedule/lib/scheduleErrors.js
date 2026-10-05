@@ -147,18 +147,18 @@ export const getUpdateLessonScheduleError = (error, t) => {
   return t("teacherSchedule.lessonEdit.errors.generic");
 };
 
-export const getUpdateLessonZoomError = (error, t) => {
+export const getUpdateLessonMeetingUrlError = (error, t) => {
   const message = error?.message ?? "";
 
   if (message.includes("LESSON_CANCELLED")) {
-    return t("teacherSchedule.zoomEdit.errors.cancelled");
+    return t("teacherSchedule.meetingLinkEdit.errors.cancelled");
   }
 
   if (message.includes("LESSON_NOT_FOUND")) {
-    return t("teacherSchedule.zoomEdit.errors.notFound");
+    return t("teacherSchedule.meetingLinkEdit.errors.notFound");
   }
 
-  return t("teacherSchedule.zoomEdit.errors.generic");
+  return t("teacherSchedule.meetingLinkEdit.errors.generic");
 };
 
 export const getLessonOutcomeError = (error, t) => {

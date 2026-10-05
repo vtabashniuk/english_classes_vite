@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FINANCE_CURRENCIES } from "../../constants/finance";
 import { useTeacherOverview } from "../../features/dashboard/hooks/useTeacherOverview";
 import { buildFinanceReceiptSummary } from "../../features/finance/lib/financeSummary";
+import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
 import {
   formatLessonTime,
   getDatePartsInTimezone,
@@ -266,14 +267,14 @@ const TeacherDashboard = () => {
                             >
                               {t("teacherDashboard.upcomingLessons.openStudent")}
                             </Link>
-                            {lesson.zoom_url && (
+                            {lesson.meeting_url && (
                               <a
-                                href={lesson.zoom_url}
+                                href={lesson.meeting_url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={styles.zoomLink}
+                                className={styles.meetingLink}
                               >
-                                Zoom ↗
+                                {getMeetingProviderLabel(lesson.meeting_url, t)} ↗
                               </a>
                             )}
                           </div>

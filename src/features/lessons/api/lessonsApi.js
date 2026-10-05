@@ -8,7 +8,7 @@ const TEACHER_LESSON_SELECT = `
   ends_at,
   duration_minutes,
   status,
-  zoom_url,
+  meeting_url,
   completed_at,
   missed_at,
   cancelled_by,
@@ -34,7 +34,7 @@ export const listStudentLessons = () =>
   supabase
     .from("lessons")
     .select(
-      "id, starts_at, ends_at, duration_minutes, status, zoom_url, occurrence_date, pricing_date, price_amount_minor, price_currency, price_rate_id, cancelled_by, cancelled_at, cancellation_reason, cancellation_request_id, cancellation_charge_mode, cancellation_waiver_reason",
+      "id, starts_at, ends_at, duration_minutes, status, meeting_url, occurrence_date, pricing_date, price_amount_minor, price_currency, price_rate_id, cancelled_by, cancelled_at, cancellation_reason, cancellation_request_id, cancellation_charge_mode, cancellation_waiver_reason",
     )
     .order("starts_at", { ascending: true });
 
@@ -64,7 +64,7 @@ export const listTeacherUpcomingLessons = ({ fromIso, limit = 500 }) =>
         ends_at,
         duration_minutes,
         status,
-        zoom_url,
+        meeting_url,
         profiles:student_id (
           id,
           full_name,
@@ -87,12 +87,12 @@ export const listStudentLessonsForAssignment = ({ studentId, fromIso, toIso }) =
     .neq("status", "cancelled")
     .order("starts_at", { ascending: true });
 
-export const createLesson = ({ studentId, lessonDate, startTime, zoomUrl }) =>
+export const createLesson = ({ studentId, lessonDate, startTime, meetingUrl }) =>
   supabase.rpc("create_lesson", {
     p_student_id: studentId,
     p_lesson_date: lessonDate,
     p_start_time: startTime,
-    p_zoom_url: zoomUrl,
+    p_meeting_url: meetingUrl,
   });
 
 
@@ -187,19 +187,19 @@ export const updateLessonSchedule = ({
   lessonId,
   lessonDate,
   startTime,
-  zoomUrl,
+  meetingUrl,
 }) =>
   supabase.rpc("update_lesson_schedule", {
     p_lesson_id: lessonId,
     p_lesson_date: lessonDate,
     p_start_time: startTime,
-    p_zoom_url: zoomUrl,
+    p_meeting_url: meetingUrl,
   });
 
-export const updateLessonZoom = ({ lessonId, zoomUrl }) =>
-  supabase.rpc("update_lesson_zoom", {
+export const updateLessonMeetingUrl = ({ lessonId, meetingUrl }) =>
+  supabase.rpc("update_lesson_meeting_url", {
     p_lesson_id: lessonId,
-    p_zoom_url: zoomUrl,
+    p_meeting_url: meetingUrl,
   });
 
 export const getLessonTeacherNote = (lessonId) =>

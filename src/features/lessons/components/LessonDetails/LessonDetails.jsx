@@ -8,6 +8,7 @@ import {
   formatZonedDateForInput,
   isLessonStarted,
 } from "../../../schedule/lib/scheduleUtils";
+import { getMeetingProviderLabel } from "../../lib/meetingProvider";
 import LessonTeacherNote from "../LessonTeacherNote/LessonTeacherNote";
 
 import styles from "./LessonDetails.module.css";
@@ -29,8 +30,8 @@ const LessonDetails = ({
   setSeriesIntervalWeeks,
   seriesValidUntil,
   setSeriesValidUntil,
-  seriesZoomUrl,
-  setSeriesZoomUrl,
+  seriesMeetingUrl,
+  setSeriesMeetingUrl,
   handleSaveRecurringSeries,
   savingRecurringSeries,
   editingLesson,
@@ -41,16 +42,16 @@ const LessonDetails = ({
   editLessonTime,
   setEditLessonTime,
   editLessonTimeSlots,
-  editLessonZoom,
-  setEditLessonZoom,
+  editLessonMeetingUrl,
+  setEditLessonMeetingUrl,
   handleSaveLesson,
   savingLesson,
-  editingZoom,
-  setEditingZoom,
-  lessonZoomDraft,
-  setLessonZoomDraft,
-  handleSaveLessonZoom,
-  savingZoom,
+  editingMeetingUrl,
+  setEditingMeetingUrl,
+  lessonMeetingUrlDraft,
+  setLessonMeetingUrlDraft,
+  handleSaveLessonMeetingUrl,
+  savingMeetingUrl,
   handleSetLessonOutcome,
   updatingOutcome,
   handleStartEditLesson,
@@ -210,11 +211,11 @@ const LessonDetails = ({
             </label>
 
             <label className={styles.field}>
-              <span>{t("teacherSchedule.zoomUrl")}</span>
+              <span>{t("teacherSchedule.meetingUrl")}</span>
               <input
                 type="url"
-                value={seriesZoomUrl}
-                onChange={(event) => setSeriesZoomUrl(event.target.value)}
+                value={seriesMeetingUrl}
+                onChange={(event) => setSeriesMeetingUrl(event.target.value)}
                 placeholder="https://..."
               />
             </label>
@@ -289,11 +290,11 @@ const LessonDetails = ({
           </div>
 
           <label className={styles.field}>
-            <span>{t("teacherSchedule.zoomUrl")}</span>
+            <span>{t("teacherSchedule.meetingUrl")}</span>
             <input
               type="url"
-              value={editLessonZoom}
-              onChange={(event) => setEditLessonZoom(event.target.value)}
+              value={editLessonMeetingUrl}
+              onChange={(event) => setEditLessonMeetingUrl(event.target.value)}
               placeholder="https://..."
             />
           </label>
@@ -322,10 +323,10 @@ const LessonDetails = ({
       )}
 
       <div className={styles.detailItem}>
-        <span>Zoom</span>
-        {lesson.zoom_url ? (
-          <a href={lesson.zoom_url} target="_blank" rel="noreferrer">
-            {t("teacherSchedule.openZoom")}
+        <span>{t("teacherSchedule.meetingUrl")}</span>
+        {lesson.meeting_url ? (
+          <a href={lesson.meeting_url} target="_blank" rel="noreferrer">
+            {getMeetingProviderLabel(lesson.meeting_url, t)} ↗
           </a>
         ) : (
           <strong>—</strong>
@@ -335,15 +336,15 @@ const LessonDetails = ({
       {lesson.status !== "cancelled" &&
         !editingRecurringSeries &&
         !editingLesson && (
-          <div className={styles.zoomEditor}>
-            {editingZoom ? (
+          <div className={styles.meetingLinkEditor}>
+            {editingMeetingUrl ? (
               <>
                 <label className={styles.field}>
-                  <span>{t("teacherSchedule.zoomEdit.label")}</span>
+                  <span>{t("teacherSchedule.meetingLinkEdit.label")}</span>
                   <input
                     type="url"
-                    value={lessonZoomDraft}
-                    onChange={(event) => setLessonZoomDraft(event.target.value)}
+                    value={lessonMeetingUrlDraft}
+                    onChange={(event) => setLessonMeetingUrlDraft(event.target.value)}
                     placeholder="https://..."
                   />
                 </label>
@@ -352,23 +353,23 @@ const LessonDetails = ({
                   <Button
                     variant="primary"
                     size="large"
-                    onClick={handleSaveLessonZoom}
-                    disabled={savingZoom}
+                    onClick={handleSaveLessonMeetingUrl}
+                    disabled={savingMeetingUrl}
                   >
-                    {savingZoom
-                      ? t("teacherSchedule.zoomEdit.saving")
-                      : t("teacherSchedule.zoomEdit.save")}
+                    {savingMeetingUrl
+                      ? t("teacherSchedule.meetingLinkEdit.saving")
+                      : t("teacherSchedule.meetingLinkEdit.save")}
                   </Button>
 
                   <Button
                     variant="secondary"
                     onClick={() => {
-                      setLessonZoomDraft(lesson.zoom_url || "");
-                      setEditingZoom(false);
+                      setLessonMeetingUrlDraft(lesson.meeting_url || "");
+                      setEditingMeetingUrl(false);
                     }}
-                    disabled={savingZoom}
+                    disabled={savingMeetingUrl}
                   >
-                    {t("teacherSchedule.zoomEdit.cancel")}
+                    {t("teacherSchedule.meetingLinkEdit.cancel")}
                   </Button>
                 </div>
               </>
@@ -376,11 +377,11 @@ const LessonDetails = ({
               <Button
                 variant="secondary"
                 onClick={() => {
-                  setLessonZoomDraft(lesson.zoom_url || "");
-                  setEditingZoom(true);
+                  setLessonMeetingUrlDraft(lesson.meeting_url || "");
+                  setEditingMeetingUrl(true);
                 }}
               >
-                {t("teacherSchedule.zoomEdit.button")}
+                {t("teacherSchedule.meetingLinkEdit.button")}
               </Button>
             )}
           </div>

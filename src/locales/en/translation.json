@@ -83,8 +83,7 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "missed": "Missed",
-    "joinZoom": "Join Zoom",
-    "noZoom": "Link has not been added yet",
+    "noMeeting": "Lesson link has not been added yet",
     "duration50": "50 minutes",
     "loading": "Loading schedule...",
     "loadError": "Could not load the schedule.",
@@ -196,7 +195,8 @@
         "alreadyResolved": "This request has already been resolved.",
         "generic": "Could not process the reschedule request."
       }
-    }
+    },
+    "joinMeeting": "Join: {{provider}}"
   },
   "about": {
     "title": "About Olga",
@@ -385,14 +385,13 @@
     "date": "Date",
     "time": "Time",
     "selectTime": "Select a time",
-    "zoomUrl": "Zoom link",
+    "meetingUrl": "Lesson link",
     "create": "Create lesson",
     "creating": "Creating...",
     "lessonDetails": "Lesson details",
     "lessonDetailsHint": "Click a lesson in the calendar.",
     "selectLessonHint": "Select a lesson to view its details.",
     "status": "Status",
-    "openZoom": "Open Zoom",
     "unknownStudent": "Student",
     "days": {
       "monday": "Mon",
@@ -520,19 +519,6 @@
       "selectWeekday": "Select a working day",
       "validUntilRequired": "Until date"
     },
-    "zoomEdit": {
-      "button": "Edit Zoom",
-      "label": "Zoom link",
-      "save": "Save",
-      "saving": "Saving...",
-      "cancel": "Cancel editing",
-      "success": "Zoom link updated.",
-      "errors": {
-        "cancelled": "Zoom cannot be changed for a cancelled lesson.",
-        "notFound": "Lesson not found.",
-        "generic": "Could not update the Zoom link."
-      }
-    },
     "lessonNote": {
       "label": "Lesson notes (teacher only)",
       "placeholder": "Add a private note for this lesson...",
@@ -566,7 +552,7 @@
     "lessonEdit": {
       "button": "Edit lesson",
       "title": "Edit lesson",
-      "hint": "Change the date, time, or Zoom link. When rescheduled, this lesson keeps its original price.",
+      "hint": "Change the date, time, or lesson link. When rescheduled, this lesson keeps its original price.",
       "save": "Save changes",
       "saving": "Saving...",
       "cancel": "Cancel editing",
@@ -580,8 +566,8 @@
         "cancellationPending": "Resolve the student cancellation request for this lesson first.",
         "reschedulePending": "Resolve the student reschedule request for this lesson first."
       },
-      "hintKeepOriginal": "Change the date, time, or Zoom link. When rescheduled, this lesson keeps its original price.",
-      "hintTargetDateTariff": "Change the date, time, or Zoom link. When rescheduled, the price is recalculated using the tariff effective on the new date.",
+      "hintKeepOriginal": "Change the date, time, or lesson link. When rescheduled, this lesson keeps its original price.",
+      "hintTargetDateTariff": "Change the date, time, or lesson link. When rescheduled, the price is recalculated using the tariff effective on the new date.",
       "recurringOccurrenceButton": "Reschedule this lesson only",
       "recurringOccurrenceTitle": "Reschedule this series lesson only"
     },
@@ -673,6 +659,19 @@
           "confirm": "Delete this recurring block and all following blocks? Earlier blocks will remain unchanged.",
           "success": "Series ended. Future blocks deleted: {{count}}."
         }
+      }
+    },
+    "meetingLinkEdit": {
+      "button": "Change link",
+      "label": "Lesson link",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel editing",
+      "success": "Lesson link updated.",
+      "errors": {
+        "cancelled": "The lesson link cannot be changed for a cancelled lesson.",
+        "notFound": "Lesson not found.",
+        "generic": "Could not update the lesson link."
       }
     }
   },
@@ -873,8 +872,7 @@
     },
     "lesson": {
       "duration": "{{count}} min",
-      "zoomLabel": "Zoom",
-      "openZoom": "Open Zoom"
+      "meetingLabel": "Lesson link"
     },
     "lessonNote": {
       "label": "Lesson notes (teacher only)",
@@ -1575,5 +1573,11 @@
     "paymentNetIncome": "Net: {{amount}}",
     "configureLowBalance": "Configure threshold",
     "lowBalanceFxPending": "Some foreign-currency balances are temporarily excluded because a current NBU rate is unavailable."
+  },
+  "meetingProviders": {
+    "zoom": "Zoom",
+    "googleMeet": "Google Meet",
+    "microsoftTeams": "Microsoft Teams",
+    "generic": "Online meeting"
   }
 }

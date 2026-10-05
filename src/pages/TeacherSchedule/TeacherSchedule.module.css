@@ -683,7 +683,7 @@
   line-height: 1.45;
 }
 
-.zoomEditor {
+.meetingLinkEditor {
   display: grid;
   gap: 0.75rem;
   padding-top: 0.2rem;

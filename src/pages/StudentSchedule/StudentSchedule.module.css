@@ -176,12 +176,12 @@
 }
 
 .duration,
-.noZoom {
+.noMeeting {
   color: var(--color-text-secondary);
   font-size: 0.85rem;
 }
 
-.zoomButton {
+.meetingButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -200,7 +200,7 @@
   transition: var(--transition);
 }
 
-.zoomButton:hover {
+.meetingButton:hover {
   background: var(--color-hover);
   transform: translateY(-1px);
 }
@@ -296,7 +296,7 @@
     flex-direction: column;
   }
 
-  .zoomButton {
+  .meetingButton {
     width: 100%;
   }
 

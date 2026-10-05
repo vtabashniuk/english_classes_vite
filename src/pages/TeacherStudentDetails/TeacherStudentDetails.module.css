@@ -223,7 +223,7 @@
   text-decoration: underline;
 }
 
-.lessonZoomRow {
+.lessonMeetingRow {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -231,7 +231,7 @@
   padding-top: 0.2rem;
 }
 
-.lessonZoomRow > span {
+.lessonMeetingRow > span {
   font-weight: 600;
 }
 

@@ -10,7 +10,7 @@ import {
   listTeacherLessonsForRange,
   setLessonOutcome,
   updateLessonSchedule,
-  updateLessonZoom,
+  updateLessonMeetingUrl,
 } from "../../features/lessons/api/lessonsApi";
 import {
   cancelRecurringSeriesFromLesson,
@@ -44,7 +44,7 @@ import {
   getLessonOutcomeError,
   getScheduleBlockError,
   getUpdateLessonScheduleError,
-  getUpdateLessonZoomError,
+  getUpdateLessonMeetingUrlError,
 } from "../../features/schedule/lib/scheduleErrors";
 import {
   addDays,
@@ -353,7 +353,7 @@ const TeacherSchedule = () => {
 
   const [selectedTime, setSelectedTime] = useState("");
 
-  const [zoomUrl, setZoomUrl] = useState("");
+  const [meetingUrl, setMeetingUrl] = useState("");
 
   const [createMode, setCreateMode] = useState("single");
 
@@ -435,9 +435,9 @@ const TeacherSchedule = () => {
 
   const [seriesValidUntil, setSeriesValidUntil] = useState("");
 
-  const [seriesZoomUrl, setSeriesZoomUrl] = useState("");
+  const [seriesMeetingUrl, setSeriesMeetingUrl] = useState("");
 
-  const [editingZoom, setEditingZoom] = useState(false);
+  const [editingMeetingUrl, setEditingMeetingUrl] = useState(false);
 
   const [editingLesson, setEditingLesson] = useState(false);
 
@@ -447,13 +447,13 @@ const TeacherSchedule = () => {
 
   const [editLessonTime, setEditLessonTime] = useState("");
 
-  const [editLessonZoom, setEditLessonZoom] = useState("");
+  const [editLessonMeetingUrl, setEditLessonMeetingUrl] = useState("");
 
   const [savingLesson, setSavingLesson] = useState(false);
 
-  const [lessonZoomDraft, setLessonZoomDraft] = useState("");
+  const [lessonMeetingUrlDraft, setLessonMeetingUrlDraft] = useState("");
 
-  const [savingZoom, setSavingZoom] = useState(false);
+  const [savingMeetingUrl, setSavingMeetingUrl] = useState(false);
 
   const [updatingOutcome, setUpdatingOutcome] = useState(false);
 
@@ -548,8 +548,8 @@ const TeacherSchedule = () => {
         setSelectedLesson(data);
         setSelectedBlock(null);
         setEditingBlock(false);
-        setLessonZoomDraft(data.zoom_url || "");
-        setEditingZoom(false);
+        setLessonMeetingUrlDraft(data.meeting_url || "");
+        setEditingMeetingUrl(false);
         setEditingLesson(false);
         setEditingRecurringSeries(false);
         setDetailSuccessMessage("");
@@ -1068,8 +1068,8 @@ const TeacherSchedule = () => {
     setSelectedBlock(null);
     setSearchParams({ lessonId: lesson.id }, { replace: true });
     setEditingBlock(false);
-    setLessonZoomDraft(lesson.zoom_url || "");
-    setEditingZoom(false);
+    setLessonMeetingUrlDraft(lesson.meeting_url || "");
+    setEditingMeetingUrl(false);
     setEditingLesson(false);
     setEditingRecurringSeries(false);
     setDetailErrorMessage("");
@@ -1102,7 +1102,7 @@ const TeacherSchedule = () => {
     setSearchParams({}, { replace: true });
     setEditingBlock(false);
     setEditingRecurringBlockSeries(false);
-    setEditingZoom(false);
+    setEditingMeetingUrl(false);
     setEditingLesson(false);
     setEditingRecurringSeries(false);
     setDetailErrorMessage("");
@@ -1443,8 +1443,8 @@ const TeacherSchedule = () => {
     const currentDate = `${startParts.year}-${pad(startParts.month)}-${pad(startParts.day)}`;
     const availableSlots = getTimeSlotsForDate(scheduleSettings, currentDate);
     setEditLessonTime(availableSlots.includes(currentTime) ? currentTime : "");
-    setEditLessonZoom(selectedLesson.zoom_url || "");
-    setEditingZoom(false);
+    setEditLessonMeetingUrl(selectedLesson.meeting_url || "");
+    setEditingMeetingUrl(false);
     setEditingRecurringSeries(false);
     setEditingLesson(true);
     setDetailErrorMessage("");
@@ -1466,13 +1466,13 @@ const TeacherSchedule = () => {
       setDetailErrorMessage("");
       setDetailSuccessMessage("");
 
-      const normalizedZoomUrl = editLessonZoom.trim() || null;
+      const normalizedMeetingUrl = editLessonMeetingUrl.trim() || null;
 
       const { error } = await updateLessonSchedule({
         lessonId: selectedLesson.id,
         lessonDate: editLessonDate,
         startTime: editLessonTime,
-        zoomUrl: normalizedZoomUrl,
+        meetingUrl: normalizedMeetingUrl,
       });
 
       if (error) {
@@ -1571,9 +1571,9 @@ const TeacherSchedule = () => {
       }
       setSeriesIntervalWeeks(String(data.interval_weeks ?? 1));
       setSeriesValidUntil(data.valid_until || "");
-      setSeriesZoomUrl(data.zoom_url || "");
+      setSeriesMeetingUrl(data.meeting_url || "");
       setEditingRecurringSeries(true);
-      setEditingZoom(false);
+      setEditingMeetingUrl(false);
     } catch (error) {
       console.error("Load recurring series error:", error);
       setDetailErrorMessage(t("teacherSchedule.recurring.editFromHere.errors.load"));
@@ -1619,7 +1619,7 @@ const TeacherSchedule = () => {
         p_start_time: seriesTime,
         p_interval_weeks: Number(seriesIntervalWeeks),
         p_valid_until: seriesValidUntil || null,
-        p_zoom_url: seriesZoomUrl.trim() || null,
+        p_meeting_url: seriesMeetingUrl.trim() || null,
       });
 
       if (error) {
@@ -1694,21 +1694,21 @@ const TeacherSchedule = () => {
     }
   };
 
-  const handleSaveLessonZoom = async () => {
+  const handleSaveLessonMeetingUrl = async () => {
     if (!selectedLesson || selectedLesson.status === "cancelled") {
       return;
     }
 
     try {
-      setSavingZoom(true);
+      setSavingMeetingUrl(true);
       setDetailErrorMessage("");
       setDetailSuccessMessage("");
 
-      const normalizedZoomUrl = lessonZoomDraft.trim() || null;
+      const normalizedMeetingUrl = lessonMeetingUrlDraft.trim() || null;
 
-      const { error } = await updateLessonZoom({
+      const { error } = await updateLessonMeetingUrl({
         lessonId: selectedLesson.id,
-        zoomUrl: normalizedZoomUrl,
+        meetingUrl: normalizedMeetingUrl,
       });
 
       if (error) {
@@ -1719,19 +1719,19 @@ const TeacherSchedule = () => {
         current
           ? {
               ...current,
-              zoom_url: normalizedZoomUrl,
+              meeting_url: normalizedMeetingUrl,
             }
           : current,
       );
 
-      setEditingZoom(false);
-      setDetailSuccessMessage(t("teacherSchedule.zoomEdit.success"));
+      setEditingMeetingUrl(false);
+      setDetailSuccessMessage(t("teacherSchedule.meetingLinkEdit.success"));
       await loadLessons();
     } catch (error) {
-      console.error("Update lesson Zoom error:", error);
-      setDetailErrorMessage(getUpdateLessonZoomError(error, t));
+      console.error("Update lesson meeting link error:", error);
+      setDetailErrorMessage(getUpdateLessonMeetingUrlError(error, t));
     } finally {
-      setSavingZoom(false);
+      setSavingMeetingUrl(false);
     }
   };
 
@@ -1800,7 +1800,7 @@ const TeacherSchedule = () => {
         studentId: selectedStudentId,
         lessonDate: selectedDate,
         startTime: selectedTime,
-        zoomUrl: zoomUrl.trim() || null,
+        meetingUrl: meetingUrl.trim() || null,
       });
 
       if (error) {
@@ -1811,7 +1811,7 @@ const TeacherSchedule = () => {
 
       setSelectedStudentId("");
 
-      setZoomUrl("");
+      setMeetingUrl("");
 
       setSelectedLesson(null);
       setSearchParams({}, { replace: true });
@@ -1940,7 +1940,7 @@ const TeacherSchedule = () => {
         p_start_time: selectedTime,
         p_valid_from: recurringValidFrom,
         p_valid_until: recurringValidUntil || null,
-        p_zoom_url: zoomUrl.trim() || null,
+        p_meeting_url: meetingUrl.trim() || null,
         p_interval_weeks: Number(recurringIntervalWeeks),
       });
 
@@ -1965,7 +1965,7 @@ const TeacherSchedule = () => {
 
       setSelectedStudentId("");
       setRecurringValidUntil("");
-      setZoomUrl("");
+      setMeetingUrl("");
       setSelectedLesson(null);
       setSearchParams({}, { replace: true });
 
@@ -2538,12 +2538,12 @@ const TeacherSchedule = () => {
               </div>
 
               <label className={styles.field}>
-                <span>{t("teacherSchedule.zoomUrl")}</span>
+                <span>{t("teacherSchedule.meetingUrl")}</span>
 
                 <input
                   type="url"
-                  value={zoomUrl}
-                  onChange={(event) => setZoomUrl(event.target.value)}
+                  value={meetingUrl}
+                  onChange={(event) => setMeetingUrl(event.target.value)}
                   placeholder="https://..."
                 />
               </label>
@@ -2685,12 +2685,12 @@ const TeacherSchedule = () => {
               </div>
 
               <label className={styles.field}>
-                <span>{t("teacherSchedule.zoomUrl")}</span>
+                <span>{t("teacherSchedule.meetingUrl")}</span>
 
                 <input
                   type="url"
-                  value={zoomUrl}
-                  onChange={(event) => setZoomUrl(event.target.value)}
+                  value={meetingUrl}
+                  onChange={(event) => setMeetingUrl(event.target.value)}
                   placeholder="https://..."
                 />
               </label>
@@ -3260,8 +3260,8 @@ const TeacherSchedule = () => {
               setSeriesIntervalWeeks={setSeriesIntervalWeeks}
               seriesValidUntil={seriesValidUntil}
               setSeriesValidUntil={setSeriesValidUntil}
-              seriesZoomUrl={seriesZoomUrl}
-              setSeriesZoomUrl={setSeriesZoomUrl}
+              seriesMeetingUrl={seriesMeetingUrl}
+              setSeriesMeetingUrl={setSeriesMeetingUrl}
               handleSaveRecurringSeries={handleSaveRecurringSeries}
               savingRecurringSeries={savingRecurringSeries}
               editingLesson={editingLesson}
@@ -3272,16 +3272,16 @@ const TeacherSchedule = () => {
               editLessonTime={editLessonTime}
               setEditLessonTime={setEditLessonTime}
               editLessonTimeSlots={editLessonTimeSlots}
-              editLessonZoom={editLessonZoom}
-              setEditLessonZoom={setEditLessonZoom}
+              editLessonMeetingUrl={editLessonMeetingUrl}
+              setEditLessonMeetingUrl={setEditLessonMeetingUrl}
               handleSaveLesson={handleSaveLesson}
               savingLesson={savingLesson}
-              editingZoom={editingZoom}
-              setEditingZoom={setEditingZoom}
-              lessonZoomDraft={lessonZoomDraft}
-              setLessonZoomDraft={setLessonZoomDraft}
-              handleSaveLessonZoom={handleSaveLessonZoom}
-              savingZoom={savingZoom}
+              editingMeetingUrl={editingMeetingUrl}
+              setEditingMeetingUrl={setEditingMeetingUrl}
+              lessonMeetingUrlDraft={lessonMeetingUrlDraft}
+              setLessonMeetingUrlDraft={setLessonMeetingUrlDraft}
+              handleSaveLessonMeetingUrl={handleSaveLessonMeetingUrl}
+              savingMeetingUrl={savingMeetingUrl}
               handleSetLessonOutcome={handleSetLessonOutcome}
               updatingOutcome={updatingOutcome}
               handleStartEditLesson={handleStartEditLesson}
