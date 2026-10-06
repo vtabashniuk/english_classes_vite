@@ -314,6 +314,53 @@
   background: var(--color-success-bg);
 }
 
+.financialAccessNotice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+
+.financialAccessNotice strong,
+.financialAccessNotice p {
+  margin: 0;
+}
+
+.financialAccessNotice > div {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.financialAccessRestricted {
+  border-color: var(--color-error-border);
+  background: var(--color-error-bg);
+}
+
+.financialAccessTemporary {
+  border-color: color-mix(in srgb, var(--color-primary-blue) 35%, var(--color-border));
+}
+
+.financialAccessPayment {
+  flex: 0 0 auto;
+  font-weight: 700;
+}
+
+.requestToggleButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+@media (max-width: 700px) {
+  .financialAccessNotice {
+    flex-direction: column;
+  }
+}
+
 .lessonActions {
   display: flex;
   align-items: center;
@@ -695,4 +742,9 @@
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+.learningPauseNotice {
+  border-color: var(--color-warning-border, var(--color-border));
+  background: var(--color-warning-bg, var(--color-surface));
 }

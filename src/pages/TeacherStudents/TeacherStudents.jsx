@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
-import { listStudents } from "../../features/profiles/api/profilesApi";
 import { inviteStudent } from "../../features/students/api/studentInvitesApi";
+import { listTeacherStudentsLifecycle } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./TeacherStudents.module.css";
 
 const fetchStudents = async () => {
-  const { data, error } = await listStudents();
+  const { data, error } = await listTeacherStudentsLifecycle();
 
   if (error) {
     throw error;
@@ -31,6 +31,17 @@ const TeacherStudents = () => {
   const [isInviting, setIsInviting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteError, setInviteError] = useState("");
+
+  const groupedStudents = useMemo(
+    () => ({
+      active: students.filter((student) => student.learning_status === "active"),
+      paused: students.filter((student) => student.learning_status === "paused"),
+      inactive: students.filter(
+        (student) => student.learning_status === "inactive",
+      ),
+    }),
+    [students],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -100,6 +111,85 @@ const TeacherStudents = () => {
       year: "numeric",
     }).format(new Date(dateString));
 
+  const formatDateOnly = (dateString) =>
+    new Intl.DateTimeFormat(intlLocale, {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(new Date(`${dateString}T12:00:00`));
+
+  const renderStudentCard = (student) => {
+    const statusKey = student.learning_status || "active";
+
+    return (
+      <article key={student.student_id} className={styles.studentCard}>
+        <div className={styles.studentTop}>
+          <div className={styles.avatar}>
+            {(student.full_name || student.email || "?").charAt(0).toUpperCase()}
+          </div>
+
+          <div className={styles.studentInfo}>
+            <h2>{student.full_name || t("common.nameNotSpecified")}</h2>
+            <p>{student.email}</p>
+          </div>
+
+          <span
+            className={`${styles.status} ${
+              statusKey === "active"
+                ? styles.active
+                : statusKey === "paused"
+                  ? styles.paused
+                  : styles.inactive
+            }`}
+          >
+            {t(`teacherStudents.status.${statusKey}`)}
+          </span>
+        </div>
+
+        <div className={styles.studentDetails}>
+          <div>
+            <span>{t("common.phone")}</span>
+            <strong>{student.phone || t("common.notSpecified")}</strong>
+          </div>
+
+          <div>
+            <span>{t("teacherStudents.added")}</span>
+            <strong>{formatDate(student.created_at)}</strong>
+          </div>
+
+          {statusKey === "paused" && student.pause_until && (
+            <div>
+              <span>{t("teacherStudents.pauseUntil")}</span>
+              <strong>{formatDateOnly(student.pause_until)}</strong>
+            </div>
+          )}
+        </div>
+
+        <Link
+          to={`/teacher-dashboard/students/${student.student_id}`}
+          className={styles.detailsButton}
+        >
+          {t("teacherStudents.openProfile")}
+        </Link>
+      </article>
+    );
+  };
+
+  const renderGroup = (status) => {
+    const items = groupedStudents[status];
+    if (!items.length) return null;
+
+    return (
+      <section className={styles.studentGroup} key={status}>
+        <div className={styles.groupHeading}>
+          <h2>{t(`teacherStudents.groups.${status}`)}</h2>
+          <span>{items.length}</span>
+        </div>
+        <div className={styles.studentsGrid}>{items.map(renderStudentCard)}</div>
+      </section>
+    );
+  };
+
   return (
     <section className={styles.page}>
       <div className={styles.header}>
@@ -115,9 +205,7 @@ const TeacherStudents = () => {
           className={styles.inviteButton}
           onClick={() => setIsInviteOpen((current) => !current)}
         >
-          {isInviteOpen
-            ? t("common.close")
-            : t("teacherStudents.invite.open")}
+          {isInviteOpen ? t("common.close") : t("teacherStudents.invite.open")}
         </button>
       </div>
 
@@ -189,52 +277,10 @@ const TeacherStudents = () => {
           <p>{t("teacherStudents.empty.description")}</p>
         </div>
       ) : (
-        <div className={styles.studentsGrid}>
-          {students.map((student) => (
-            <article key={student.id} className={styles.studentCard}>
-              <div className={styles.studentTop}>
-                <div className={styles.avatar}>
-                  {(student.full_name || student.email || "?")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-
-                <div className={styles.studentInfo}>
-                  <h2>{student.full_name || t("common.nameNotSpecified")}</h2>
-                  <p>{student.email}</p>
-                </div>
-
-                <span
-                  className={`${styles.status} ${
-                    student.is_active ? styles.active : styles.inactive
-                  }`}
-                >
-                  {student.is_active
-                    ? t("common.active")
-                    : t("common.inactive")}
-                </span>
-              </div>
-
-              <div className={styles.studentDetails}>
-                <div>
-                  <span>{t("common.phone")}</span>
-                  <strong>{student.phone || t("common.notSpecified")}</strong>
-                </div>
-
-                <div>
-                  <span>{t("teacherStudents.added")}</span>
-                  <strong>{formatDate(student.created_at)}</strong>
-                </div>
-              </div>
-
-              <Link
-                to={`/teacher-dashboard/students/${student.id}`}
-                className={styles.detailsButton}
-              >
-                {t("teacherStudents.openProfile")}
-              </Link>
-            </article>
-          ))}
+        <div className={styles.groups}>
+          {renderGroup("active")}
+          {renderGroup("paused")}
+          {renderGroup("inactive")}
         </div>
       )}
     </section>

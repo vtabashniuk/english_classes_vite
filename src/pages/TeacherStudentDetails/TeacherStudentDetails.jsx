@@ -29,10 +29,18 @@ import {
   saveTeacherStudentPrivateNote,
 } from "../../features/students/api/studentDetailsApi";
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
+import {
+  getTeacherStudentLifecycle,
+  setTeacherStudentLearningStatus,
+} from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import LessonTeacherNote from "../../features/lessons/components/LessonTeacherNote/LessonTeacherNote";
 import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
+import {
+  getTeacherStudentFinancialAccess,
+  temporaryUnlockStudentFinancialAccess,
+} from "../../features/studentFinancialAccess/api/studentFinancialAccessApi";
 import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherStudentDetails.module.css";
@@ -57,6 +65,10 @@ const TeacherStudentDetails = () => {
   const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const [student, setStudent] = useState(null);
+  const [lifecycle, setLifecycle] = useState(null);
+  const [lifecycleSaving, setLifecycleSaving] = useState(false);
+  const [pendingLifecycleStatus, setPendingLifecycleStatus] = useState("");
+  const [pauseUntilDraft, setPauseUntilDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -73,6 +85,10 @@ const TeacherStudentDetails = () => {
   const [financeLoading, setFinanceLoading] = useState(true);
   const [financeError, setFinanceError] = useState("");
   const [financeOverview, setFinanceOverview] = useState(null);
+  const [financialAccess, setFinancialAccess] = useState(null);
+  const [financialAccessLoading, setFinancialAccessLoading] = useState(true);
+  const [financialAccessError, setFinancialAccessError] = useState("");
+  const [financialAccessUnlocking, setFinancialAccessUnlocking] = useState(false);
   const [rateCurrency, setRateCurrency] = useState(DEFAULT_CURRENCY);
   const [lessonRate, setLessonRate] = useState("");
   const [rateEffectiveFrom, setRateEffectiveFrom] = useState(
@@ -80,7 +96,6 @@ const TeacherStudentDetails = () => {
   );
   const [financeSaving, setFinanceSaving] = useState(false);
   const [financeSaveError, setFinanceSaveError] = useState("");
-  const [financeSuccess, setFinanceSuccess] = useState("");
 
   const [financeActivityLoading, setFinanceActivityLoading] = useState(true);
   const [financeActivityError, setFinanceActivityError] = useState("");
@@ -94,12 +109,10 @@ const TeacherStudentDetails = () => {
   const [paymentDescription, setPaymentDescription] = useState("");
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const [paymentSuccess, setPaymentSuccess] = useState("");
   const [editingPaymentId, setEditingPaymentId] = useState("");
   const [paymentAction, setPaymentAction] = useState(null);
   const [paymentActionSaving, setPaymentActionSaving] = useState(false);
   const [paymentActionError, setPaymentActionError] = useState("");
-  const [paymentActionSuccess, setPaymentActionSuccess] = useState("");
   const [cancelReasonCode, setCancelReasonCode] = useState("duplicate");
   const [cancelReasonNote, setCancelReasonNote] = useState("");
   const [transferStudentId, setTransferStudentId] = useState("");
@@ -132,16 +145,22 @@ const TeacherStudentDetails = () => {
         setLoading(true);
         setErrorMessage("");
 
-        const { data, error } = await getStudentById(studentId);
+        const [studentResult, lifecycleResult] = await Promise.all([
+          getStudentById(studentId),
+          getTeacherStudentLifecycle(studentId),
+        ]);
 
-        if (error) throw error;
+        if (studentResult.error || lifecycleResult.error) {
+          throw studentResult.error || lifecycleResult.error;
+        }
 
-        if (!data) {
+        if (!studentResult.data || !lifecycleResult.data) {
           setErrorMessage(t("teacherStudentDetails.errors.notFound"));
           return;
         }
 
-        setStudent(data);
+        setStudent(studentResult.data);
+        setLifecycle(lifecycleResult.data);
       } catch (error) {
         console.error("Student details load error:", error);
         setErrorMessage(t("teacherStudentDetails.errors.load"));
@@ -213,21 +232,34 @@ const TeacherStudentDetails = () => {
         setFinanceLoading(true);
         setFinanceError("");
 
-        const { data, error } = await getStudentFinanceOverview(studentId);
+        const [overviewResult, accessResult] = await Promise.all([
+          getStudentFinanceOverview(studentId),
+          getTeacherStudentFinancialAccess(studentId),
+        ]);
 
-        if (error) throw error;
+        if (overviewResult.error) throw overviewResult.error;
 
-        setFinanceOverview(data);
+        setFinanceOverview(overviewResult.data);
+        if (accessResult.error) {
+          console.error("Student financial access load error:", accessResult.error);
+          setFinancialAccessError(
+            t("teacherStudentDetails.finance.financialAccess.errors.load"),
+          );
+          setFinancialAccess(null);
+        } else {
+          setFinancialAccessError("");
+          setFinancialAccess(accessResult.data);
+        }
 
-        applyFinanceFormState(data, {
+        applyFinanceFormState(overviewResult.data, {
           setRateCurrency,
           setLessonRate,
           setRateEffectiveFrom,
         });
 
         const activeCurrency =
-          data?.currentRate?.currency ||
-          data?.settings?.billing_currency ||
+          overviewResult.data?.currentRate?.currency ||
+          overviewResult.data?.settings?.billing_currency ||
           DEFAULT_CURRENCY;
 
         setPaymentCurrency(activeCurrency);
@@ -236,6 +268,7 @@ const TeacherStudentDetails = () => {
         setFinanceError(t("teacherStudentDetails.finance.errors.load"));
       } finally {
         setFinanceLoading(false);
+        setFinancialAccessLoading(false);
       }
     };
 
@@ -480,7 +513,6 @@ const TeacherStudentDetails = () => {
     setPaymentDate(toLocalDateInputValue(transaction.payment.paid_at));
     setPaymentDescription(transaction.payment.description ?? "");
     setPaymentError("");
-    setPaymentSuccess("");
     paymentAttemptRef.current = { signature: "", requestId: "" };
   };
 
@@ -498,7 +530,6 @@ const TeacherStudentDetails = () => {
   const openPaymentCancellation = (transaction) => {
     setPaymentAction({ mode: "cancel", transaction });
     setPaymentActionError("");
-    setPaymentActionSuccess("");
     setCancelReasonCode("duplicate");
     setCancelReasonNote("");
     setPaymentActionRequestId("");
@@ -507,7 +538,6 @@ const TeacherStudentDetails = () => {
   const openPaymentTransfer = (transaction) => {
     setPaymentAction({ mode: "transfer", transaction });
     setPaymentActionError("");
-    setPaymentActionSuccess("");
     setTransferStudentId(transferCandidates[0]?.student_id ?? "");
     setTransferReasonCode("wrong_student");
     setTransferReasonNote("");
@@ -515,11 +545,46 @@ const TeacherStudentDetails = () => {
   };
 
   const refreshFinanceAfterPaymentAction = async () => {
-    const overviewResult = await getStudentFinanceOverview(studentId);
-    if (overviewResult.error) throw overviewResult.error;
+    const [overviewResult, accessResult] = await Promise.all([
+      getStudentFinanceOverview(studentId),
+      getTeacherStudentFinancialAccess(studentId),
+    ]);
+    if (overviewResult.error || accessResult.error) {
+      throw overviewResult.error || accessResult.error;
+    }
 
     setFinanceOverview(overviewResult.data);
+    setFinancialAccess(accessResult.data);
+    setFinancialAccessError("");
     await refreshFinanceHistory({ page: historyPage });
+  };
+
+  const refreshFinancialAccess = async () => {
+    const { data, error } = await getTeacherStudentFinancialAccess(studentId);
+    if (error) throw error;
+    setFinancialAccess(data);
+    setFinancialAccessError("");
+    return data;
+  };
+
+  const handleTemporaryFinancialUnlock = async () => {
+    try {
+      setFinancialAccessUnlocking(true);
+      const { data, error } = await temporaryUnlockStudentFinancialAccess(studentId);
+      if (error) throw error;
+      setFinancialAccess(data);
+      setFinancialAccessError("");
+      toast.success(
+        t("teacherStudentDetails.finance.financialAccess.messages.temporaryUnlocked"),
+      );
+    } catch (error) {
+      console.error("Temporary financial unlock error:", error);
+      toast.error(
+        t("teacherStudentDetails.finance.financialAccess.errors.unlock"),
+      );
+    } finally {
+      setFinancialAccessUnlocking(false);
+    }
   };
 
   const handleCancelPayment = async () => {
@@ -536,7 +601,6 @@ const TeacherStudentDetails = () => {
     try {
       setPaymentActionSaving(true);
       setPaymentActionError("");
-      setPaymentActionSuccess("");
 
       const { error } = await cancelManualStudentPayment({
         paymentId: transaction.payment.id,
@@ -548,12 +612,12 @@ const TeacherStudentDetails = () => {
 
       await refreshFinanceAfterPaymentAction();
       resetPaymentAction();
-      setPaymentActionSuccess(
+      toast.success(
         t("teacherStudentDetails.finance.messages.paymentCancelled"),
       );
     } catch (error) {
       console.error("Manual payment cancellation error:", error);
-      setPaymentActionError(getPaymentActionError(error, t));
+      toast.error(getPaymentActionError(error, t));
     } finally {
       setPaymentActionSaving(false);
     }
@@ -580,7 +644,6 @@ const TeacherStudentDetails = () => {
     try {
       setPaymentActionSaving(true);
       setPaymentActionError("");
-      setPaymentActionSuccess("");
 
       const { error } = await transferManualStudentPayment({
         paymentId: transaction.payment.id,
@@ -594,12 +657,12 @@ const TeacherStudentDetails = () => {
 
       await refreshFinanceAfterPaymentAction();
       resetPaymentAction();
-      setPaymentActionSuccess(
+      toast.success(
         t("teacherStudentDetails.finance.messages.paymentTransferred"),
       );
     } catch (error) {
       console.error("Manual payment transfer error:", error);
-      setPaymentActionError(getPaymentActionError(error, t));
+      toast.error(getPaymentActionError(error, t));
     } finally {
       setPaymentActionSaving(false);
     }
@@ -609,7 +672,6 @@ const TeacherStudentDetails = () => {
     event.preventDefault();
 
     setFinanceSaveError("");
-    setFinanceSuccess("");
 
     if (!lessonRate) {
       setFinanceSaveError(
@@ -659,18 +721,19 @@ const TeacherStudentDetails = () => {
       if (refreshError) throw refreshError;
 
       setFinanceOverview(refreshedFinance);
+      await refreshFinancialAccess();
       applyFinanceFormState(refreshedFinance, {
         setRateCurrency,
         setLessonRate,
         setRateEffectiveFrom,
       });
 
-      setFinanceSuccess(
+      toast.success(
         t("teacherStudentDetails.finance.messages.rateSavedAndNotified"),
       );
     } catch (error) {
       console.error("Student finance save error:", error);
-      setFinanceSaveError(getFinanceError(error, t));
+      toast.error(getFinanceError(error, t));
     } finally {
       setFinanceSaving(false);
     }
@@ -679,7 +742,6 @@ const TeacherStudentDetails = () => {
   const handlePaymentSubmit = async (event) => {
     event.preventDefault();
     setPaymentError("");
-    setPaymentSuccess("");
 
     const normalizedDescription = paymentDescription.trim();
 
@@ -783,27 +845,32 @@ const TeacherStudentDetails = () => {
       if (overviewResult.error) throw overviewResult.error;
 
       setFinanceOverview(overviewResult.data);
+      await refreshFinancialAccess();
       await refreshFinanceHistory({ page: 0 });
       setHistoryPage(0);
 
       const wasEditing = isEditingPayment;
       resetPaymentForm();
-      setPaymentSuccess(
-        taxPending
-          ? t(
-              wasEditing
-                ? "teacherStudentDetails.finance.messages.paymentUpdatedTaxPending"
-                : "teacherStudentDetails.finance.messages.paymentSavedTaxPending",
-            )
-          : t(
-              wasEditing
-                ? "teacherStudentDetails.finance.messages.paymentUpdated"
-                : "teacherStudentDetails.finance.messages.paymentSaved",
-            ),
-      );
+      if (taxPending) {
+        toast.warning(
+          t(
+            wasEditing
+              ? "teacherStudentDetails.finance.messages.paymentUpdatedTaxPending"
+              : "teacherStudentDetails.finance.messages.paymentSavedTaxPending",
+          ),
+        );
+      } else {
+        toast.success(
+          t(
+            wasEditing
+              ? "teacherStudentDetails.finance.messages.paymentUpdated"
+              : "teacherStudentDetails.finance.messages.paymentSaved",
+          ),
+        );
+      }
     } catch (error) {
       console.error("Manual payment error:", error);
-      setPaymentError(getPaymentError(error, t));
+      toast.error(getPaymentError(error, t));
     } finally {
       setPaymentSaving(false);
     }
@@ -855,6 +922,76 @@ const TeacherStudentDetails = () => {
     }
   };
 
+  const beginLifecycleStatusChange = (nextStatus) => {
+    setPendingLifecycleStatus(nextStatus);
+    setPauseUntilDraft(
+      nextStatus === "paused" ? getLocalDateDaysFromNow(7) : "",
+    );
+  };
+
+  const refreshLearningScheduleSummary = async () => {
+    const today = getLocalDateString();
+    const [recurringResult, nextLessonResult] = await Promise.all([
+      listTeacherStudentRecurringLessons({ studentId, today }),
+      getTeacherStudentNextLesson({
+        studentId,
+        fromIso: new Date().toISOString(),
+      }),
+    ]);
+
+    if (recurringResult.error || nextLessonResult.error) {
+      console.warn(
+        "Student schedule summary refresh warning:",
+        recurringResult.error || nextLessonResult.error,
+      );
+      return;
+    }
+
+    setRecurringLessons(recurringResult.data ?? []);
+    setNextLesson(nextLessonResult.data ?? null);
+  };
+
+  const handleLifecycleStatusChange = async (nextStatus) => {
+    if (nextStatus === "paused" && !pauseUntilDraft) {
+      toast.error(t("teacherStudentDetails.lifecycle.errors.pauseDateRequired"));
+      return;
+    }
+
+    try {
+      setLifecycleSaving(true);
+      const { data, error } = await setTeacherStudentLearningStatus({
+        studentId,
+        status: nextStatus,
+        pauseUntil: nextStatus === "paused" ? pauseUntilDraft : null,
+      });
+
+      if (error) throw error;
+
+      setLifecycle(data);
+      setStudent((current) =>
+        current
+          ? { ...current, is_active: Boolean(data?.profile_is_active) }
+          : current,
+      );
+      setPendingLifecycleStatus("");
+      setPauseUntilDraft("");
+      await refreshLearningScheduleSummary();
+      toast.success(
+        t(`teacherStudentDetails.lifecycle.messages.${nextStatus}`),
+      );
+    } catch (error) {
+      console.error("Student lifecycle update error:", error);
+      const message =
+        error?.message?.includes("PAUSE_TOO_LONG") ||
+        error?.message?.includes("PAUSE_END_IN_PAST")
+          ? t("teacherStudentDetails.lifecycle.errors.pauseDateInvalid")
+          : t("teacherStudentDetails.lifecycle.errors.save");
+      toast.error(message);
+    } finally {
+      setLifecycleSaving(false);
+    }
+  };
+
   const backLink = (
     <Link to="/teacher-dashboard/students" className={styles.backLink}>
       ← {t("teacherStudentDetails.back")}
@@ -893,18 +1030,168 @@ const TeacherStudentDetails = () => {
               <h1>{student.full_name || t("common.nameNotSpecified")}</h1>
               <span
                 className={`${styles.status} ${
-                  student.is_active ? styles.active : styles.inactive
+                  lifecycle?.learning_status === "paused"
+                    ? styles.paused
+                    : lifecycle?.learning_status === "inactive"
+                      ? styles.inactive
+                      : styles.active
                 }`}
               >
-                {student.is_active
-                  ? t("common.active")
-                  : t("common.inactive")}
+                {t(
+                  `teacherStudentDetails.lifecycle.status.${
+                    lifecycle?.learning_status || "active"
+                  }`,
+                )}
               </span>
             </div>
             <p className={styles.email}>{student.email}</p>
           </div>
         </div>
       </div>
+
+      {lifecycle && (
+        <article className={styles.lifecyclePanel}>
+          <div className={styles.lifecycleHeader}>
+            <div>
+              <span className={styles.lifecycleEyebrow}>
+                {t("teacherStudentDetails.lifecycle.title")}
+              </span>
+              <strong>
+                {t(
+                  `teacherStudentDetails.lifecycle.status.${lifecycle.learning_status}`,
+                )}
+              </strong>
+            </div>
+
+            <div className={styles.lifecycleActions}>
+              {lifecycle.learning_status === "active" && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.lifecycleSecondaryButton}
+                    onClick={() => beginLifecycleStatusChange("paused")}
+                    disabled={lifecycleSaving}
+                  >
+                    {t("teacherStudentDetails.lifecycle.actions.pause")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.lifecycleDangerButton}
+                    onClick={() => beginLifecycleStatusChange("inactive")}
+                    disabled={lifecycleSaving}
+                  >
+                    {t("teacherStudentDetails.lifecycle.actions.deactivate")}
+                  </button>
+                </>
+              )}
+
+              {lifecycle.learning_status === "paused" && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.lifecyclePrimaryButton}
+                    onClick={() => beginLifecycleStatusChange("active")}
+                    disabled={lifecycleSaving}
+                  >
+                    {t("teacherStudentDetails.lifecycle.actions.resume")}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.lifecycleDangerButton}
+                    onClick={() => beginLifecycleStatusChange("inactive")}
+                    disabled={lifecycleSaving}
+                  >
+                    {t("teacherStudentDetails.lifecycle.actions.deactivate")}
+                  </button>
+                </>
+              )}
+
+              {lifecycle.learning_status === "inactive" && (
+                <button
+                  type="button"
+                  className={styles.lifecyclePrimaryButton}
+                  onClick={() => beginLifecycleStatusChange("active")}
+                  disabled={lifecycleSaving}
+                >
+                  {t("teacherStudentDetails.lifecycle.actions.restore")}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <p className={styles.lifecycleHint}>
+            {lifecycle.learning_status === "paused" && lifecycle.pause_until
+              ? t("teacherStudentDetails.lifecycle.hints.pausedUntil", {
+                  date: formatDateOnly(lifecycle.pause_until),
+                })
+              : t(
+                  `teacherStudentDetails.lifecycle.hints.${lifecycle.learning_status}`,
+                )}
+          </p>
+
+          {pendingLifecycleStatus && (
+            <div className={styles.lifecycleConfirm}>
+              <p>
+                {t(
+                  `teacherStudentDetails.lifecycle.confirm.${
+                    pendingLifecycleStatus === "active"
+                      ? lifecycle.learning_status === "paused"
+                        ? "resume"
+                        : "restore"
+                      : pendingLifecycleStatus
+                  }`,
+                )}
+              </p>
+
+              {pendingLifecycleStatus === "paused" && (
+                <label className={styles.lifecyclePauseField}>
+                  <span>{t("teacherStudentDetails.lifecycle.pauseUntil")}</span>
+                  <input
+                    type="date"
+                    min={getLocalDateString()}
+                    max={getLocalDateDaysFromNow(14)}
+                    value={pauseUntilDraft}
+                    onChange={(event) => setPauseUntilDraft(event.target.value)}
+                    disabled={lifecycleSaving}
+                    required
+                  />
+                  <small>{t("teacherStudentDetails.lifecycle.pauseMaxHint")}</small>
+                </label>
+              )}
+
+              <div>
+                <button
+                  type="button"
+                  className={styles.lifecycleCancelButton}
+                  onClick={() => {
+                    setPendingLifecycleStatus("");
+                    setPauseUntilDraft("");
+                  }}
+                  disabled={lifecycleSaving}
+                >
+                  {t("common.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className={
+                    pendingLifecycleStatus === "inactive"
+                      ? styles.lifecycleDangerButton
+                      : styles.lifecyclePrimaryButton
+                  }
+                  onClick={() =>
+                    handleLifecycleStatusChange(pendingLifecycleStatus)
+                  }
+                  disabled={lifecycleSaving}
+                >
+                  {lifecycleSaving
+                    ? t("common.saving")
+                    : t("teacherStudentDetails.lifecycle.actions.confirm")}
+                </button>
+              </div>
+            </div>
+          )}
+        </article>
+      )}
 
       <div className={styles.grid}>
         <article className={styles.card}>
@@ -954,6 +1241,139 @@ const TeacherStudentDetails = () => {
                   {t("teacherStudentDetails.finance.currentBalance")}
                 </span>
               </div>
+
+              {financialAccessLoading ? null : financialAccessError ? (
+                <p className={styles.error}>{financialAccessError}</p>
+              ) : financialAccess ? (
+                <div
+                  className={`${styles.financialAccessPanel} ${
+                    financialAccess.access_restricted
+                      ? styles.financialAccessBlocked
+                      : financialAccess.manual_unlock_active
+                        ? styles.financialAccessTemporary
+                        : styles.financialAccessOpen
+                  }`}
+                >
+                  <div className={styles.financialAccessHeader}>
+                    <div>
+                      <span className={styles.financialAccessLabel}>
+                        {t("teacherStudentDetails.finance.financialAccess.title")}
+                      </span>
+                      <strong>
+                        {!financialAccess.financial_blocking_enabled
+                          ? t("teacherStudentDetails.finance.financialAccess.disabled")
+                          : financialAccess.access_restricted
+                            ? t("teacherStudentDetails.finance.financialAccess.blocked")
+                            : financialAccess.manual_unlock_active
+                              ? t("teacherStudentDetails.finance.financialAccess.temporary")
+                              : t("teacherStudentDetails.finance.financialAccess.active")}
+                      </strong>
+                    </div>
+
+                    {financialAccess.is_financially_blocked &&
+                      !financialAccess.manual_unlock_active && (
+                        <button
+                          type="button"
+                          className={styles.financialAccessButton}
+                          onClick={handleTemporaryFinancialUnlock}
+                          disabled={financialAccessUnlocking}
+                        >
+                          {financialAccessUnlocking
+                            ? t("teacherStudentDetails.finance.financialAccess.unlocking")
+                            : t("teacherStudentDetails.finance.financialAccess.temporaryUnlock")}
+                        </button>
+                      )}
+                  </div>
+
+                  {financialAccess.tariff_currency && (
+                    <dl className={styles.financialAccessMetrics}>
+                      <div>
+                        <dt>
+                          {t(
+                            financialAccess.coverage_uses_fx
+                              ? "teacherStudentDetails.finance.financialAccess.combinedBalanceApprox"
+                              : "teacherStudentDetails.finance.financialAccess.combinedBalance",
+                          )}
+                        </dt>
+                        <dd>
+                          {financialAccess.fx_pending ||
+                          financialAccess.balance_minor == null
+                            ? "—"
+                            : formatMoney(
+                                Number(financialAccess.balance_minor),
+                                financialAccess.tariff_currency,
+                              )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {t("teacherStudentDetails.finance.financialAccess.blockThreshold", {
+                            count: financialAccess.debt_threshold_lessons,
+                          })}
+                        </dt>
+                        <dd>
+                          {financialAccess.block_debt_threshold_minor == null
+                            ? "—"
+                            : formatMoney(
+                                -Number(financialAccess.block_debt_threshold_minor),
+                                financialAccess.tariff_currency,
+                              )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {t("teacherStudentDetails.finance.financialAccess.recoveryTarget", {
+                            count: financialAccess.recovery_target_lessons,
+                          })}
+                        </dt>
+                        <dd>
+                          {financialAccess.recovery_target_minor == null
+                            ? "—"
+                            : formatMoney(
+                                Number(financialAccess.recovery_target_minor),
+                                financialAccess.tariff_currency,
+                              )}
+                        </dd>
+                      </div>
+                      {!financialAccess.fx_pending &&
+                        Number(financialAccess.balance_minor ?? 0) < 0 &&
+                        Number(financialAccess.recommended_payment_minor ?? 0) > 0 && (
+                          <div>
+                            <dt>
+                              {t(
+                                "teacherStudentDetails.finance.financialAccess.recommendedPaymentLabel",
+                              )}
+                            </dt>
+                            <dd>
+                              {formatMoney(
+                                Number(financialAccess.recommended_payment_minor),
+                                financialAccess.tariff_currency,
+                              )}
+                            </dd>
+                          </div>
+                        )}
+                    </dl>
+                  )}
+
+                  {financialAccess.fx_pending ? (
+                    <p className={styles.financialAccessHint}>
+                      {t("teacherStudentDetails.finance.financialAccess.fxPending")}
+                    </p>
+                  ) : financialAccess.coverage_uses_fx ? (
+                    <p className={styles.financialAccessHint}>
+                      {t(
+                        "teacherStudentDetails.finance.financialAccess.exactNbuHint",
+                      )}
+                    </p>
+                  ) : null}
+
+                  {financialAccess.manual_unlock_active && (
+                    <p className={styles.financialAccessHint}>
+                      {t("teacherStudentDetails.finance.financialAccess.temporaryHint")}
+                    </p>
+                  )}
+                </div>
+              ) : null}
 
               <div className={styles.rateStatusList}>
                 {financeOverview?.currentRate ? (
@@ -1031,7 +1451,6 @@ const TeacherStudentDetails = () => {
                         }
 
                         setFinanceSaveError("");
-                        setFinanceSuccess("");
                       }}
                       disabled={financeSaving}
                     >
@@ -1054,7 +1473,6 @@ const TeacherStudentDetails = () => {
                         onChange={(event) => {
                           setLessonRate(sanitizePositiveIntegerInput(event.target.value));
                           setFinanceSaveError("");
-                          setFinanceSuccess("");
                         }}
                         placeholder="0"
                         disabled={financeSaving}
@@ -1072,7 +1490,6 @@ const TeacherStudentDetails = () => {
                       onChange={(event) => {
                         setRateEffectiveFrom(event.target.value);
                         setFinanceSaveError("");
-                        setFinanceSuccess("");
                       }}
                       disabled={financeSaving}
                     />
@@ -1087,9 +1504,6 @@ const TeacherStudentDetails = () => {
                   <p className={styles.error}>{financeSaveError}</p>
                 )}
 
-                {financeSuccess && (
-                  <p className={styles.success}>{financeSuccess}</p>
-                )}
 
                 <div className={styles.financeActions}>
                   <button
@@ -1169,7 +1583,6 @@ const TeacherStudentDetails = () => {
                           onChange={(event) => {
                             setPaymentCurrency(event.target.value);
                             setPaymentError("");
-                            setPaymentSuccess("");
                           }}
                           disabled={paymentSaving}
                         >
@@ -1191,7 +1604,6 @@ const TeacherStudentDetails = () => {
                             onChange={(event) => {
                               setPaymentAmount(sanitizeMoneyInput(event.target.value));
                               setPaymentError("");
-                              setPaymentSuccess("");
                             }}
                             placeholder="0,00"
                             disabled={paymentSaving}
@@ -1207,7 +1619,6 @@ const TeacherStudentDetails = () => {
                           onChange={(event) => {
                             setPaymentAccountId(event.target.value);
                             setPaymentError("");
-                            setPaymentSuccess("");
                           }}
                           disabled={paymentSaving || eligiblePaymentAccounts.length === 0}
                         >
@@ -1234,7 +1645,6 @@ const TeacherStudentDetails = () => {
                           onChange={(event) => {
                             setPaymentDate(event.target.value);
                             setPaymentError("");
-                            setPaymentSuccess("");
                           }}
                           disabled={paymentSaving}
                         />
@@ -1262,7 +1672,6 @@ const TeacherStudentDetails = () => {
                           onChange={(event) => {
                             setPaymentDescription(event.target.value);
                             setPaymentError("");
-                            setPaymentSuccess("");
                           }}
                           maxLength={500}
                           rows={3}
@@ -1283,9 +1692,6 @@ const TeacherStudentDetails = () => {
                     )}
 
                     {paymentError && <p className={styles.error}>{paymentError}</p>}
-                    {paymentSuccess && (
-                      <p className={styles.success}>{paymentSuccess}</p>
-                    )}
 
                     <div className={styles.financeActions}>
                       {isEditingPayment && (
@@ -1294,7 +1700,6 @@ const TeacherStudentDetails = () => {
                           className={styles.secondaryButton}
                           onClick={() => {
                             resetPaymentForm();
-                            setPaymentSuccess("");
                           }}
                           disabled={paymentSaving}
                         >
@@ -1399,9 +1804,6 @@ const TeacherStudentDetails = () => {
                   </p>
                 ) : (
                   <>
-                  {paymentActionSuccess && (
-                    <p className={styles.success}>{paymentActionSuccess}</p>
-                  )}
                   {paymentActionError && (
                     <p className={styles.error}>{paymentActionError}</p>
                   )}
@@ -2084,6 +2486,17 @@ const getLocalDateString = () => {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
 
+  return `${year}-${month}-${day}`;
+};
+
+const getLocalDateDaysFromNow = (days) => {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 

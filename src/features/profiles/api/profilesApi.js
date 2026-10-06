@@ -17,17 +17,24 @@ export const getLoginProfileById = (userId) =>
     .eq("id", userId)
     .single();
 
-export const listActiveStudents = ({ includeContact = false } = {}) =>
-  supabase
-    .from("profiles")
-    .select(
-      includeContact
-        ? "id, full_name, email, is_active"
-        : "id, full_name, email",
-    )
-    .eq("role", "student")
-    .eq("is_active", true)
-    .order("full_name");
+export const listActiveStudents = async ({ includeContact = false } = {}) => {
+  const { data, error } = await supabase.rpc("list_teacher_students_lifecycle");
+
+  if (error) return { data: null, error };
+
+  const activeStudents = (data ?? [])
+    .filter((student) => student.learning_status === "active")
+    .map((student) => ({
+      id: student.student_id,
+      full_name: student.full_name,
+      email: student.email,
+      ...(includeContact
+        ? { is_active: Boolean(student.profile_is_active) }
+        : {}),
+    }));
+
+  return { data: activeStudents, error: null };
+};
 
 export const listStudents = () =>
   supabase

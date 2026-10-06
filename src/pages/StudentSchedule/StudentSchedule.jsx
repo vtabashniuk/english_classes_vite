@@ -20,6 +20,8 @@ import {
   requestLessonCancellation,
 } from "../../features/lessons/api/lessonsApi";
 import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
+import { getMyStudentFinancialAccess } from "../../features/studentFinancialAccess/api/studentFinancialAccessApi";
+import { getMyStudentLifecycle } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
@@ -72,6 +74,8 @@ const StudentSchedule = () => {
   const [lessons, setLessons] = useState([]);
   const [requests, setRequests] = useState([]);
   const [cancellationRequests, setCancellationRequests] = useState([]);
+  const [financialAccess, setFinancialAccess] = useState(null);
+  const [learningLifecycle, setLearningLifecycle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -103,6 +107,11 @@ const StudentSchedule = () => {
   const timezoneLabel = timezoneConfig ? t(timezoneConfig.labelKey) : timezone;
   const language = i18n.resolvedLanguage || i18n.language;
   const intlLocale = getIntlLocale(language);
+  const financiallyRestricted = Boolean(financialAccess?.access_restricted);
+  const learningPaused = learningLifecycle?.learning_status === "paused";
+  const learningInactive = learningLifecycle?.learning_status === "inactive";
+  const learningRestricted = learningPaused || learningInactive;
+  const newLearningRestricted = financiallyRestricted || learningRestricted;
 
   const loadRequests = async () => {
     const nextRequests = await fetchStudentRequests();
@@ -133,17 +142,31 @@ const StudentSchedule = () => {
 
     const initialize = async () => {
       try {
-        const [nextLessons, nextRequests, nextCancellationRequests] = await Promise.all([
+        const [
+          nextLessons,
+          nextRequests,
+          nextCancellationRequests,
+          accessResult,
+          lifecycleResult,
+        ] = await Promise.all([
           fetchStudentLessons(),
           fetchStudentRequests(),
           fetchCancellationRequests(),
+          getMyStudentFinancialAccess(),
+          getMyStudentLifecycle(),
         ]);
+
+        if (accessResult.error || lifecycleResult.error) {
+          throw accessResult.error || lifecycleResult.error;
+        }
 
         if (!cancelled) {
           setErrorMessage("");
           setLessons(nextLessons);
           setRequests(nextRequests);
           setCancellationRequests(nextCancellationRequests);
+          setFinancialAccess(accessResult.data);
+          setLearningLifecycle(lifecycleResult.data);
         }
       } catch (error) {
         console.error("Student schedule load error:", error);
@@ -375,6 +398,16 @@ const StudentSchedule = () => {
   };
 
   const handleOpenRescheduleForm = async (lesson) => {
+    if (learningRestricted) {
+      setErrorMessage(t("studentSchedule.lifecycle.restrictedAction"));
+      return;
+    }
+
+    if (financiallyRestricted) {
+      setErrorMessage(t("studentSchedule.financialAccess.restrictedAction"));
+      return;
+    }
+
     if (rescheduleLessonId === lesson.id) {
       resetRescheduleForm();
       return;
@@ -415,6 +448,16 @@ const StudentSchedule = () => {
   const handleCreateRescheduleRequest = async (event, lesson) => {
     event.preventDefault();
 
+    if (learningRestricted) {
+      setRescheduleError(t("studentSchedule.lifecycle.restrictedAction"));
+      return;
+    }
+
+    if (financiallyRestricted) {
+      setRescheduleError(t("studentSchedule.financialAccess.restrictedAction"));
+      return;
+    }
+
     if (!rescheduleSelectedSlot) {
       setRescheduleError(t("studentSchedule.reschedule.errors.selectSlot"));
       return;
@@ -440,6 +483,10 @@ const StudentSchedule = () => {
       window.dispatchEvent(new Event("notifications-changed"));
     } catch (error) {
       console.error("Create lesson reschedule request error:", error);
+      if ((error?.message ?? "").includes("STUDENT_FINANCIAL_ACCESS_RESTRICTED")) {
+        const accessResult = await getMyStudentFinancialAccess();
+        if (!accessResult.error) setFinancialAccess(accessResult.data);
+      }
       setRescheduleError(getLessonRescheduleError(error, t));
     } finally {
       setRescheduleSubmitting(false);
@@ -497,6 +544,18 @@ const StudentSchedule = () => {
   };
 
   const handleOpenRequestForm = async () => {
+    if (learningRestricted) {
+      setRequestFormOpen(false);
+      setRequestError(t("studentSchedule.lifecycle.restrictedAction"));
+      return;
+    }
+
+    if (financiallyRestricted) {
+      setRequestFormOpen(false);
+      setRequestError(t("studentSchedule.financialAccess.restrictedAction"));
+      return;
+    }
+
     const nextOpenState = !requestFormOpen;
     setRequestFormOpen(nextOpenState);
     setRequestError("");
@@ -546,6 +605,16 @@ const StudentSchedule = () => {
   const handleCreateRequest = async (event) => {
     event.preventDefault();
 
+    if (learningRestricted) {
+      setRequestError(t("studentSchedule.lifecycle.restrictedAction"));
+      return;
+    }
+
+    if (financiallyRestricted) {
+      setRequestError(t("studentSchedule.financialAccess.restrictedAction"));
+      return;
+    }
+
     if (!selectedSlot) {
       setRequestError(t("studentSchedule.extraLesson.errors.selectSlot"));
       return;
@@ -573,6 +642,10 @@ const StudentSchedule = () => {
       await loadRequests();
     } catch (error) {
       console.error("Create extra lesson request error:", error);
+      if ((error?.message ?? "").includes("STUDENT_FINANCIAL_ACCESS_RESTRICTED")) {
+        const accessResult = await getMyStudentFinancialAccess();
+        if (!accessResult.error) setFinancialAccess(accessResult.data);
+      }
       setRequestError(getExtraLessonRequestError(error, t));
     } finally {
       setRequestSubmitting(false);
@@ -614,6 +687,92 @@ const StudentSchedule = () => {
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
       {successMessage && <div className={styles.success}>{successMessage}</div>}
 
+      {learningRestricted && (
+        <div className={`${styles.financialAccessNotice} ${styles.learningPauseNotice}`}>
+          <div>
+            <strong>
+              {learningInactive
+                ? t("studentSchedule.lifecycle.inactiveTitle")
+                : t("studentSchedule.lifecycle.pausedTitle")}
+            </strong>
+            <p>
+              {learningInactive
+                ? t("studentSchedule.lifecycle.inactiveDescription")
+                : learningLifecycle?.pause_until
+                  ? t("studentSchedule.lifecycle.pausedDescriptionUntil", {
+                      date: new Intl.DateTimeFormat(intlLocale, {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      }).format(
+                        new Date(`${learningLifecycle.pause_until}T12:00:00`),
+                      ),
+                    })
+                  : t("studentSchedule.lifecycle.pausedDescription")}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!financialAccess?.is_financially_blocked &&
+        !financialAccess?.fx_pending &&
+        Number(financialAccess?.balance_minor ?? 0) < 0 &&
+        Number(financialAccess?.recommended_payment_minor ?? 0) > 0 &&
+        financialAccess?.tariff_currency && (
+          <div className={styles.financialAccessNotice}>
+            <div>
+              <strong>{t("studentSchedule.financialAccess.debtTitle")}</strong>
+              <p>{t("studentSchedule.financialAccess.debtDescription")}</p>
+            </div>
+            <span className={styles.financialAccessPayment}>
+              {t("studentSchedule.financialAccess.recommendedPayment", {
+                amount: formatFinanceMoney(
+                  Number(financialAccess.recommended_payment_minor),
+                  financialAccess.tariff_currency,
+                  language,
+                ),
+              })}
+            </span>
+          </div>
+        )}
+
+      {financialAccess?.is_financially_blocked && (
+        <div
+          className={`${styles.financialAccessNotice} ${
+            financiallyRestricted
+              ? styles.financialAccessRestricted
+              : styles.financialAccessTemporary
+          }`}
+        >
+          <div>
+            <strong>
+              {financiallyRestricted
+                ? t("studentSchedule.financialAccess.blockedTitle")
+                : t("studentSchedule.financialAccess.temporaryTitle")}
+            </strong>
+            <p>
+              {financiallyRestricted
+                ? t("studentSchedule.financialAccess.blockedDescription")
+                : t("studentSchedule.financialAccess.temporaryDescription")}
+            </p>
+          </div>
+
+          {!financialAccess.fx_pending &&
+            Number(financialAccess.recommended_payment_minor ?? 0) > 0 &&
+            financialAccess.tariff_currency && (
+              <span className={styles.financialAccessPayment}>
+                {t("studentSchedule.financialAccess.recommendedPayment", {
+                  amount: formatFinanceMoney(
+                    Number(financialAccess.recommended_payment_minor),
+                    financialAccess.tariff_currency,
+                    language,
+                  ),
+                })}
+              </span>
+            )}
+        </div>
+      )}
+
       <section className={styles.extraLessonSection}>
         <div className={styles.extraLessonHeading}>
           <div>
@@ -625,6 +784,7 @@ const StudentSchedule = () => {
             type="button"
             className={styles.requestToggleButton}
             onClick={handleOpenRequestForm}
+            disabled={newLearningRestricted}
           >
             {requestFormOpen
               ? t("studentSchedule.extraLesson.close")
@@ -860,6 +1020,7 @@ const StudentSchedule = () => {
                           className={styles.rescheduleButton}
                           onClick={() => handleOpenRescheduleForm(lesson)}
                           disabled={
+                            financiallyRestricted ||
                             pendingCancellationLessonIds.has(lesson.id) ||
                             pendingRescheduleLessonIds.has(lesson.id)
                           }
@@ -1048,6 +1209,14 @@ const getCancelLessonError = (error, t) => {
 const getExtraLessonRequestError = (error, t) => {
   const message = error?.message ?? "";
 
+  if (message.includes("STUDENT_LEARNING_PAUSED") ||
+      message.includes("STUDENT_LEARNING_INACTIVE")) {
+    return t("studentSchedule.lifecycle.restrictedAction");
+  }
+  if (message.includes("STUDENT_FINANCIAL_ACCESS_RESTRICTED")) {
+    return t("studentSchedule.financialAccess.restrictedAction");
+  }
+
   if (message.includes("SCHEDULE_BLOCK_CONFLICT")) {
     return t("studentSchedule.extraLesson.errors.scheduleBlocked");
   }
@@ -1116,6 +1285,14 @@ const getLessonReschedulePreviewError = (reason, noticeHours, t) => {
 
 const getLessonRescheduleError = (error, t) => {
   const message = error?.message ?? "";
+
+  if (message.includes("STUDENT_LEARNING_PAUSED") ||
+      message.includes("STUDENT_LEARNING_INACTIVE")) {
+    return t("studentSchedule.lifecycle.restrictedAction");
+  }
+  if (message.includes("STUDENT_FINANCIAL_ACCESS_RESTRICTED")) {
+    return t("studentSchedule.financialAccess.restrictedAction");
+  }
 
   if (message.includes("RESCHEDULE_WINDOW_CLOSED")) {
     return t("studentSchedule.reschedule.errors.windowClosedGeneric");

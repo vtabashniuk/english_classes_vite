@@ -1,11 +1,16 @@
 export const DEFAULT_FINANCE_SETTINGS = {
   lowBalanceLessonsThreshold: 2,
+  financialBlockingEnabled: false,
+  financialBlockingDebtThresholdLessons: 5,
   freeCancellationHours: 6,
   historyPageSize: 20,
 };
 
 export const MIN_LOW_BALANCE_LESSONS = 1;
 export const MAX_LOW_BALANCE_LESSONS = 20;
+
+export const MIN_FINANCIAL_BLOCKING_DEBT_LESSONS = 1;
+export const MAX_FINANCIAL_BLOCKING_DEBT_LESSONS = 50;
 
 export const MIN_FREE_CANCELLATION_HOURS = 1;
 export const MAX_FREE_CANCELLATION_HOURS = 168;

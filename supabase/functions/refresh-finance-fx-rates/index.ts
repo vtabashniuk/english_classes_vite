@@ -128,8 +128,34 @@ Deno.serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    if (profileError || !profile || profile.role !== "teacher" || !profile.is_active) {
-      return jsonResponse({ error: "TEACHER_REQUIRED" }, 403);
+    if (profileError || !profile || !profile.is_active) {
+      return jsonResponse({ error: "ACTIVE_USER_REQUIRED" }, 403);
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    let teacherId = user.id;
+
+    if (profile.role === "student") {
+      const { data: relation, error: relationError } = await supabaseUser
+        .from("teacher_students")
+        .select("teacher_id")
+        .eq("student_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (relationError || !relation?.teacher_id) {
+        return jsonResponse({ error: "TEACHER_NOT_FOUND" }, 403);
+      }
+
+      teacherId = relation.teacher_id;
+    } else if (profile.role !== "teacher") {
+      return jsonResponse({ error: "TEACHER_OR_STUDENT_REQUIRED" }, 403);
     }
 
     const body = await req.json().catch(() => null);
@@ -138,22 +164,15 @@ Deno.serve(async (req) => {
         ? body.rateDate
         : null;
 
-    const { data: settings } = await supabaseUser
+    const { data: settings } = await supabaseAdmin
       .from("teacher_settings")
       .select("schedule_timezone")
-      .eq("teacher_id", user.id)
+      .eq("teacher_id", teacherId)
       .maybeSingle();
 
     const rateDate =
       requestedBodyDate ||
       getDateInTimeZone(settings?.schedule_timezone || "Europe/Kyiv");
-
-    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
 
     const { data: cached, error: cacheError } = await supabaseAdmin
       .from("finance_nbu_exchange_rates")

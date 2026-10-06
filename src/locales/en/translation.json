@@ -196,7 +196,25 @@
         "generic": "Could not process the reschedule request."
       }
     },
-    "joinMeeting": "Join: {{provider}}"
+    "joinMeeting": "Join: {{provider}}",
+    "financialAccess": {
+      "blockedTitle": "New actions are temporarily restricted due to debt",
+      "blockedDescription": "You can still sign in, view lessons and assignments, and cancel an already scheduled lesson. Extra-lesson and reschedule requests are unavailable until the financial reserve is restored.",
+      "temporaryTitle": "Financial restriction temporarily lifted by your teacher",
+      "temporaryDescription": "New actions are available again until the next financial operation. The system will automatically re-evaluate your financial status after it.",
+      "recommendedPayment": "Recommended payment: {{amount}}.",
+      "restrictedAction": "This action is temporarily unavailable due to a financial restriction.",
+      "debtTitle": "Balance is in debt",
+      "debtDescription": "The recommended top-up is calculated in the current tariff currency to restore the reserve above the low-balance threshold."
+    },
+    "lifecycle": {
+      "pausedTitle": "Learning is temporarily paused",
+      "pausedDescription": "You can still view your account and scheduled lessons, but new extra-lesson and reschedule requests are temporarily unavailable.",
+      "restrictedAction": "New learning actions are unavailable while learning is paused.",
+      "inactiveTitle": "Learning has ended",
+      "inactiveDescription": "Your learning status is inactive. New learning actions are unavailable. Contact your teacher if learning should be restored.",
+      "pausedDescriptionUntil": "Paused through {{date}} inclusive. Lessons during the pause are cancelled without charge; new extra-lesson and reschedule requests are temporarily unavailable."
+    }
   },
   "about": {
     "title": "About Olga",
@@ -367,7 +385,18 @@
     "errors": {
       "load": "Could not load the student list.",
       "invite": "Could not invite the student."
-    }
+    },
+    "groups": {
+      "active": "Active students",
+      "paused": "Paused",
+      "inactive": "Inactive students"
+    },
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "inactive": "Inactive"
+    },
+    "pauseUntil": "Paused until"
   },
   "teacherSchedule": {
     "title": "Schedule",
@@ -817,12 +846,17 @@
         "invalidThreshold": "Enter a whole number of lessons from 1 to 20.",
         "save": "Could not save financial control settings.",
         "invalidCancellationHours": "Enter a whole number of hours from 1 to 168.",
-        "invalidHistoryPageSize": "Choose a transaction count from the list."
+        "invalidHistoryPageSize": "Choose a transaction count from the list.",
+        "invalidDebtThreshold": "Enter a whole number of lessons from 1 to 50."
       },
       "freeCancellationHours": "Free cancellation window, hours before lesson",
       "freeCancellationHint": "A student request sent at least this long before the lesson is cancelled without a charge. A later request is charged in full by default.",
       "historyPageSize": "Transactions per history page",
-      "historyPageSizeHint": "Controls how many finance transactions are shown on one history page."
+      "historyPageSizeHint": "Controls how many finance transactions are shown on one history page.",
+      "financialBlockingEnabled": "Automatically restrict new student actions for significant debt",
+      "financialBlockingEnabledHint": "The student can still sign in, view lessons and assignments, and cancel an already scheduled lesson. New extra-lesson and reschedule requests are restricted.",
+      "financialBlockingDebtThreshold": "Blocking threshold, lesson-price multiples",
+      "financialBlockingDebtThresholdHint": "The student is blocked when the combined balance in the current tariff currency falls below minus the cost of this many lessons. Once blocked, automatic recovery happens only after the balance covers more lessons than the Low balance threshold."
     },
     "workingDaysTitle": "Working days and hours",
     "workingDaysHint": "Enable working days and set a separate time range for each day.",
@@ -1092,7 +1126,72 @@
           "replacement": "Transferred from {{source}}"
         }
       },
-      "lessonChargeRecordedAt": "Recorded: {{date}}"
+      "lessonChargeRecordedAt": "Recorded: {{date}}",
+      "financialAccess": {
+        "title": "Financial access",
+        "blocked": "Restricted due to debt",
+        "temporary": "Temporarily unlocked",
+        "active": "Active",
+        "temporaryUnlock": "Temporarily unlock",
+        "unlocking": "Unlocking…",
+        "combinedBalance": "Combined balance in tariff currency",
+        "blockThreshold": "Blocking threshold ({{count}} lessons)",
+        "recoveryTarget": "Automatic recovery ({{count}} lessons)",
+        "fxPending": "Status cannot be recalculated yet because an up-to-date NBU rate is missing for part of the foreign-currency balance.",
+        "recommendedPayment": "Recommended payment: {{amount}} to restore the financial reserve above the low-balance threshold.",
+        "temporaryHint": "The temporary unlock lasts until the student’s next financial operation. The system will automatically evaluate the status again after that operation.",
+        "messages": {
+          "temporaryUnlocked": "Student temporarily unlocked until the next financial operation."
+        },
+        "errors": {
+          "load": "Could not load financial access status.",
+          "unlock": "Could not temporarily unlock the student."
+        },
+        "recommendedPaymentLabel": "Recommended payment",
+        "exactNbuHint": "When the balance contains multiple currencies, they are converted using the official NBU rate for the current date and the combined amount is then approximately rounded down: UAH to 10 UAH, USD/EUR to 1 whole currency unit.",
+        "disabled": "Automatic blocking is off",
+        "combinedBalanceApprox": "Combined balance in tariff currency (≈, rounded down)"
+      }
+    },
+    "lifecycle": {
+      "title": "Learning status",
+      "status": {
+        "active": "Active",
+        "paused": "Paused",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "pause": "Pause learning",
+        "deactivate": "Finish learning",
+        "resume": "Resume learning",
+        "restore": "Restore student",
+        "confirm": "Confirm"
+      },
+      "hints": {
+        "active": "The student is active and can create new lesson and reschedule requests.",
+        "paused": "A temporary pause blocks new learning actions. The student’s regular slot is preserved only for the short pause period.",
+        "inactive": "Learning has ended. Future lessons are cancelled without charge, recurring series are stopped, and the schedule time is fully released. History, finance, debts and notes are preserved.",
+        "pausedUntil": "Paused through {{date}} inclusive. Lessons in this period are cancelled without charge. The regular slot cannot be taken by a new recurring series, but it may be used for a one-time lesson or one-time block."
+      },
+      "confirm": {
+        "active": "Restore active learning for this student?",
+        "paused": "Pause this student for a short period? All future lessons through the selected date will be cancelled without charge. The recurring series keeps its slot from new series, while one-time lessons and blocks are allowed during the pause.",
+        "inactive": "Finish learning? All future lessons will be cancelled without charge, recurring series will stop, and their schedule time will be released. Student login will be disabled while history and financial data are preserved.",
+        "resume": "End the pause early? New learning actions will become available again, but lessons already cancelled for the pause period will not be restored automatically.",
+        "restore": "Restore the student? Account access will be enabled again, but previous recurring series and cancelled lessons will not be restored automatically. Create a new schedule if needed."
+      },
+      "messages": {
+        "active": "Student learning restored.",
+        "paused": "Student learning paused.",
+        "inactive": "Student deactivated."
+      },
+      "errors": {
+        "save": "Could not change student status.",
+        "pauseDateRequired": "Select the pause end date.",
+        "pauseDateInvalid": "The pause may end no earlier than today and no later than 14 days from today."
+      },
+      "pauseUntil": "Pause until",
+      "pauseMaxHint": "The maximum pause length is 14 days."
     }
   },
   "languageSwitcher": {

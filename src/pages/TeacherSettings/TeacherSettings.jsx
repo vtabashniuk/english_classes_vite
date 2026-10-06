@@ -23,8 +23,10 @@ import {
   DEFAULT_FINANCE_SETTINGS,
   FINANCE_CURRENCIES,
   FINANCE_HISTORY_PAGE_SIZE_OPTIONS,
+  MAX_FINANCIAL_BLOCKING_DEBT_LESSONS,
   MAX_FREE_CANCELLATION_HOURS,
   MAX_LOW_BALANCE_LESSONS,
+  MIN_FINANCIAL_BLOCKING_DEBT_LESSONS,
   MIN_FREE_CANCELLATION_HOURS,
   MIN_LOW_BALANCE_LESSONS,
 } from "../../constants/finance";
@@ -39,6 +41,7 @@ import {
   WEEKDAYS,
 } from "../../constants/schedule";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
+import useToast from "../../shared/toast/useToast";
 
 import styles from "./TeacherSettings.module.css";
 
@@ -58,6 +61,7 @@ const TeacherSettings = () => {
   const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage || i18n.language;
   const location = useLocation();
+  const toast = useToast();
 
   const [timezone, setTimezone] = useState(DEFAULT_SCHEDULE_SETTINGS.timezone);
   const [workingHours, setWorkingHours] = useState(createDefaultWorkingHours);
@@ -75,6 +79,11 @@ const TeacherSettings = () => {
   const [lowBalanceThresholdLessons, setLowBalanceThresholdLessons] = useState(
     DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
   );
+  const [financialBlockingEnabled, setFinancialBlockingEnabled] = useState(
+    DEFAULT_FINANCE_SETTINGS.financialBlockingEnabled,
+  );
+  const [financialBlockingDebtThresholdLessons, setFinancialBlockingDebtThresholdLessons] =
+    useState(DEFAULT_FINANCE_SETTINGS.financialBlockingDebtThresholdLessons);
   const [freeCancellationHours, setFreeCancellationHours] = useState(
     DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
   );
@@ -105,23 +114,18 @@ const TeacherSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const [financePreferencesSaving, setFinancePreferencesSaving] = useState(false);
   const [financePreferencesError, setFinancePreferencesError] = useState("");
-  const [financePreferencesSuccess, setFinancePreferencesSuccess] = useState("");
 
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxErrorMessage, setTaxErrorMessage] = useState("");
-  const [taxSuccessMessage, setTaxSuccessMessage] = useState("");
 
   const [parameterSaving, setParameterSaving] = useState(false);
   const [parameterError, setParameterError] = useState("");
-  const [parameterSuccess, setParameterSuccess] = useState("");
 
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountError, setAccountError] = useState("");
-  const [accountSuccess, setAccountSuccess] = useState("");
 
   const scheduledTaxProfiles = useMemo(
     () =>
@@ -223,6 +227,18 @@ const TeacherSettings = () => {
               DEFAULT_FINANCE_SETTINGS.lowBalanceLessonsThreshold,
           ),
         );
+        setFinancialBlockingEnabled(
+          Boolean(
+            data?.financial_blocking_enabled ??
+              DEFAULT_FINANCE_SETTINGS.financialBlockingEnabled,
+          ),
+        );
+        setFinancialBlockingDebtThresholdLessons(
+          Number(
+            data?.financial_blocking_debt_threshold_lessons ??
+              DEFAULT_FINANCE_SETTINGS.financialBlockingDebtThresholdLessons,
+          ),
+        );
         setFreeCancellationHours(
           Number(
             data?.free_cancellation_hours ??
@@ -317,7 +333,6 @@ const TeacherSettings = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMessage("");
-    setSuccessMessage("");
 
     const duration = Number(lessonDurationMinutes);
     const invalidWorkingDay = workingHours.some((item) => {
@@ -358,10 +373,10 @@ const TeacherSettings = () => {
       if (error) throw error;
 
       setTeacherToday(getDateInTimeZone(timezone));
-      setSuccessMessage(t("teacherSettings.messages.saved"));
+      toast.success(t("teacherSettings.messages.saved"));
     } catch (error) {
       console.error("Update teacher settings error:", error);
-      setErrorMessage(getSettingsError(error, t));
+      toast.error(getSettingsError(error, t));
     } finally {
       setSaving(false);
     }
@@ -370,7 +385,6 @@ const TeacherSettings = () => {
   const handleFinancePreferencesSubmit = async (event) => {
     event.preventDefault();
     setFinancePreferencesError("");
-    setFinancePreferencesSuccess("");
 
     const threshold = Number(lowBalanceThresholdLessons);
     if (
@@ -396,6 +410,18 @@ const TeacherSettings = () => {
       return;
     }
 
+    const debtThreshold = Number(financialBlockingDebtThresholdLessons);
+    if (
+      !Number.isInteger(debtThreshold) ||
+      debtThreshold < MIN_FINANCIAL_BLOCKING_DEBT_LESSONS ||
+      debtThreshold > MAX_FINANCIAL_BLOCKING_DEBT_LESSONS
+    ) {
+      setFinancePreferencesError(
+        t("teacherSettings.financePreferences.errors.invalidDebtThreshold"),
+      );
+      return;
+    }
+
     const resolvedHistoryPageSize = Number(historyPageSize);
     if (!FINANCE_HISTORY_PAGE_SIZE_OPTIONS.includes(resolvedHistoryPageSize)) {
       setFinancePreferencesError(
@@ -408,22 +434,22 @@ const TeacherSettings = () => {
       setFinancePreferencesSaving(true);
       const { error } = await updateMyFinancePreferences({
         lowBalanceThresholdLessons: threshold,
+        financialBlockingEnabled,
+        financialBlockingDebtThresholdLessons: debtThreshold,
         freeCancellationHours: cancellationHours,
         historyPageSize: resolvedHistoryPageSize,
       });
       if (error) throw error;
 
       setLowBalanceThresholdLessons(threshold);
+      setFinancialBlockingEnabled(Boolean(financialBlockingEnabled));
+      setFinancialBlockingDebtThresholdLessons(debtThreshold);
       setFreeCancellationHours(cancellationHours);
       setHistoryPageSize(resolvedHistoryPageSize);
-      setFinancePreferencesSuccess(
-        t("teacherSettings.financePreferences.messages.saved"),
-      );
+      toast.success(t("teacherSettings.financePreferences.messages.saved"));
     } catch (error) {
       console.error("Update finance preferences error:", error);
-      setFinancePreferencesError(
-        t("teacherSettings.financePreferences.errors.save"),
-      );
+      toast.error(t("teacherSettings.financePreferences.errors.save"));
     } finally {
       setFinancePreferencesSaving(false);
     }
@@ -435,14 +461,12 @@ const TeacherSettings = () => {
     setPeGroup(Number(baseProfile?.pe_group ?? 3));
     setTaxEffectiveFrom(teacherToday);
     setTaxErrorMessage("");
-    setTaxSuccessMessage("");
     setTaxEditing(true);
   };
 
   const handleTaxSubmit = async (event) => {
     event.preventDefault();
     setTaxErrorMessage("");
-    setTaxSuccessMessage("");
 
     if (!taxEffectiveFrom) {
       setTaxErrorMessage(t("teacherSettings.tax.errors.dateRequired"));
@@ -474,10 +498,10 @@ const TeacherSettings = () => {
       setTaxProfiles(profilesResult.data ?? []);
       setCurrentTaxProfile(currentResult.data ?? null);
       setTaxEditing(false);
-      setTaxSuccessMessage(t("teacherSettings.tax.messages.saved"));
+      toast.success(t("teacherSettings.tax.messages.saved"));
     } catch (error) {
       console.error("Update tax settings error:", error);
-      setTaxErrorMessage(getTaxSettingsError(error, t));
+      toast.error(getTaxSettingsError(error, t));
     } finally {
       setTaxSaving(false);
     }
@@ -486,7 +510,6 @@ const TeacherSettings = () => {
   const handleParameterDateChange = async (nextDate) => {
     setParameterEffectiveFrom(nextDate);
     setParameterError("");
-    setParameterSuccess("");
     if (!nextDate) return;
 
     try {
@@ -505,7 +528,6 @@ const TeacherSettings = () => {
   const handleParameterSubmit = async (event) => {
     event.preventDefault();
     setParameterError("");
-    setParameterSuccess("");
 
     if (parameterEffectiveFrom < teacherToday) {
       setParameterError(t("teacherSettings.finance.pastDate"));
@@ -544,10 +566,10 @@ const TeacherSettings = () => {
         setParameterSources,
       });
       setParameterOverrides(overridesResult.data ?? []);
-      setParameterSuccess(t("teacherSettings.finance.parametersSaved"));
+      toast.success(t("teacherSettings.finance.parametersSaved"));
     } catch (error) {
       console.error("Save tax parameters error:", error);
-      setParameterError(getTaxParameterError(error, t));
+      toast.error(getTaxParameterError(error, t));
     } finally {
       setParameterSaving(false);
     }
@@ -556,7 +578,6 @@ const TeacherSettings = () => {
   const handleAccountSubmit = async (event) => {
     event.preventDefault();
     setAccountError("");
-    setAccountSuccess("");
 
     const normalizedName = accountName.trim();
     if (!normalizedName) {
@@ -582,10 +603,10 @@ const TeacherSettings = () => {
 
       setPaymentAccounts(accountsResult.data ?? []);
       setAccountName("");
-      setAccountSuccess(t("teacherSettings.finance.accountCreated"));
+      toast.success(t("teacherSettings.finance.accountCreated"));
     } catch (error) {
       console.error("Create payment account error:", error);
-      setAccountError(getAccountError(error, t));
+      toast.error(getAccountError(error, t));
     } finally {
       setAccountSaving(false);
     }
@@ -763,7 +784,6 @@ const TeacherSettings = () => {
           </label>
 
           {errorMessage && <p className={styles.error}>{errorMessage}</p>}
-          {successMessage && <p className={styles.success}>{successMessage}</p>}
 
           <div className={styles.actions}>
             <button type="submit" className={styles.primaryButton} disabled={saving}>
@@ -798,6 +818,41 @@ const TeacherSettings = () => {
             <small>{t("teacherSettings.financePreferences.lowBalanceHint")}</small>
           </label>
 
+          <label className={styles.workingDayToggle}>
+            <input
+              type="checkbox"
+              checked={financialBlockingEnabled}
+              onChange={(event) =>
+                setFinancialBlockingEnabled(event.target.checked)
+              }
+              disabled={financePreferencesSaving}
+            />
+            <span>{t("teacherSettings.financePreferences.financialBlockingEnabled")}</span>
+          </label>
+          <small>
+            {t("teacherSettings.financePreferences.financialBlockingEnabledHint")}
+          </small>
+
+          <label className={styles.field}>
+            <span>
+              {t("teacherSettings.financePreferences.financialBlockingDebtThreshold")}
+            </span>
+            <input
+              type="number"
+              min={MIN_FINANCIAL_BLOCKING_DEBT_LESSONS}
+              max={MAX_FINANCIAL_BLOCKING_DEBT_LESSONS}
+              step="1"
+              value={financialBlockingDebtThresholdLessons}
+              onChange={(event) =>
+                setFinancialBlockingDebtThresholdLessons(event.target.value)
+              }
+              disabled={financePreferencesSaving || !financialBlockingEnabled}
+            />
+            <small>
+              {t("teacherSettings.financePreferences.financialBlockingDebtThresholdHint")}
+            </small>
+          </label>
+
           <label className={styles.field}>
             <span>{t("teacherSettings.financePreferences.freeCancellationHours")}</span>
             <input
@@ -830,9 +885,6 @@ const TeacherSettings = () => {
 
           {financePreferencesError && (
             <p className={styles.error}>{financePreferencesError}</p>
-          )}
-          {financePreferencesSuccess && (
-            <p className={styles.success}>{financePreferencesSuccess}</p>
           )}
 
           <div className={styles.actions}>
@@ -883,8 +935,6 @@ const TeacherSettings = () => {
                   ))}
                 </div>
               )}
-
-              {taxSuccessMessage && <p className={styles.success}>{taxSuccessMessage}</p>}
 
               <div className={styles.actions}>
                 <button type="button" className={styles.secondaryButton} onClick={startTaxEditing}>
@@ -1045,7 +1095,6 @@ const TeacherSettings = () => {
                 )}
 
                 {parameterError && <p className={styles.error}>{parameterError}</p>}
-                {parameterSuccess && <p className={styles.success}>{parameterSuccess}</p>}
 
                 <div className={styles.actions}>
                   <button
@@ -1168,7 +1217,6 @@ const TeacherSettings = () => {
               <p className={styles.hint}>{t("teacherSettings.finance.peAccountDisabled")}</p>
             )}
             {accountError && <p className={styles.error}>{accountError}</p>}
-            {accountSuccess && <p className={styles.success}>{accountSuccess}</p>}
 
             <div className={styles.actions}>
               <button type="submit" className={styles.secondaryButton} disabled={accountSaving}>

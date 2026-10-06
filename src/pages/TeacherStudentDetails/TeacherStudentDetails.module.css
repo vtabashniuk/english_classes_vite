@@ -346,6 +346,99 @@
   font-size: 0.82rem;
 }
 
+.financialAccessPanel {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface-muted);
+}
+
+.financialAccessBlocked {
+  border-color: color-mix(in srgb, var(--color-error-text) 35%, var(--color-border));
+}
+
+.financialAccessTemporary {
+  border-color: color-mix(in srgb, var(--color-primary-blue) 35%, var(--color-border));
+}
+
+.financialAccessOpen {
+  border-color: color-mix(in srgb, var(--color-success-text) 30%, var(--color-border));
+}
+
+.financialAccessHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.financialAccessHeader > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.financialAccessLabel,
+.financialAccessHint,
+.financialAccessMetrics dt {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.financialAccessButton {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.financialAccessButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.financialAccessMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.financialAccessMetrics > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.financialAccessMetrics dd {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.financialAccessRecommendation {
+  margin: 0;
+  font-weight: 700;
+}
+
+.financialAccessHint {
+  margin: 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 650px) {
+  .financialAccessMetrics {
+    grid-template-columns: 1fr;
+  }
+}
+
 .rateStatusList {
   display: grid;
   gap: 0.75rem;
@@ -926,4 +1019,144 @@
 .dangerButton:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.paused {
+  color: var(--color-warning-text, var(--color-text-primary));
+  background: var(--color-warning-bg, var(--color-surface));
+}
+
+.lifecyclePanel {
+  display: grid;
+  gap: 0.85rem;
+
+  margin-bottom: 1.5rem;
+  padding: 1rem 1.1rem;
+
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.lifecycleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.lifecycleHeader > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.lifecycleEyebrow {
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.lifecycleActions,
+.lifecycleConfirm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.lifecyclePrimaryButton,
+.lifecycleSecondaryButton,
+.lifecycleDangerButton,
+.lifecycleCancelButton {
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
+
+  border-radius: var(--border-radius);
+
+  font: inherit;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.lifecyclePrimaryButton {
+  border: 1px solid var(--color-primary-blue);
+  color: var(--color-on-primary);
+  background: var(--color-primary-blue);
+}
+
+.lifecycleSecondaryButton,
+.lifecycleCancelButton {
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+}
+
+.lifecycleDangerButton {
+  border: 1px solid var(--color-error-text);
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
+.lifecyclePrimaryButton:disabled,
+.lifecycleSecondaryButton:disabled,
+.lifecycleDangerButton:disabled,
+.lifecycleCancelButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.lifecycleHint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.lifecycleConfirm {
+  display: grid;
+  gap: 0.75rem;
+
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+
+  background: var(--color-background-secondary, var(--color-surface));
+}
+
+.lifecycleConfirm p {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 720px) {
+  .lifecycleHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.lifecyclePauseField {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 320px;
+}
+
+.lifecyclePauseField > span {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.lifecyclePauseField input {
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--border-radius);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  font: inherit;
+}
+
+.lifecyclePauseField small {
+  color: var(--color-text-secondary);
+  line-height: 1.4;
 }

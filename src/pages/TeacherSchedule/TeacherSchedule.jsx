@@ -74,6 +74,7 @@ import {
 } from "../../features/schedule/lib/scheduleUtils";
 
 import { getIntlLocale } from "../../utils/getIntlLocale";
+import useToast from "../../shared/toast/useToast";
 
 import { getTimezone } from "../../constants/timezones";
 
@@ -327,6 +328,7 @@ const getBlockEndSlotsForDate = (settings, dateValue, startTime) => {
 
 const TeacherSchedule = () => {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedLessonId = searchParams.get("lessonId");
 
@@ -461,11 +463,7 @@ const TeacherSchedule = () => {
 
   const [createErrorMessage, setCreateErrorMessage] = useState("");
 
-  const [createSuccessMessage, setCreateSuccessMessage] = useState("");
-
   const [detailErrorMessage, setDetailErrorMessage] = useState("");
-
-  const [detailSuccessMessage, setDetailSuccessMessage] = useState("");
 
   const [currentTimeMs, setCurrentTimeMs] = useState(null);
 
@@ -484,30 +482,28 @@ const TeacherSchedule = () => {
   }, []);
 
   useEffect(() => {
-    if (!createErrorMessage && !createSuccessMessage) {
+    if (!createErrorMessage) {
       return undefined;
     }
 
     const timeoutId = window.setTimeout(() => {
       setCreateErrorMessage("");
-      setCreateSuccessMessage("");
     }, 5000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [createErrorMessage, createSuccessMessage]);
+  }, [createErrorMessage]);
 
   useEffect(() => {
-    if (!detailErrorMessage && !detailSuccessMessage) {
+    if (!detailErrorMessage) {
       return undefined;
     }
 
     const timeoutId = window.setTimeout(() => {
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
     }, 5000);
 
     return () => window.clearTimeout(timeoutId);
-  }, [detailErrorMessage, detailSuccessMessage]);
+  }, [detailErrorMessage]);
 
 
   const locale = getIntlLocale(i18n.language);
@@ -552,8 +548,7 @@ const TeacherSchedule = () => {
         setEditingMeetingUrl(false);
         setEditingLesson(false);
         setEditingRecurringSeries(false);
-        setDetailSuccessMessage("");
-
+  
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => {
             document.getElementById("lesson-details-panel")?.scrollIntoView({
@@ -1049,9 +1044,7 @@ const TeacherSchedule = () => {
     setBlockRecurringValidFrom(dateValue);
 
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
     setDetailErrorMessage("");
-    setDetailSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-create-form")?.scrollIntoView({
@@ -1073,7 +1066,6 @@ const TeacherSchedule = () => {
     setEditingLesson(false);
     setEditingRecurringSeries(false);
     setDetailErrorMessage("");
-    setDetailSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-details-panel")?.scrollIntoView({
@@ -1106,7 +1098,6 @@ const TeacherSchedule = () => {
     setEditingLesson(false);
     setEditingRecurringSeries(false);
     setDetailErrorMessage("");
-    setDetailSuccessMessage("");
 
     requestAnimationFrame(() => {
       document.getElementById("lesson-details-panel")?.scrollIntoView({
@@ -1123,13 +1114,11 @@ const TeacherSchedule = () => {
     setBlockRepeatMode("single");
     setEditingBlock(true);
     setDetailErrorMessage("");
-    setDetailSuccessMessage("");
   };
 
   const handleCreateScheduleBlock = async (event) => {
     event.preventDefault();
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
 
     const isRecurring = blockRepeatMode === "recurring";
 
@@ -1166,7 +1155,7 @@ const TeacherSchedule = () => {
         const createdCount = result?.created_count ?? 0;
         const conflictCount = result?.conflict_count ?? 0;
 
-        setCreateSuccessMessage(
+        const message =
           conflictCount > 0
             ? t("teacherSchedule.scheduleBlock.recurring.messages.createdWithConflicts", {
                 createdCount,
@@ -1174,8 +1163,9 @@ const TeacherSchedule = () => {
               })
             : t("teacherSchedule.scheduleBlock.recurring.messages.created", {
                 createdCount,
-              }),
-        );
+              });
+        if (conflictCount > 0) toast.warning(message);
+        else toast.success(message);
         setBlockRecurringValidUntil("");
       } else {
         const { error } = await createScheduleBlock({
@@ -1186,7 +1176,7 @@ const TeacherSchedule = () => {
         });
 
         if (error) throw error;
-        setCreateSuccessMessage(t("teacherSchedule.scheduleBlock.messages.created"));
+        toast.success(t("teacherSchedule.scheduleBlock.messages.created"));
       }
 
       setBlockReason("");
@@ -1194,7 +1184,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Create schedule block error:", error);
-      setCreateErrorMessage(getScheduleBlockError(error, t));
+      toast.error(getScheduleBlockError(error, t));
     } finally {
       setSavingBlock(false);
     }
@@ -1208,7 +1198,6 @@ const TeacherSchedule = () => {
     try {
       setSavingBlock(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { error } = await updateScheduleBlock({
         blockId: selectedBlock.id,
@@ -1222,11 +1211,11 @@ const TeacherSchedule = () => {
 
       setEditingBlock(false);
       setSelectedBlock(null);
-      setDetailSuccessMessage(t("teacherSchedule.scheduleBlock.messages.updated"));
+      toast.success(t("teacherSchedule.scheduleBlock.messages.updated"));
       await loadLessons();
     } catch (error) {
       console.error("Update schedule block error:", error);
-      setDetailErrorMessage(getScheduleBlockError(error, t));
+      toast.error(getScheduleBlockError(error, t));
     } finally {
       setSavingBlock(false);
     }
@@ -1248,14 +1237,13 @@ const TeacherSchedule = () => {
     try {
       setDeletingBlockId(selectedBlock.id);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { error } = await deleteScheduleBlock(selectedBlock.id);
       if (error) throw error;
 
       setSelectedBlock(null);
       setEditingBlock(false);
-      setDetailSuccessMessage(
+      toast.success(
         t(
           selectedBlock.recurring_block_series_id
             ? "teacherSchedule.scheduleBlock.recurring.messages.occurrenceDeleted"
@@ -1265,7 +1253,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Delete schedule block error:", error);
-      setDetailErrorMessage(getScheduleBlockError(error, t));
+      toast.error(getScheduleBlockError(error, t));
     } finally {
       setDeletingBlockId(null);
     }
@@ -1277,7 +1265,6 @@ const TeacherSchedule = () => {
     try {
       setLoadingRecurringBlockSeries(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await getRecurringScheduleBlockSeriesById(
         selectedBlock.recurring_block_series_id,
@@ -1354,7 +1341,6 @@ const TeacherSchedule = () => {
     try {
       setSavingRecurringBlockSeries(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await editRecurringScheduleBlockSeriesFromBlock({
         p_block_id: selectedBlock.id,
@@ -1368,18 +1354,19 @@ const TeacherSchedule = () => {
       if (error) throw error;
 
       const result = Array.isArray(data) ? data[0] : data;
-      setDetailSuccessMessage(
-        t("teacherSchedule.scheduleBlock.recurring.editFromHere.success", {
-          createdCount: result?.created_count ?? 0,
-          conflictCount: result?.conflict_count ?? 0,
-        }),
-      );
+      const conflictCount = result?.conflict_count ?? 0;
+      const message = t("teacherSchedule.scheduleBlock.recurring.editFromHere.success", {
+        createdCount: result?.created_count ?? 0,
+        conflictCount,
+      });
+      if (conflictCount > 0) toast.warning(message);
+      else toast.success(message);
       setEditingRecurringBlockSeries(false);
       setSelectedBlock(null);
       await loadLessons();
     } catch (error) {
       console.error("Edit recurring block series error:", error);
-      setDetailErrorMessage(getScheduleBlockError(error, t));
+      toast.error(getScheduleBlockError(error, t));
     } finally {
       setSavingRecurringBlockSeries(false);
     }
@@ -1396,14 +1383,13 @@ const TeacherSchedule = () => {
     try {
       setCancellingRecurringBlockSeriesId(selectedBlock.recurring_block_series_id);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await cancelRecurringScheduleBlockSeriesFromBlock(
         selectedBlock.id,
       );
       if (error) throw error;
 
-      setDetailSuccessMessage(
+      toast.success(
         t("teacherSchedule.scheduleBlock.recurring.cancelFromHere.success", {
           count: data ?? 0,
         }),
@@ -1413,7 +1399,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Cancel recurring block series error:", error);
-      setDetailErrorMessage(getScheduleBlockError(error, t));
+      toast.error(getScheduleBlockError(error, t));
     } finally {
       setCancellingRecurringBlockSeriesId(null);
     }
@@ -1448,7 +1434,6 @@ const TeacherSchedule = () => {
     setEditingRecurringSeries(false);
     setEditingLesson(true);
     setDetailErrorMessage("");
-    setDetailSuccessMessage("");
   };
 
   const handleSaveLesson = async () => {
@@ -1464,7 +1449,6 @@ const TeacherSchedule = () => {
     try {
       setSavingLesson(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const normalizedMeetingUrl = editLessonMeetingUrl.trim() || null;
 
@@ -1482,11 +1466,11 @@ const TeacherSchedule = () => {
       setEditingLesson(false);
       setSelectedLesson(null);
       setSearchParams({}, { replace: true });
-      setDetailSuccessMessage(t("teacherSchedule.lessonEdit.success"));
+      toast.success(t("teacherSchedule.lessonEdit.success"));
       await loadLessons();
     } catch (error) {
       console.error("Update lesson schedule error:", error);
-      setDetailErrorMessage(getUpdateLessonScheduleError(error, t));
+      toast.error(getUpdateLessonScheduleError(error, t));
     } finally {
       setSavingLesson(false);
     }
@@ -1508,7 +1492,6 @@ const TeacherSchedule = () => {
     try {
       setCancellingLessonId(selectedLesson.id);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { error } = await cancelLesson({
         lessonId: selectedLesson.id,
@@ -1518,7 +1501,7 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setDetailSuccessMessage(t("teacherSchedule.cancel.success"));
+      toast.success(t("teacherSchedule.cancel.success"));
 
       setSelectedLesson(null);
       setSearchParams({}, { replace: true });
@@ -1526,7 +1509,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Cancel lesson error:", error);
-      setDetailErrorMessage(getCancelLessonError(error, t));
+      toast.error(getCancelLessonError(error, t));
     } finally {
       setCancellingLessonId(null);
     }
@@ -1540,7 +1523,6 @@ const TeacherSchedule = () => {
     try {
       setLoadingRecurringSeries(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await getRecurringLessonById(
         selectedLesson.recurring_lesson_id,
@@ -1611,7 +1593,6 @@ const TeacherSchedule = () => {
     try {
       setSavingRecurringSeries(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await editRecurringSeriesFromLesson({
         p_lesson_id: selectedLesson.id,
@@ -1628,12 +1609,13 @@ const TeacherSchedule = () => {
 
       const result = Array.isArray(data) ? data[0] : data;
 
-      setDetailSuccessMessage(
-        t("teacherSchedule.recurring.editFromHere.success", {
-          createdCount: result?.created_count ?? 0,
-          conflictCount: result?.conflict_count ?? 0,
-        }),
-      );
+      const conflictCount = result?.conflict_count ?? 0;
+      const message = t("teacherSchedule.recurring.editFromHere.success", {
+        createdCount: result?.created_count ?? 0,
+        conflictCount,
+      });
+      if (conflictCount > 0) toast.warning(message);
+      else toast.success(message);
 
       setEditingRecurringSeries(false);
       setSelectedLesson(null);
@@ -1641,7 +1623,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Edit recurring series error:", error);
-      setDetailErrorMessage(getEditRecurringSeriesError(error, t));
+      toast.error(getEditRecurringSeriesError(error, t));
     } finally {
       setSavingRecurringSeries(false);
     }
@@ -1667,7 +1649,6 @@ const TeacherSchedule = () => {
     try {
       setCancellingSeriesId(selectedLesson.recurring_lesson_id);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { data, error } = await cancelRecurringSeriesFromLesson(
         selectedLesson.id,
@@ -1677,7 +1658,7 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setDetailSuccessMessage(
+      toast.success(
         t("teacherSchedule.recurring.cancelFromHere.success", {
           count: data ?? 0,
         }),
@@ -1688,7 +1669,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Cancel recurring series error:", error);
-      setDetailErrorMessage(getCancelRecurringSeriesError(error, t));
+      toast.error(getCancelRecurringSeriesError(error, t));
     } finally {
       setCancellingSeriesId(null);
     }
@@ -1702,7 +1683,6 @@ const TeacherSchedule = () => {
     try {
       setSavingMeetingUrl(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const normalizedMeetingUrl = lessonMeetingUrlDraft.trim() || null;
 
@@ -1725,11 +1705,11 @@ const TeacherSchedule = () => {
       );
 
       setEditingMeetingUrl(false);
-      setDetailSuccessMessage(t("teacherSchedule.meetingLinkEdit.success"));
+      toast.success(t("teacherSchedule.meetingLinkEdit.success"));
       await loadLessons();
     } catch (error) {
       console.error("Update lesson meeting link error:", error);
-      setDetailErrorMessage(getUpdateLessonMeetingUrlError(error, t));
+      toast.error(getUpdateLessonMeetingUrlError(error, t));
     } finally {
       setSavingMeetingUrl(false);
     }
@@ -1744,7 +1724,6 @@ const TeacherSchedule = () => {
     try {
       setUpdatingOutcome(true);
       setDetailErrorMessage("");
-      setDetailSuccessMessage("");
 
       const { error } = await setLessonOutcome({
         lessonId: selectedLesson.id,
@@ -1766,7 +1745,7 @@ const TeacherSchedule = () => {
           : current,
       );
 
-      setDetailSuccessMessage(
+      toast.success(
         status === "completed"
           ? t("teacherSchedule.outcome.completedSuccess")
           : t("teacherSchedule.outcome.missedSuccess"),
@@ -1775,7 +1754,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Set lesson outcome error:", error);
-      setDetailErrorMessage(getLessonOutcomeError(error, t));
+      toast.error(getLessonOutcomeError(error, t));
     } finally {
       setUpdatingOutcome(false);
     }
@@ -1785,7 +1764,6 @@ const TeacherSchedule = () => {
     event.preventDefault();
 
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
 
     if (!selectedStudentId || !selectedDate || !selectedTime) {
       setCreateErrorMessage(t("teacherSchedule.errors.requiredFields"));
@@ -1807,7 +1785,7 @@ const TeacherSchedule = () => {
         throw error;
       }
 
-      setCreateSuccessMessage(t("teacherSchedule.messages.lessonCreated"));
+      toast.success(t("teacherSchedule.messages.lessonCreated"));
 
       setSelectedStudentId("");
 
@@ -1820,7 +1798,7 @@ const TeacherSchedule = () => {
     } catch (error) {
       console.error("Create lesson error:", error);
 
-      setCreateErrorMessage(getCreateLessonError(error, t));
+      toast.error(getCreateLessonError(error, t));
     } finally {
       setCreating(false);
     }
@@ -1829,7 +1807,6 @@ const TeacherSchedule = () => {
   const handleCreateModeChange = (mode) => {
     setCreateMode(mode);
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
 
     if (mode === "recurring" && selectedDate) {
       const date = parseInputDate(selectedDate);
@@ -1874,7 +1851,6 @@ const TeacherSchedule = () => {
   const handleBlockRepeatModeChange = (mode) => {
     setBlockRepeatMode(mode);
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
 
     if (mode === "recurring") {
       const startSlots = getBlockStartSlotsForWeekday(
@@ -1911,7 +1887,6 @@ const TeacherSchedule = () => {
     event.preventDefault();
 
     setCreateErrorMessage("");
-    setCreateSuccessMessage("");
 
     if (
       !selectedStudentId ||
@@ -1952,7 +1927,7 @@ const TeacherSchedule = () => {
       const createdCount = result?.created_count ?? 0;
       const conflictCount = result?.conflict_count ?? 0;
 
-      setCreateSuccessMessage(
+      const message =
         conflictCount > 0
           ? t("teacherSchedule.recurring.messages.createdWithConflicts", {
               createdCount,
@@ -1960,8 +1935,9 @@ const TeacherSchedule = () => {
             })
           : t("teacherSchedule.recurring.messages.created", {
               createdCount,
-            }),
-      );
+            });
+      if (conflictCount > 0) toast.warning(message);
+      else toast.success(message);
 
       setSelectedStudentId("");
       setRecurringValidUntil("");
@@ -1972,7 +1948,7 @@ const TeacherSchedule = () => {
       await loadLessons();
     } catch (error) {
       console.error("Create recurring lesson error:", error);
-      setCreateErrorMessage(getCreateRecurringLessonError(error, t));
+      toast.error(getCreateRecurringLessonError(error, t));
     } finally {
       setCreating(false);
     }
@@ -2550,9 +2526,6 @@ const TeacherSchedule = () => {
 
               {createErrorMessage && <p className={styles.error}>{createErrorMessage}</p>}
 
-              {createSuccessMessage && (
-                <p className={styles.success}>{createSuccessMessage}</p>
-              )}
 
               <Button
                 type="submit"
@@ -2703,9 +2676,6 @@ const TeacherSchedule = () => {
 
               {createErrorMessage && <p className={styles.error}>{createErrorMessage}</p>}
 
-              {createSuccessMessage && (
-                <p className={styles.success}>{createSuccessMessage}</p>
-              )}
 
               <Button
                 type="submit"
@@ -2904,9 +2874,6 @@ const TeacherSchedule = () => {
               {createErrorMessage && (
                 <p className={styles.error}>{createErrorMessage}</p>
               )}
-              {createSuccessMessage && (
-                <p className={styles.success}>{createSuccessMessage}</p>
-              )}
 
               <Button
                 type="submit"
@@ -2941,9 +2908,6 @@ const TeacherSchedule = () => {
 
           {detailErrorMessage && (
             <p className={styles.error}>{detailErrorMessage}</p>
-          )}
-          {detailSuccessMessage && (
-            <p className={styles.success}>{detailSuccessMessage}</p>
           )}
 
           {selectedBlock ? (
