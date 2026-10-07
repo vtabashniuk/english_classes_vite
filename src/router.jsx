@@ -8,6 +8,8 @@ import DashboardLayout from "./Layouts/DashboardLayout/DashboardLayout";
 import HomePage from "./pages/HomePage/HomePage";
 import AboutMePage from "./pages/AboutMePage";
 import LoginPage from "./pages/LoginPage/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 import StudentDashboard from "./pages/StudentDashboard/StudentDashboard";
 import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
@@ -59,6 +61,14 @@ const router = createBrowserRouter([
       {
         path: "/login",
         element: <LoginPage />,
+      },
+      {
+        path: "/forgot-password",
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: "/reset-password",
+        element: <ResetPasswordPage />,
       },
     ],
   },

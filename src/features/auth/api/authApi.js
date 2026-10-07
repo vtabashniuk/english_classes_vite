@@ -15,3 +15,6 @@ export const exchangeCodeForSession = (code) =>
 
 export const updateCurrentUser = (attributes) =>
   supabase.auth.updateUser(attributes);
+
+export const requestPasswordReset = ({ email, redirectTo }) =>
+  supabase.auth.resetPasswordForEmail(email, { redirectTo });

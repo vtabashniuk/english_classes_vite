@@ -121,6 +121,14 @@ const LoginPage = () => {
 
         <button
           type="button"
+          className={styles.forgotButton}
+          onClick={() => navigate("/forgot-password")}
+        >
+          {t("auth.login.forgotPassword")}
+        </button>
+
+        <button
+          type="button"
           className={styles.backButton}
           onClick={() => navigate("/")}
         >

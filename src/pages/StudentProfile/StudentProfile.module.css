@@ -124,20 +124,10 @@
   cursor: wait;
 }
 
-.success,
 .error {
   margin: 0;
   padding: 0.8rem 1rem;
-
   border-radius: var(--border-radius);
-}
-
-.success {
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-}
-
-.error {
   color: var(--color-error-text);
   background: var(--color-error-bg);
 }

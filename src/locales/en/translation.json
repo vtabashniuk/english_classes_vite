@@ -71,7 +71,23 @@
     "emailRequired": "Enter a new email.",
     "sameEmail": "This is already your current email.",
     "emailChangeSent": "Email change request sent. Check your inbox to confirm it.",
-    "emailChangeError": "Could not change email."
+    "emailChangeError": "Could not change email.",
+    "password": {
+      "title": "Security",
+      "description": "Change the password you use to sign in.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "saving": "Changing password...",
+      "currentRequired": "Enter your current password.",
+      "tooShort": "The new password must be at least 8 characters long.",
+      "mismatch": "The new passwords do not match.",
+      "samePassword": "The new password must be different from the current password.",
+      "saved": "Password changed successfully.",
+      "currentIncorrect": "The current password is incorrect.",
+      "saveError": "Could not change the password."
+    }
   },
   "studentSchedule": {
     "title": "My Schedule",
@@ -292,7 +308,8 @@
         "invalidCredentials": "Incorrect email or password.",
         "profileLoad": "Could not load your profile.",
         "inactive": "This account has been deactivated."
-      }
+      },
+      "forgotPassword": "Forgot password?"
     },
     "callback": {
       "finishing": "Finishing authentication..."
@@ -312,6 +329,34 @@
     "protectedRoute": {
       "profileNotFound": "User profile was not found.",
       "accountInactive": "This account has been deactivated."
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "description": "Enter your sign-in email. We will send a link to set a new password.",
+      "submit": "Send reset link",
+      "sending": "Sending...",
+      "sendAgain": "Send again",
+      "sent": "If an account with this email exists, a password reset link has been sent.",
+      "checkInbox": "Check your inbox and spam folder. The email may take a moment to arrive.",
+      "backToLogin": "Back to sign in",
+      "error": "Could not send the password reset link."
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "description": "Create a new password for signing in to your account.",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Save new password",
+      "checking": "Checking the password reset link...",
+      "saved": "Password changed. Sign in with your new password.",
+      "invalidTitle": "The link is invalid or has expired",
+      "invalidDescription": "Request a new password reset link.",
+      "requestAgain": "Request a new link",
+      "errors": {
+        "tooShort": "Password must be at least 8 characters long.",
+        "mismatch": "Passwords do not match.",
+        "save": "Could not change the password."
+      }
     }
   },
   "notFound": {
