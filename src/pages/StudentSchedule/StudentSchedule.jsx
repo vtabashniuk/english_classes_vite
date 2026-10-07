@@ -996,16 +996,29 @@ const StudentSchedule = () => {
 
                   <div className={styles.lessonActions}>
                     {lesson.meeting_url ? (
-                      <a
-                        href={lesson.meeting_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.meetingButton}
-                      >
-                        {t("studentSchedule.joinMeeting", {
-                          provider: getMeetingProviderLabel(lesson.meeting_url, t),
-                        })}
-                      </a>
+                      financiallyRestricted ? (
+                        <button
+                          type="button"
+                          className={`${styles.meetingButton} ${styles.meetingButtonDisabled}`}
+                          disabled
+                          title={t("studentSchedule.financialAccess.joinBlocked")}
+                        >
+                          {t("studentSchedule.joinMeeting", {
+                            provider: getMeetingProviderLabel(lesson.meeting_url, t),
+                          })}
+                        </button>
+                      ) : (
+                        <a
+                          href={lesson.meeting_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.meetingButton}
+                        >
+                          {t("studentSchedule.joinMeeting", {
+                            provider: getMeetingProviderLabel(lesson.meeting_url, t),
+                          })}
+                        </a>
+                      )
                     ) : (
                       <span className={styles.noMeeting}>
                         {t("studentSchedule.noMeeting")}

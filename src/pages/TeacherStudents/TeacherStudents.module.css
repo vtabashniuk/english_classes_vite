@@ -257,6 +257,11 @@
   background: var(--color-success-bg);
 }
 
+.debtor {
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+}
+
 .inactive {
   color: var(--color-error-text);
   background: var(--color-error-bg);

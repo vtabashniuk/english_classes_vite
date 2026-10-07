@@ -34,7 +34,16 @@ const TeacherStudents = () => {
 
   const groupedStudents = useMemo(
     () => ({
-      active: students.filter((student) => student.learning_status === "active"),
+      active: students.filter(
+        (student) =>
+          student.learning_status === "active" &&
+          !student.is_financially_blocked,
+      ),
+      debtors: students.filter(
+        (student) =>
+          student.learning_status === "active" &&
+          student.is_financially_blocked,
+      ),
       paused: students.filter((student) => student.learning_status === "paused"),
       inactive: students.filter(
         (student) => student.learning_status === "inactive",
@@ -119,7 +128,14 @@ const TeacherStudents = () => {
     }).format(new Date(`${dateString}T12:00:00`));
 
   const renderStudentCard = (student) => {
-    const statusKey = student.learning_status || "active";
+    const statusKey =
+      student.learning_status === "inactive"
+        ? "inactive"
+        : student.learning_status === "paused"
+          ? "paused"
+          : student.is_financially_blocked
+            ? "debtor"
+            : "active";
 
     return (
       <article key={student.student_id} className={styles.studentCard}>
@@ -137,9 +153,11 @@ const TeacherStudents = () => {
             className={`${styles.status} ${
               statusKey === "active"
                 ? styles.active
-                : statusKey === "paused"
-                  ? styles.paused
-                  : styles.inactive
+                : statusKey === "debtor"
+                  ? styles.debtor
+                  : statusKey === "paused"
+                    ? styles.paused
+                    : styles.inactive
             }`}
           >
             {t(`teacherStudents.status.${statusKey}`)}
@@ -279,6 +297,7 @@ const TeacherStudents = () => {
       ) : (
         <div className={styles.groups}>
           {renderGroup("active")}
+          {renderGroup("debtors")}
           {renderGroup("paused")}
           {renderGroup("inactive")}
         </div>

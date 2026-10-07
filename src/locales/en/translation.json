@@ -215,7 +215,8 @@
     "joinMeeting": "Join: {{provider}}",
     "financialAccess": {
       "blockedTitle": "New actions are temporarily restricted due to debt",
-      "blockedDescription": "You can still sign in, view lessons and assignments, and cancel an already scheduled lesson. Extra-lesson and reschedule requests are unavailable until the financial reserve is restored.",
+      "blockedDescription": "You can still sign in, view lessons and assignments, and cancel an already scheduled lesson. Joining a lesson, requesting an extra lesson, and requesting a reschedule are unavailable until the financial reserve is restored.",
+      "joinBlocked": "Joining the lesson is temporarily unavailable due to the financial restriction.",
       "temporaryTitle": "Financial restriction temporarily lifted by your teacher",
       "temporaryDescription": "New actions are available again until the next financial operation. The system will automatically re-evaluate your financial status after it.",
       "recommendedPayment": "Recommended payment: {{amount}}.",
@@ -434,12 +435,14 @@
     "groups": {
       "active": "Active students",
       "paused": "Paused",
-      "inactive": "Inactive students"
+      "inactive": "Inactive students",
+      "debtors": "Debtors"
     },
     "status": {
       "active": "Active",
       "paused": "Paused",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "debtor": "Blocked due to debt"
     },
     "pauseUntil": "Paused until"
   },
