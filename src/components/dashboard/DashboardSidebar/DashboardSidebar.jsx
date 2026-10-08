@@ -64,10 +64,6 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       labelKey: "dashboardNav.notifications",
     },
     {
-      to: "/teacher-dashboard/assignments",
-      labelKey: "dashboardNav.assignments",
-    },
-    {
       to: "/teacher-dashboard/materials",
       labelKey: "dashboardNav.materials",
     },

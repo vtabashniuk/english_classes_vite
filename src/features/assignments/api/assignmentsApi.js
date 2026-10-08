@@ -1,11 +1,14 @@
 import { supabase } from "../../../shared/api/supabaseClient";
 
-export const listTeacherAssignments = () =>
+export const listTeacherStudentAssignments = (studentId) =>
   supabase
     .from("assignments")
     .select(
-      "id, student_id, lesson_id, title, description, due_date, status, created_at, profiles:student_id(full_name,email), assignment_materials(materials(id,title,url))",
+      "id, student_id, lesson_id, title, description, due_date, status, created_at, assignment_materials(materials(id,title,url,category))",
     )
+    .eq("student_id", studentId)
+    .order("status", { ascending: true })
+    .order("due_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
 export const listStudentAssignments = () =>

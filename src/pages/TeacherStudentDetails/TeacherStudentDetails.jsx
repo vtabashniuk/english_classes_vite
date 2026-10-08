@@ -24,7 +24,6 @@ import { getStudentById } from "../../features/profiles/api/profilesApi";
 import {
   getTeacherStudentNextLesson,
   getTeacherStudentPrivateNote,
-  listTeacherStudentAssignments,
   listTeacherStudentRecurringLessons,
   saveTeacherStudentPrivateNote,
 } from "../../features/students/api/studentDetailsApi";
@@ -38,6 +37,7 @@ import {
 import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import LessonTeacherNote from "../../features/lessons/components/LessonTeacherNote/LessonTeacherNote";
+import TeacherStudentAssignmentsSection from "../../features/assignments/components/TeacherStudentAssignmentsSection/TeacherStudentAssignmentsSection";
 import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
 import {
   getTeacherStudentFinancialAccess,
@@ -79,7 +79,6 @@ const TeacherStudentDetails = () => {
   const [detailsError, setDetailsError] = useState("");
   const [recurringLessons, setRecurringLessons] = useState([]);
   const [nextLesson, setNextLesson] = useState(null);
-  const [assignments, setAssignments] = useState([]);
   const [privateNote, setPrivateNote] = useState("");
   const [privateNoteUpdatedAt, setPrivateNoteUpdatedAt] = useState(null);
   const [privateNoteDraft, setPrivateNoteDraft] = useState("");
@@ -184,22 +183,18 @@ const TeacherStudentDetails = () => {
         setDetailsError("");
 
         const today = getLocalDateString();
-        const [recurringResult, nextLessonResult, assignmentsResult, noteResult] =
+        const [recurringResult, nextLessonResult, noteResult] =
           await Promise.all([
             listTeacherStudentRecurringLessons({ studentId, today }),
             getTeacherStudentNextLesson({
               studentId,
               fromIso: new Date().toISOString(),
             }),
-            listTeacherStudentAssignments(studentId),
             getTeacherStudentPrivateNote(studentId),
           ]);
 
         const firstError =
-          recurringResult.error ||
-          nextLessonResult.error ||
-          assignmentsResult.error ||
-          noteResult.error;
+          recurringResult.error || nextLessonResult.error || noteResult.error;
 
         if (firstError) throw firstError;
 
@@ -209,7 +204,6 @@ const TeacherStudentDetails = () => {
 
         setRecurringLessons(recurringResult.data ?? []);
         setNextLesson(nextLessonResult.data ?? null);
-        setAssignments(assignmentsResult.data ?? []);
         setPrivateNote(note);
         setPrivateNoteDraft(note);
         setPrivateNoteUpdatedAt(noteResult.data?.updated_at ?? null);
@@ -2419,37 +2413,10 @@ const TeacherStudentDetails = () => {
         </article>
 
         <article className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherStudentDetails.assignments")}</h2>
-          </div>
-
-          {detailsLoading ? (
-            <div className={styles.placeholder}>
-              <span>{t("common.loading")}</span>
-            </div>
-          ) : detailsError ? (
-            <p className={styles.error}>{detailsError}</p>
-          ) : assignments.length === 0 ? (
-            <div className={styles.placeholder}>
-              <span>{t("teacherStudentDetails.assignmentsPlaceholder")}</span>
-            </div>
-          ) : (
-            <div className={styles.compactList}>
-              {assignments.map((assignment) => (
-                <div key={assignment.id} className={styles.compactItem}>
-                  <strong>{assignment.title}</strong>
-                  {assignment.description && <span>{assignment.description}</span>}
-                  <small>
-                    {assignment.due_date
-                      ? t("teacherStudentDetails.assignment.due", {
-                          date: formatDateOnly(assignment.due_date),
-                        })
-                      : t("teacherStudentDetails.assignment.noDeadline")}
-                  </small>
-                </div>
-              ))}
-            </div>
-          )}
+          <TeacherStudentAssignmentsSection
+            studentId={studentId}
+            canManage={lifecycle?.learning_status === "active"}
+          />
         </article>
 
         <article className={`${styles.card} ${styles.notesCard}`}>

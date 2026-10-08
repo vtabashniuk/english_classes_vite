@@ -24,7 +24,6 @@ import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
 import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
 import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
 import TeacherRequests from "./pages/TeacherRequests/TeacherRequests";
-import TeacherAssignments from "./pages/TeacherAssignments/TeacherAssignments";
 import TeacherMaterials from "./pages/TeacherMaterials/TeacherMaterials";
 import Notifications from "./pages/Notifications/Notifications";
 
@@ -141,10 +140,6 @@ const router = createBrowserRouter([
       {
         path: "notifications",
         element: <Notifications />,
-      },
-      {
-        path: "assignments",
-        element: <TeacherAssignments />,
       },
       {
         path: "materials",

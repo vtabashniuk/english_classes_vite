@@ -23,16 +23,6 @@ export const getTeacherStudentNextLesson = ({ studentId, fromIso }) =>
     .limit(1)
     .maybeSingle();
 
-export const listTeacherStudentAssignments = (studentId) =>
-  supabase
-    .from("assignments")
-    .select("id, lesson_id, title, description, due_date, status, created_at")
-    .eq("student_id", studentId)
-    .eq("status", "assigned")
-    .order("due_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .limit(5);
-
 export const getTeacherStudentPrivateNote = (studentId) =>
   supabase
     .from("teacher_student_private_notes")
