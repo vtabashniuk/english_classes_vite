@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TIMEZONES } from "../../constants/timezones";
 import { updateCurrentUser } from "../../features/auth/api/authApi";
 import { updateMyProfile } from "../../features/profiles/api/profilesApi";
+import {
+  applyStudentLearningPause,
+  getMyStudentLifecycle,
+  resumeStudentLearningPause,
+} from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { useAuth } from "../../context/useAuth";
 import useToast from "../../shared/toast/useToast";
 
@@ -29,6 +34,38 @@ const StudentProfile = () => {
   const [passwordConfirm, setPasswordConfirm] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+
+  const [learningLifecycle, setLearningLifecycle] = useState(null);
+  const [pauseLoading, setPauseLoading] = useState(true);
+  const [pauseSaving, setPauseSaving] = useState(false);
+  const [pauseError, setPauseError] = useState("");
+  const [pauseFrom, setPauseFrom] = useState(getLocalDateString());
+  const [pauseUntil, setPauseUntil] = useState(() =>
+    getDateDaysFrom(getLocalDateString(), 6),
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLifecycle = async () => {
+      try {
+        setPauseLoading(true);
+        const { data, error } = await getMyStudentLifecycle();
+        if (error) throw error;
+        if (!cancelled) setLearningLifecycle(data);
+      } catch (error) {
+        console.error("Student lifecycle load error:", error);
+        if (!cancelled) setPauseError(t("studentProfile.learningPause.errors.load"));
+      } finally {
+        if (!cancelled) setPauseLoading(false);
+      }
+    };
+
+    loadLifecycle();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const handleProfileSubmit = async (event) => {
     event.preventDefault();
@@ -147,6 +184,71 @@ const StudentProfile = () => {
     }
   };
 
+  const handlePauseResume = async () => {
+    setPauseError("");
+    const wasActivePause = Boolean(learningLifecycle?.pause_is_active);
+
+    try {
+      setPauseSaving(true);
+      const { data, error } = await resumeStudentLearningPause();
+      if (error) throw error;
+
+      setLearningLifecycle(data);
+      setPauseFrom(getLocalDateString());
+      setPauseUntil(getDateDaysFrom(getLocalDateString(), 6));
+      window.dispatchEvent(new Event("notifications-changed"));
+      toast.success(
+        t(
+          wasActivePause
+            ? "studentProfile.learningPause.resumed"
+            : "studentProfile.learningPause.scheduledCancelled",
+        ),
+      );
+    } catch (error) {
+      console.error("Student pause resume error:", error);
+      toast.error(t("studentProfile.learningPause.errors.resume"));
+    } finally {
+      setPauseSaving(false);
+    }
+  };
+
+  const handlePauseSubmit = async (event) => {
+    event.preventDefault();
+    setPauseError("");
+
+    if (!pauseFrom || !pauseUntil) {
+      setPauseError(t("studentProfile.learningPause.errors.required"));
+      return;
+    }
+
+    try {
+      setPauseSaving(true);
+      const { data, error } = await applyStudentLearningPause({
+        pauseFrom,
+        pauseUntil,
+      });
+      if (error) throw error;
+
+      setLearningLifecycle(data);
+      window.dispatchEvent(new Event("notifications-changed"));
+      toast.success(t("studentProfile.learningPause.saved"));
+    } catch (error) {
+      console.error("Student pause apply error:", error);
+      const message = error?.message ?? "";
+      setPauseError(
+        message.includes("PAUSE_TOO_LONG") ||
+          message.includes("PAUSE_START_IN_PAST") ||
+          message.includes("PAUSE_END_BEFORE_START")
+          ? t("studentProfile.learningPause.errors.invalidPeriod")
+          : message.includes("STUDENT_ALREADY_PAUSED")
+            ? t("studentProfile.learningPause.errors.alreadyPaused")
+            : t("studentProfile.learningPause.errors.save"),
+      );
+    } finally {
+      setPauseSaving(false);
+    }
+  };
+
   return (
     <section className={styles.page}>
       <div className={styles.heading}>
@@ -242,6 +344,100 @@ const StudentProfile = () => {
         </article>
 
         <article className={styles.card}>
+          <h2>{t("studentProfile.learningPause.title")}</h2>
+
+          {pauseLoading ? (
+            <p className={styles.helper}>{t("common.loading")}</p>
+          ) : learningLifecycle?.learning_status === "paused" ? (
+            <>
+              <p className={styles.helper}>
+                {t("studentProfile.learningPause.currentPeriod", {
+                  from: formatDateOnly(learningLifecycle.pause_from),
+                  until: formatDateOnly(learningLifecycle.pause_until),
+                })}
+              </p>
+              <p className={styles.helper}>
+                {t("studentProfile.learningPause.activeHint")}
+              </p>
+              {pauseError && <p className={styles.error}>{pauseError}</p>}
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={handlePauseResume}
+                disabled={pauseSaving}
+              >
+                {pauseSaving
+                  ? t("studentProfile.learningPause.resuming")
+                  : learningLifecycle?.pause_is_active
+                    ? t("studentProfile.learningPause.resume")
+                    : t("studentProfile.learningPause.cancelScheduled")}
+              </button>
+            </>
+          ) : (
+            <form className={styles.form} onSubmit={handlePauseSubmit}>
+              <p className={styles.helper}>
+                {t("studentProfile.learningPause.description")}
+              </p>
+
+              <div className={styles.pausePeriod}>
+                <label className={styles.field}>
+                  <span>{t("studentProfile.learningPause.from")}</span>
+                  <input
+                    type="date"
+                    min={getLocalDateString()}
+                    value={pauseFrom}
+                    onChange={(event) => {
+                      const nextFrom = event.target.value;
+                      setPauseFrom(nextFrom);
+                      if (nextFrom) {
+                        const maxUntil = getDateDaysFrom(nextFrom, 13);
+                        if (!pauseUntil || pauseUntil < nextFrom || pauseUntil > maxUntil) {
+                          setPauseUntil(getDateDaysFrom(nextFrom, 6));
+                        }
+                      }
+                    }}
+                    disabled={pauseSaving}
+                    required
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("studentProfile.learningPause.until")}</span>
+                  <input
+                    type="date"
+                    min={pauseFrom || getLocalDateString()}
+                    max={pauseFrom ? getDateDaysFrom(pauseFrom, 13) : undefined}
+                    value={pauseUntil}
+                    onChange={(event) => setPauseUntil(event.target.value)}
+                    disabled={pauseSaving}
+                    required
+                  />
+                </label>
+              </div>
+
+              <p className={styles.helper}>
+                {t("studentProfile.learningPause.maxHint")}
+              </p>
+              <p className={styles.helper}>
+                {t("studentProfile.learningPause.cancellationHint")}
+              </p>
+
+              {pauseError && <p className={styles.error}>{pauseError}</p>}
+
+              <button
+                type="submit"
+                className={styles.secondaryButton}
+                disabled={pauseSaving}
+              >
+                {pauseSaving
+                  ? t("studentProfile.learningPause.saving")
+                  : t("studentProfile.learningPause.submit")}
+              </button>
+            </form>
+          )}
+        </article>
+
+        <article className={styles.card}>
           <h2>{t("studentProfile.password.title")}</h2>
           <p className={styles.helper}>
             {t("studentProfile.password.description")}
@@ -297,6 +493,33 @@ const StudentProfile = () => {
       </div>
     </section>
   );
+};
+
+const getLocalDateString = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getDateDaysFrom = (dateString, days) => {
+  if (!dateString) return "";
+  const date = new Date(`${dateString}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDateOnly = (dateString) => {
+  if (!dateString) return "—";
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(`${dateString}T12:00:00`));
 };
 
 export default StudentProfile;

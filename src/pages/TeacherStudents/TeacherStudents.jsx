@@ -177,8 +177,12 @@ const TeacherStudents = () => {
 
           {statusKey === "paused" && student.pause_until && (
             <div>
-              <span>{t("teacherStudents.pauseUntil")}</span>
-              <strong>{formatDateOnly(student.pause_until)}</strong>
+              <span>{t("teacherStudents.pausePeriod")}</span>
+              <strong>
+                {student.pause_from
+                  ? `${formatDateOnly(student.pause_from)} — ${formatDateOnly(student.pause_until)}`
+                  : formatDateOnly(student.pause_until)}
+              </strong>
             </div>
           )}
         </div>

@@ -30,7 +30,9 @@ import {
 } from "../../features/students/api/studentDetailsApi";
 import { getMyTeacherScheduleSettings } from "../../features/settings/api/teacherSettingsApi";
 import {
+  applyStudentLearningPause,
   getTeacherStudentLifecycle,
+  resumeStudentLearningPause,
   setTeacherStudentLearningStatus,
 } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
@@ -68,6 +70,7 @@ const TeacherStudentDetails = () => {
   const [lifecycle, setLifecycle] = useState(null);
   const [lifecycleSaving, setLifecycleSaving] = useState(false);
   const [pendingLifecycleStatus, setPendingLifecycleStatus] = useState("");
+  const [pauseFromDraft, setPauseFromDraft] = useState("");
   const [pauseUntilDraft, setPauseUntilDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -924,9 +927,15 @@ const TeacherStudentDetails = () => {
 
   const beginLifecycleStatusChange = (nextStatus) => {
     setPendingLifecycleStatus(nextStatus);
-    setPauseUntilDraft(
-      nextStatus === "paused" ? getLocalDateDaysFromNow(7) : "",
-    );
+
+    if (nextStatus === "paused") {
+      const pauseFrom = getLocalDateString();
+      setPauseFromDraft(pauseFrom);
+      setPauseUntilDraft(getDateDaysFrom(pauseFrom, 6));
+    } else {
+      setPauseFromDraft("");
+      setPauseUntilDraft("");
+    }
   };
 
   const refreshLearningScheduleSummary = async () => {
@@ -952,18 +961,32 @@ const TeacherStudentDetails = () => {
   };
 
   const handleLifecycleStatusChange = async (nextStatus) => {
-    if (nextStatus === "paused" && !pauseUntilDraft) {
+    const cancellingScheduledPause =
+      nextStatus === "active" &&
+      lifecycle?.learning_status === "paused" &&
+      !lifecycle?.pause_is_active;
+
+    if (nextStatus === "paused" && (!pauseFromDraft || !pauseUntilDraft)) {
       toast.error(t("teacherStudentDetails.lifecycle.errors.pauseDateRequired"));
       return;
     }
 
     try {
       setLifecycleSaving(true);
-      const { data, error } = await setTeacherStudentLearningStatus({
-        studentId,
-        status: nextStatus,
-        pauseUntil: nextStatus === "paused" ? pauseUntilDraft : null,
-      });
+      const result =
+        nextStatus === "paused"
+          ? await applyStudentLearningPause({
+              studentId,
+              pauseFrom: pauseFromDraft,
+              pauseUntil: pauseUntilDraft,
+            })
+          : nextStatus === "active" && lifecycle?.learning_status === "paused"
+            ? await resumeStudentLearningPause({ studentId })
+            : await setTeacherStudentLearningStatus({
+                studentId,
+                status: nextStatus,
+              });
+      const { data, error } = result;
 
       if (error) throw error;
 
@@ -974,16 +997,23 @@ const TeacherStudentDetails = () => {
           : current,
       );
       setPendingLifecycleStatus("");
+      setPauseFromDraft("");
       setPauseUntilDraft("");
       await refreshLearningScheduleSummary();
+      window.dispatchEvent(new Event("notifications-changed"));
       toast.success(
-        t(`teacherStudentDetails.lifecycle.messages.${nextStatus}`),
+        t(
+          cancellingScheduledPause
+            ? "teacherStudentDetails.lifecycle.messages.pauseCancelled"
+            : `teacherStudentDetails.lifecycle.messages.${nextStatus}`,
+        ),
       );
     } catch (error) {
       console.error("Student lifecycle update error:", error);
       const message =
         error?.message?.includes("PAUSE_TOO_LONG") ||
-        error?.message?.includes("PAUSE_END_IN_PAST")
+        error?.message?.includes("PAUSE_START_IN_PAST") ||
+        error?.message?.includes("PAUSE_END_BEFORE_START")
           ? t("teacherStudentDetails.lifecycle.errors.pauseDateInvalid")
           : t("teacherStudentDetails.lifecycle.errors.save");
       toast.error(message);
@@ -1093,7 +1123,11 @@ const TeacherStudentDetails = () => {
                     onClick={() => beginLifecycleStatusChange("active")}
                     disabled={lifecycleSaving}
                   >
-                    {t("teacherStudentDetails.lifecycle.actions.resume")}
+                    {t(
+                      lifecycle.pause_is_active
+                        ? "teacherStudentDetails.lifecycle.actions.resume"
+                        : "teacherStudentDetails.lifecycle.actions.cancelPause",
+                    )}
                   </button>
                   <button
                     type="button"
@@ -1120,9 +1154,12 @@ const TeacherStudentDetails = () => {
           </div>
 
           <p className={styles.lifecycleHint}>
-            {lifecycle.learning_status === "paused" && lifecycle.pause_until
-              ? t("teacherStudentDetails.lifecycle.hints.pausedUntil", {
-                  date: formatDateOnly(lifecycle.pause_until),
+            {lifecycle.learning_status === "paused" &&
+            lifecycle.pause_from &&
+            lifecycle.pause_until
+              ? t("teacherStudentDetails.lifecycle.hints.pausedPeriod", {
+                  from: formatDateOnly(lifecycle.pause_from),
+                  until: formatDateOnly(lifecycle.pause_until),
                 })
               : t(
                   `teacherStudentDetails.lifecycle.hints.${lifecycle.learning_status}`,
@@ -1136,7 +1173,9 @@ const TeacherStudentDetails = () => {
                   `teacherStudentDetails.lifecycle.confirm.${
                     pendingLifecycleStatus === "active"
                       ? lifecycle.learning_status === "paused"
-                        ? "resume"
+                        ? lifecycle.pause_is_active
+                          ? "resume"
+                          : "cancelPause"
                         : "restore"
                       : pendingLifecycleStatus
                   }`,
@@ -1144,19 +1183,50 @@ const TeacherStudentDetails = () => {
               </p>
 
               {pendingLifecycleStatus === "paused" && (
-                <label className={styles.lifecyclePauseField}>
-                  <span>{t("teacherStudentDetails.lifecycle.pauseUntil")}</span>
-                  <input
-                    type="date"
-                    min={getLocalDateString()}
-                    max={getLocalDateDaysFromNow(14)}
-                    value={pauseUntilDraft}
-                    onChange={(event) => setPauseUntilDraft(event.target.value)}
-                    disabled={lifecycleSaving}
-                    required
-                  />
+                <div className={styles.lifecyclePausePeriod}>
+                  <label className={styles.lifecyclePauseField}>
+                    <span>{t("teacherStudentDetails.lifecycle.pauseFrom")}</span>
+                    <input
+                      type="date"
+                      min={getLocalDateString()}
+                      value={pauseFromDraft}
+                      onChange={(event) => {
+                        const nextFrom = event.target.value;
+                        setPauseFromDraft(nextFrom);
+
+                        if (nextFrom) {
+                          const maxUntil = getDateDaysFrom(nextFrom, 13);
+                          if (
+                            !pauseUntilDraft ||
+                            pauseUntilDraft < nextFrom ||
+                            pauseUntilDraft > maxUntil
+                          ) {
+                            setPauseUntilDraft(getDateDaysFrom(nextFrom, 6));
+                          }
+                        }
+                      }}
+                      disabled={lifecycleSaving}
+                      required
+                    />
+                  </label>
+
+                  <label className={styles.lifecyclePauseField}>
+                    <span>{t("teacherStudentDetails.lifecycle.pauseUntil")}</span>
+                    <input
+                      type="date"
+                      min={pauseFromDraft || getLocalDateString()}
+                      max={
+                        pauseFromDraft ? getDateDaysFrom(pauseFromDraft, 13) : undefined
+                      }
+                      value={pauseUntilDraft}
+                      onChange={(event) => setPauseUntilDraft(event.target.value)}
+                      disabled={lifecycleSaving}
+                      required
+                    />
+                  </label>
+
                   <small>{t("teacherStudentDetails.lifecycle.pauseMaxHint")}</small>
-                </label>
+                </div>
               )}
 
               <div>
@@ -1165,6 +1235,7 @@ const TeacherStudentDetails = () => {
                   className={styles.lifecycleCancelButton}
                   onClick={() => {
                     setPendingLifecycleStatus("");
+                    setPauseFromDraft("");
                     setPauseUntilDraft("");
                   }}
                   disabled={lifecycleSaving}
@@ -2489,14 +2560,16 @@ const getLocalDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-const getLocalDateDaysFromNow = (days) => {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
+const getDateDaysFrom = (dateString, days) => {
+  if (!dateString) return "";
+
+  const date = new Date(`${dateString}T12:00:00`);
   date.setDate(date.getDate() + days);
 
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+
   return `${year}-${month}-${day}`;
 };
 

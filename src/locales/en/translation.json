@@ -87,6 +87,32 @@
       "saved": "Password changed successfully.",
       "currentIncorrect": "The current password is incorrect.",
       "saveError": "Could not change the password."
+    },
+    "learningPause": {
+      "title": "Learning pause",
+      "description": "You can pause your learning yourself. Teacher approval is not required.",
+      "from": "Pause starts",
+      "until": "Pause ends",
+      "maxHint": "The maximum duration is 14 calendar days from the selected start date.",
+      "cancellationHint": "Lessons within the pause period are cancelled automatically. If a lesson is inside the teacher’s late-cancellation window, its price will be charged.",
+      "submit": "Pause learning",
+      "saving": "Applying pause...",
+      "saved": "Learning pause applied.",
+      "currentPeriod": "Learning is paused from {{from}} through {{until}}.",
+      "activeHint": "During the pause, new extra-lesson and reschedule requests are unavailable. Lessons already cancelled for the pause are not restored automatically.",
+      "resume": "Resume learning",
+      "cancelScheduled": "Cancel scheduled pause",
+      "resuming": "Resuming learning...",
+      "resumed": "Learning resumed.",
+      "scheduledCancelled": "Scheduled pause cancelled.",
+      "errors": {
+        "load": "Could not load pause status.",
+        "required": "Select the pause start and end dates.",
+        "invalidPeriod": "The start date cannot be in the past and the pause cannot exceed 14 calendar days.",
+        "alreadyPaused": "A pause is already scheduled or active.",
+        "save": "Could not apply the pause.",
+        "resume": "Could not resume learning."
+      }
     }
   },
   "studentSchedule": {
@@ -230,7 +256,10 @@
       "restrictedAction": "New learning actions are unavailable while learning is paused.",
       "inactiveTitle": "Learning has ended",
       "inactiveDescription": "Your learning status is inactive. New learning actions are unavailable. Contact your teacher if learning should be restored.",
-      "pausedDescriptionUntil": "Paused through {{date}} inclusive. Lessons during the pause are cancelled without charge; new extra-lesson and reschedule requests are temporarily unavailable."
+      "pausedDescriptionUntil": "Paused through {{date}} inclusive. Lessons during the pause are cancelled without charge; new extra-lesson and reschedule requests are temporarily unavailable.",
+      "scheduledTitle": "Learning pause scheduled",
+      "scheduledDescription": "The pause is scheduled from {{from}} through {{until}}. Learning actions remain available until it starts. Lessons in the selected period have already been cancelled according to the cancellation policy.",
+      "pausedDescriptionPeriod": "The pause runs from {{from}} through {{until}} inclusive. Lessons in this period were cancelled according to the cancellation policy; new extra-lesson and reschedule requests are temporarily unavailable."
     }
   },
   "about": {
@@ -444,7 +473,8 @@
       "inactive": "Inactive",
       "debtor": "Blocked due to debt"
     },
-    "pauseUntil": "Paused until"
+    "pauseUntil": "Paused until",
+    "pausePeriod": "Pause period"
   },
   "teacherSchedule": {
     "title": "Schedule",
@@ -1213,33 +1243,38 @@
         "deactivate": "Finish learning",
         "resume": "Resume learning",
         "restore": "Restore student",
-        "confirm": "Confirm"
+        "confirm": "Confirm",
+        "cancelPause": "Cancel scheduled pause"
       },
       "hints": {
         "active": "The student is active and can create new lesson and reschedule requests.",
         "paused": "A temporary pause blocks new learning actions. The student’s regular slot is preserved only for the short pause period.",
         "inactive": "Learning has ended. Future lessons are cancelled without charge, recurring series are stopped, and the schedule time is fully released. History, finance, debts and notes are preserved.",
-        "pausedUntil": "Paused through {{date}} inclusive. Lessons in this period are cancelled without charge. The regular slot cannot be taken by a new recurring series, but it may be used for a one-time lesson or one-time block."
+        "pausedUntil": "Paused through {{date}} inclusive. Lessons in this period are cancelled without charge. The regular slot cannot be taken by a new recurring series, but it may be used for a one-time lesson or one-time block.",
+        "pausedPeriod": "Paused from {{from}} through {{until}} inclusive. Lessons in this period are cancelled without charge. The regular slot cannot be taken by a new recurring series, but it may be used for a one-time lesson or one-time block."
       },
       "confirm": {
         "active": "Restore active learning for this student?",
-        "paused": "Pause this student for a short period? All future lessons through the selected date will be cancelled without charge. The recurring series keeps its slot from new series, while one-time lessons and blocks are allowed during the pause.",
+        "paused": "Pause this student for a short period? Lessons in the selected period will be cancelled without charge. The recurring series keeps its slot from new series, while one-time lessons and blocks are allowed during the pause.",
         "inactive": "Finish learning? All future lessons will be cancelled without charge, recurring series will stop, and their schedule time will be released. Student login will be disabled while history and financial data are preserved.",
         "resume": "End the pause early? New learning actions will become available again, but lessons already cancelled for the pause period will not be restored automatically.",
-        "restore": "Restore the student? Account access will be enabled again, but previous recurring series and cancelled lessons will not be restored automatically. Create a new schedule if needed."
+        "restore": "Restore the student? Account access will be enabled again, but previous recurring series and cancelled lessons will not be restored automatically. Create a new schedule if needed.",
+        "cancelPause": "Cancel the scheduled pause? Learning will continue without interruption. Lessons already cancelled for the pause will not be restored automatically."
       },
       "messages": {
         "active": "Student learning restored.",
         "paused": "Student learning paused.",
-        "inactive": "Student deactivated."
+        "inactive": "Student deactivated.",
+        "pauseCancelled": "Scheduled pause cancelled."
       },
       "errors": {
         "save": "Could not change student status.",
-        "pauseDateRequired": "Select the pause end date.",
-        "pauseDateInvalid": "The pause may end no earlier than today and no later than 14 days from today."
+        "pauseDateRequired": "Select the pause start and end dates.",
+        "pauseDateInvalid": "The start date cannot be in the past and the end date cannot be later than 13 days after the start date."
       },
       "pauseUntil": "Pause until",
-      "pauseMaxHint": "The maximum pause length is 14 days."
+      "pauseMaxHint": "The maximum duration is 14 calendar days from the selected start date.",
+      "pauseFrom": "Pause from"
     }
   },
   "languageSwitcher": {
@@ -1284,7 +1319,9 @@
       "byTeacher": "The teacher cancelled the lesson on {{date}} at {{time}}. No funds are charged.",
       "studentEarly": "Your cancellation request for {{date}} at {{time}} was approved. No funds are charged.",
       "studentLateCharged": "The lesson on {{date}} at {{time}} was cancelled. Because it was a late cancellation, {{amount}} was charged from your balance.",
-      "studentLateWaived": "Your cancellation request for {{date}} at {{time}} was approved as an exception. No funds are charged."
+      "studentLateWaived": "Your cancellation request for {{date}} at {{time}} was approved as an exception. No funds are charged.",
+      "pauseNoCharge": "Lesson on {{date}} at {{time}} was cancelled for the learning pause. No charge was made.",
+      "pauseLateCharged": "Lesson on {{date}} at {{time}} was cancelled for the learning pause. Because this was a late cancellation, {{amount}} was charged."
     },
     "errors": {
       "load": "Could not load notifications.",
@@ -1406,6 +1443,20 @@
     "lessonRescheduleRequestExpired": {
       "title": "Reschedule request closed",
       "body": "The request to move the lesson from {{oldDate}} at {{oldTime}} was closed because the requested time passed, the lesson started, or its schedule changed. The lesson was not moved by this request."
+    },
+    "learningPauseApplied": {
+      "title": "Learning pause",
+      "studentBody": "Learning is paused from {{pauseFrom}} through {{pauseUntil}}.",
+      "teacherBody": "{{studentName}} paused learning from {{pauseFrom}} through {{pauseUntil}}."
+    },
+    "learningPauseEnded": {
+      "title": "Learning resumed",
+      "studentBody": "Learning resumed early. Lessons already cancelled for the pause are not restored automatically.",
+      "teacherBody": "Learning for {{studentName}} resumed early.",
+      "scheduledStudentBody": "The scheduled pause was cancelled. Learning continues.",
+      "scheduledTeacherBody": "The scheduled pause for {{studentName}} was cancelled. Learning continues.",
+      "automaticStudentBody": "The learning pause has ended. Learning resumed.",
+      "automaticTeacherBody": "The learning pause for {{studentName}} has ended. Learning resumed."
     }
   },
   "teacherRequests": {

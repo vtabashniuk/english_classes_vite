@@ -203,6 +203,8 @@ const Notifications = () => {
       rateAmount: formatRateAmount(notification.data?.newAmountMinor),
       rateCurrency: notification.data?.newCurrency || "—",
       effectiveDate: formatCalendarDate(notification.data?.effectiveFrom),
+      pauseFrom: formatCalendarDate(notification.data?.pauseFrom),
+      pauseUntil: formatCalendarDate(notification.data?.pauseUntil),
       amount,
       priceInfo: reschedulePriceInfo,
       waiverReason: notification.data?.waiverReason || "—",

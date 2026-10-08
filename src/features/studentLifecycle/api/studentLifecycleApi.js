@@ -31,6 +31,29 @@ export const setTeacherStudentLearningStatus = async ({
   return { data: error ? null : firstOrNull(data), error };
 };
 
+
+export const applyStudentLearningPause = async ({
+  studentId = null,
+  pauseFrom,
+  pauseUntil,
+}) => {
+  const { data, error } = await supabase.rpc("apply_student_learning_pause", {
+    p_pause_from: pauseFrom,
+    p_pause_until: pauseUntil,
+    p_student_id: studentId,
+  });
+
+  return { data: error ? null : firstOrNull(data), error };
+};
+
+export const resumeStudentLearningPause = async ({ studentId = null } = {}) => {
+  const { data, error } = await supabase.rpc("resume_student_learning_pause", {
+    p_student_id: studentId,
+  });
+
+  return { data: error ? null : firstOrNull(data), error };
+};
+
 export const getMyStudentLifecycle = async () => {
   const { data, error } = await supabase.rpc("get_my_student_lifecycle");
 

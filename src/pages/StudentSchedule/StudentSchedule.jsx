@@ -108,7 +108,12 @@ const StudentSchedule = () => {
   const language = i18n.resolvedLanguage || i18n.language;
   const intlLocale = getIntlLocale(language);
   const financiallyRestricted = Boolean(financialAccess?.access_restricted);
-  const learningPaused = learningLifecycle?.learning_status === "paused";
+  const learningPauseScheduled =
+    learningLifecycle?.learning_status === "paused" &&
+    learningLifecycle?.pause_is_active === false;
+  const learningPaused =
+    learningLifecycle?.learning_status === "paused" &&
+    learningLifecycle?.pause_is_active !== false;
   const learningInactive = learningLifecycle?.learning_status === "inactive";
   const learningRestricted = learningPaused || learningInactive;
   const newLearningRestricted = financiallyRestricted || learningRestricted;
@@ -687,27 +692,41 @@ const StudentSchedule = () => {
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
       {successMessage && <div className={styles.success}>{successMessage}</div>}
 
-      {learningRestricted && (
+      {(learningRestricted || learningPauseScheduled) && (
         <div className={`${styles.financialAccessNotice} ${styles.learningPauseNotice}`}>
           <div>
             <strong>
               {learningInactive
                 ? t("studentSchedule.lifecycle.inactiveTitle")
-                : t("studentSchedule.lifecycle.pausedTitle")}
+                : learningPauseScheduled
+                  ? t("studentSchedule.lifecycle.scheduledTitle")
+                  : t("studentSchedule.lifecycle.pausedTitle")}
             </strong>
             <p>
               {learningInactive
                 ? t("studentSchedule.lifecycle.inactiveDescription")
-                : learningLifecycle?.pause_until
-                  ? t("studentSchedule.lifecycle.pausedDescriptionUntil", {
-                      date: new Intl.DateTimeFormat(intlLocale, {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                      }).format(
-                        new Date(`${learningLifecycle.pause_until}T12:00:00`),
-                      ),
-                    })
+                : learningLifecycle?.pause_from && learningLifecycle?.pause_until
+                  ? t(
+                      learningPauseScheduled
+                        ? "studentSchedule.lifecycle.scheduledDescription"
+                        : "studentSchedule.lifecycle.pausedDescriptionPeriod",
+                      {
+                        from: new Intl.DateTimeFormat(intlLocale, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        }).format(
+                          new Date(`${learningLifecycle.pause_from}T12:00:00`),
+                        ),
+                        until: new Intl.DateTimeFormat(intlLocale, {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                        }).format(
+                          new Date(`${learningLifecycle.pause_until}T12:00:00`),
+                        ),
+                      },
+                    )
                   : t("studentSchedule.lifecycle.pausedDescription")}
             </p>
           </div>
