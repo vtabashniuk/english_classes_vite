@@ -1,16 +1,32 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { Navigate, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/useAuth";
-import { updateCurrentUser } from "../../features/auth/api/authApi";
+import {
+  getAuthenticatedUser,
+  updateCurrentUser,
+} from "../../features/auth/api/authApi";
+import PasswordField from "../../features/auth/components/PasswordField";
+import { validateNewPassword } from "../../features/auth/lib/passwordFlowAccess";
+import {
+  canUsePasswordFlow,
+  clearPasswordFlow,
+  subscribePasswordFlow,
+} from "../../features/auth/lib/passwordFlowState";
 
 import styles from "./SetPasswordPage.module.css";
 
 const SetPasswordPage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
+  const userId = session?.user?.id;
+  const authorized = useSyncExternalStore(
+    subscribePasswordFlow,
+    () => canUsePasswordFlow("invite", userId),
+    () => false,
+  );
 
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -21,25 +37,27 @@ const SetPasswordPage = () => {
     event.preventDefault();
     setErrorMessage("");
 
-    if (password.length < 8) {
-      setErrorMessage(t("auth.setPassword.errors.tooShort"));
+    const validationKey = validateNewPassword(password, passwordConfirm);
+    if (validationKey) {
+      setErrorMessage(t(`auth.setPassword.errors.${validationKey}`));
       return;
     }
-
-    if (password !== passwordConfirm) {
-      setErrorMessage(t("auth.setPassword.errors.mismatch"));
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      const { error } = await updateCurrentUser({ password });
-
-      if (error) {
-        throw error;
+      const { data: identity, error: identityError } = await getAuthenticatedUser();
+      if (
+        identityError || !identity?.user?.id ||
+        identity.user.id !== userId ||
+        profile?.role !== "student" ||
+        !canUsePasswordFlow("invite", userId)
+      ) {
+        setErrorMessage(t("auth.setPassword.invalidDescription"));
+        return;
       }
+      const { error } = await updateCurrentUser({ password });
+      if (error) throw error;
 
+      clearPasswordFlow();
       navigate("/student-area", { replace: true });
     } catch (error) {
       console.error("Set password error:", error);
@@ -50,15 +68,21 @@ const SetPasswordPage = () => {
   };
 
   if (loading) {
+    return <main><p>{t("auth.setPassword.checkingInvite")}</p></main>;
+  }
+  if (!session) return <Navigate to="/login" replace />;
+  if (!authorized || profile?.role !== "student") {
     return (
-      <main>
-        <p>{t("auth.setPassword.checkingInvite")}</p>
+      <main className={styles.page}>
+        <section className={styles.card}>
+          <h1>{t("auth.setPassword.invalidTitle")}</h1>
+          <p>{t("auth.setPassword.invalidDescription")}</p>
+          <button type="button" onClick={() => navigate("/login", { replace: true })}>
+            {t("auth.forgotPassword.backToLogin")}
+          </button>
+        </section>
       </main>
     );
-  }
-
-  if (!session) {
-    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -66,36 +90,20 @@ const SetPasswordPage = () => {
       <section className={styles.card}>
         <h1>{t("auth.setPassword.title")}</h1>
         <p>{t("auth.setPassword.description")}</p>
-
         <form className={styles.form} onSubmit={handleSubmit}>
-          <label>
-            <span>{t("common.password")}</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="new-password"
-              required
-            />
-          </label>
-
-          <label>
-            <span>{t("auth.setPassword.confirmPassword")}</span>
-            <input
-              type="password"
-              value={passwordConfirm}
-              onChange={(event) => setPasswordConfirm(event.target.value)}
-              autoComplete="new-password"
-              required
-            />
-          </label>
-
-          {errorMessage && <p className={styles.error}>{errorMessage}</p>}
-
+          <PasswordField
+            name="new-password" label={t("common.password")}
+            value={password} onChange={setPassword}
+            autoComplete="new-password" disabled={isSubmitting}
+          />
+          <PasswordField
+            name="confirm-password" label={t("auth.setPassword.confirmPassword")}
+            value={passwordConfirm} onChange={setPasswordConfirm}
+            autoComplete="new-password" disabled={isSubmitting}
+          />
+          {errorMessage && <p className={styles.error} role="alert">{errorMessage}</p>}
           <button type="submit" disabled={isSubmitting}>
-            {isSubmitting
-              ? t("common.saving")
-              : t("auth.setPassword.submit")}
+            {isSubmitting ? t("common.saving") : t("auth.setPassword.submit")}
           </button>
         </form>
       </section>

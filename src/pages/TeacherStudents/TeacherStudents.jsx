@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { inviteStudent } from "../../features/students/api/studentInvitesApi";
+import { getInviteErrorMessage, getInviteSuccessMessageKey } from "../../features/students/lib/studentInviteFeedback";
+import useToast from "../../shared/toast/useToast";
 import { listTeacherPendingAssignmentCounts } from "../../features/assignments/api/assignmentsApi";
 import { listTeacherStudentsLifecycle } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
@@ -21,6 +23,7 @@ const fetchStudents = async () => {
 
 const TeacherStudents = () => {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const [students, setStudents] = useState([]);
@@ -31,7 +34,6 @@ const TeacherStudents = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState("");
   const [inviteError, setInviteError] = useState("");
 
   const groupedStudents = useMemo(
@@ -92,7 +94,6 @@ const TeacherStudents = () => {
 
   const handleInvite = async (event) => {
     event.preventDefault();
-    setInviteMessage("");
     setInviteError("");
     setIsInviting(true);
 
@@ -102,14 +103,23 @@ const TeacherStudents = () => {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || "INVITE_FAILED");
 
-      setInviteMessage(t("teacherStudents.invite.success"));
+      // The invitation succeeded. A subsequent list-refresh failure must not
+      // misrepresent that completed operation as a failed invitation.
+      toast.success(t(getInviteSuccessMessageKey(data)));
       setFullName("");
       setEmail("");
-      const nextStudents = await fetchStudents();
-      setStudents(nextStudents);
+
+      try {
+        const nextStudents = await fetchStudents();
+        setStudents(nextStudents);
+        setErrorMessage("");
+      } catch (refreshError) {
+        console.error("Students refresh after invitation error:", refreshError);
+        setErrorMessage(t("teacherStudents.errors.load"));
+      }
     } catch (error) {
       console.error("Student invite error:", error);
-      setInviteError(error?.message || t("teacherStudents.errors.invite"));
+      setInviteError(getInviteErrorMessage(error, t));
     } finally {
       setIsInviting(false);
     }
@@ -117,7 +127,6 @@ const TeacherStudents = () => {
 
   const handleCloseInvite = () => {
     setIsInviteOpen(false);
-    setInviteMessage("");
     setInviteError("");
   };
 
@@ -238,7 +247,7 @@ const TeacherStudents = () => {
         <button
           type="button"
           className={styles.inviteButton}
-          onClick={() => setIsInviteOpen((current) => !current)}
+          onClick={() => (isInviteOpen ? handleCloseInvite() : setIsInviteOpen(true))}
         >
           {isInviteOpen ? t("common.close") : t("teacherStudents.invite.open")}
         </button>
@@ -275,10 +284,9 @@ const TeacherStudents = () => {
             </label>
           </div>
 
-          {inviteMessage && (
-            <p className={styles.successMessage}>{inviteMessage}</p>
+          {inviteError && (
+            <p className={styles.errorMessage} role="alert">{inviteError}</p>
           )}
-          {inviteError && <p className={styles.errorMessage}>{inviteError}</p>}
 
           <div className={styles.formActions}>
             <button

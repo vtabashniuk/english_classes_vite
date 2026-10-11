@@ -1,4 +1,10 @@
+import { recordPasswordAuthEvent } from "../lib/passwordFlowState";
 import { supabase } from "../../../shared/api/supabaseClient";
+
+// Register early enough to capture one-time email-link auth events.
+supabase.auth.onAuthStateChange((event, session) => {
+  recordPasswordAuthEvent(event, session);
+});
 
 export const getSession = () => supabase.auth.getSession();
 
@@ -12,8 +18,16 @@ export const signInWithPassword = ({ email, password }) =>
 
 export const signOut = () => supabase.auth.signOut();
 
-export const exchangeCodeForSession = (code) =>
-  supabase.auth.exchangeCodeForSession(code);
+// Prevent development StrictMode effect replay from consuming an email code twice.
+let lastCode = null;
+let lastExchange = null;
+export const exchangeCodeForSession = (code) => {
+  if (code !== lastCode) {
+    lastCode = code;
+    lastExchange = supabase.auth.exchangeCodeForSession(code);
+  }
+  return lastExchange;
+};
 
 export const updateCurrentUser = (attributes) =>
   supabase.auth.updateUser(attributes);

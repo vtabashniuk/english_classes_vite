@@ -354,7 +354,9 @@
         "tooShort": "Password must contain at least 8 characters.",
         "mismatch": "Passwords do not match.",
         "save": "Could not set the password."
-      }
+      },
+      "invalidTitle": "Invitation is invalid",
+      "invalidDescription": "To set a password, open a fresh invitation link from your email. A regular sign-in cannot be used to set a password without the current one."
     },
     "protectedRoute": {
       "profileNotFound": "User profile was not found.",
@@ -451,7 +453,10 @@
       "name": "Student name",
       "namePlaceholder": "For example, John Smith",
       "submit": "Send invitation",
-      "success": "Invitation sent successfully."
+      "success": "Invitation sent successfully.",
+      "alreadyLinked": "This student is already on your list. No new email was sent.",
+      "relationshipRestored": "The student link was restored. No new email was sent.",
+      "emailRateLimit": "The email sending limit has been reached. Please try inviting the student later."
     },
     "empty": {
       "title": "No students yet",
