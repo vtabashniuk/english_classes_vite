@@ -16,7 +16,7 @@ export const onAuthStateChange = (callback) =>
 export const signInWithPassword = ({ email, password }) =>
   supabase.auth.signInWithPassword({ email, password });
 
-export const signOut = () => supabase.auth.signOut();
+export const signOut = (options) => supabase.auth.signOut(options);
 
 // Prevent development StrictMode effect replay from consuming an email code twice.
 let lastCode = null;

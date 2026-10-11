@@ -389,6 +389,17 @@
         "mismatch": "Passwords do not match.",
         "save": "Could not change the password."
       }
+    },
+    "sessionIdle": {
+      "warningTitle": "Automatic CRM sign-out",
+      "warningDescription": "You have not used the CRM for a while. You will be signed out in:",
+      "timeRemaining": "Time until sign-out",
+      "continue": "Keep me signed in",
+      "expiredTitle": "Signed out due to inactivity",
+      "expiredDescription": "We are signing you out to protect your account. Sign in again to continue.",
+      "loggingOut": "Signing out…",
+      "logoutError": "Could not sign out. Access to the CRM is temporarily locked. Check your connection and try again.",
+      "retryLogout": "Retry sign-out"
     }
   },
   "notFound": {

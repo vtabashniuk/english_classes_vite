@@ -6,6 +6,7 @@ import {
   signOut as signOutUser,
 } from "../features/auth/api/authApi";
 import { getProfileById } from "../features/profiles/api/profilesApi";
+import SessionInactivityGuard from "../features/auth/components/SessionInactivityGuard";
 import { AuthContext } from "./authContext";
 
 const loadProfile = async (userId) => {
@@ -110,8 +111,8 @@ export const AuthProvider = ({ children }) => {
     return currentProfile;
   }, [session]);
 
-  const signOut = useCallback(async () => {
-    const { error } = await signOutUser();
+  const signOut = useCallback(async (options) => {
+    const { error } = await signOutUser(options);
 
     if (error) {
       throw error;
@@ -130,7 +131,21 @@ export const AuthProvider = ({ children }) => {
     [session, profile, loading, refreshProfile, signOut],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {session?.user && profile?.id === session.user.id &&
+        ["teacher", "student"].includes(profile.role) && (
+          <SessionInactivityGuard
+            key={`${session.user.id}:${session.user.last_sign_in_at ?? "initial"}`}
+            userId={session.user.id}
+            sessionMarker={session.user.last_sign_in_at ?? session.user.created_at ?? "initial"}
+            role={profile.role}
+            signOut={signOut}
+          />
+        )}
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;
