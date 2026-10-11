@@ -354,7 +354,9 @@
         "tooShort": "Password must contain at least 8 characters.",
         "mismatch": "Passwords do not match.",
         "save": "Could not set the password."
-      }
+      },
+      "invalidTitle": "Invitation is invalid",
+      "invalidDescription": "To set a password, open a fresh invitation link from your email. A regular sign-in cannot be used to set a password without the current one."
     },
     "protectedRoute": {
       "profileNotFound": "User profile was not found.",
@@ -387,6 +389,17 @@
         "mismatch": "Passwords do not match.",
         "save": "Could not change the password."
       }
+    },
+    "sessionIdle": {
+      "warningTitle": "Automatic CRM sign-out",
+      "warningDescription": "You have not used the CRM for a while. You will be signed out in:",
+      "timeRemaining": "Time until sign-out",
+      "continue": "Keep me signed in",
+      "expiredTitle": "Signed out due to inactivity",
+      "expiredDescription": "We are signing you out to protect your account. Sign in again to continue.",
+      "loggingOut": "Signing out…",
+      "logoutError": "Could not sign out. Access to the CRM is temporarily locked. Check your connection and try again.",
+      "retryLogout": "Retry sign-out"
     }
   },
   "notFound": {
@@ -451,7 +464,10 @@
       "name": "Student name",
       "namePlaceholder": "For example, John Smith",
       "submit": "Send invitation",
-      "success": "Invitation sent successfully."
+      "success": "Invitation sent successfully.",
+      "alreadyLinked": "This student is already on your list. No new email was sent.",
+      "relationshipRestored": "The student link was restored. No new email was sent.",
+      "emailRateLimit": "The email sending limit has been reached. Please try inviting the student later."
     },
     "empty": {
       "title": "No students yet",
@@ -1930,5 +1946,25 @@
       "studentNotifications": "My notifications"
     },
     "financeHistory": "Finance history in student profile"
+  },
+  "security": {
+    "password": {
+      "title": "Security",
+      "description": "Change the password you use to sign in.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "saving": "Changing password...",
+      "currentRequired": "Enter your current password.",
+      "tooShort": "The new password must be at least 8 characters long.",
+      "mismatch": "The new passwords do not match.",
+      "samePassword": "The new password must be different from the current password.",
+      "saved": "Password changed successfully.",
+      "currentIncorrect": "The current password is incorrect.",
+      "saveError": "Could not change the password.",
+      "tooWeak": "The new password does not meet the security requirements.",
+      "reauthRequired": "Changing the password requires additional sign-in verification. Sign in again or use password recovery."
+    }
   }
 }

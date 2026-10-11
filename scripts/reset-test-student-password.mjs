@@ -1,14 +1,19 @@
-import { createClient } from "@supabase/supabase-js";
+import {
+  assertLocalAdminResetConfig,
+  assertUserMatchesExpectedEmail,
+} from "./lib/localAdminSafety.mjs";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const userId = process.env.TEST_USER_ID;
-const newPassword = process.env.TEST_USER_PASSWORD;
+// Validate target and explicit intent BEFORE loading the Supabase SDK or
+// initializing any privileged client. Never allow a cloud Supabase URL.
+const {
+  supabaseUrl,
+  serviceRoleKey,
+  userId,
+  expectedEmail,
+  newPassword,
+} = assertLocalAdminResetConfig(process.env, process.argv.slice(2));
 
-if (!supabaseUrl || !serviceRoleKey || !userId || !newPassword) {
-  throw new Error("Missing required environment variables.");
-}
-
+const { createClient } = await import("@supabase/supabase-js");
 const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
@@ -16,13 +21,18 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
-const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+// An ID typo must not silently reset another local user's password.
+const { data: existing, error: lookupError } = await supabase.auth.admin.getUserById(userId);
+if (lookupError || !existing?.user) {
+  throw new Error("Could not verify local test user. Password not changed.");
+}
+assertUserMatchesExpectedEmail(existing.user.email, expectedEmail);
+
+const { error } = await supabase.auth.admin.updateUserById(userId, {
   password: newPassword,
 });
-
 if (error) {
-  console.error(error);
-  process.exit(1);
+  throw new Error("Local test password reset failed. Check the local Supabase logs.");
 }
 
-console.log("Password updated for:", data.user.email);
+console.log("Local test password updated for:", expectedEmail);

@@ -1,0 +1,51 @@
+name: CRM CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'hotfix/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Build and tests must never require access to Supabase or Vercel secrets.
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Quality checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          # Match the current local development major and tested baseline.
+          node-version: '24.21.0'
+          package-manager-cache: false
+
+      - name: Install dependencies from lockfile
+        run: npm ci
+
+      - name: Check architecture boundaries
+        run: npm run check:architecture
+
+      - name: Run unit tests
+        run: node --test tests/*.test.js
+
+      - name: Check ESLint
+        run: npm run lint
+
+      - name: Build Vite application
+        run: npm run build
