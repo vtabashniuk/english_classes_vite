@@ -15,6 +15,8 @@ import {
   transferManualStudentPayment,
 } from "../../features/finance/api/financeApi";
 import { sortFinanceOperationsNewestFirst } from "../../features/finance/lib/financeSort";
+import PaginationControls from "../../shared/pagination/PaginationControls";
+import { getPageCount, getPageRange } from "../../shared/pagination/pagination";
 import {
   DEFAULT_FINANCE_HISTORY_DAYS,
   DEFAULT_FINANCE_SETTINGS,
@@ -38,6 +40,7 @@ import { getIntlLocale } from "../../utils/getIntlLocale";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import LessonTeacherNote from "../../features/lessons/components/LessonTeacherNote/LessonTeacherNote";
 import TeacherStudentAssignmentsSection from "../../features/assignments/components/TeacherStudentAssignmentsSection/TeacherStudentAssignmentsSection";
+import StudentMaterialAccess from "../../features/materials/components/StudentMaterialAccess/StudentMaterialAccess";
 import { getMeetingProviderLabel } from "../../features/lessons/lib/meetingProvider";
 import {
   getTeacherStudentFinancialAccess,
@@ -320,8 +323,7 @@ const TeacherStudentDetails = () => {
         setHistoryError("");
 
         const result = await getStudentFinanceTransactions(studentId, {
-          limit: historyPageSize,
-          offset: historyPage * historyPageSize,
+          ...getPageRange(historyPage, historyPageSize),
           dateFrom: historyDateFrom || null,
           dateTo: historyDateTo || null,
         });
@@ -392,10 +394,7 @@ const TeacherStudentDetails = () => {
   const lessonRateIsValid = isPositiveIntegerInput(lessonRate);
   const paymentAmountMinor = parseMoneyInputToMinor(paymentAmount);
   const paymentAmountIsValid = paymentAmountMinor !== null && paymentAmountMinor > 0;
-  const historyPageCount = Math.max(
-    1,
-    Math.ceil(historyTotal / historyPageSize),
-  );
+  const historyPageCount = getPageCount(historyTotal, historyPageSize);
 
   const handleHistoryPageChange = (nextPage) => {
     setHistoryPage(nextPage);
@@ -2278,39 +2277,15 @@ const TeacherStudentDetails = () => {
                     ))}
                   </div>
 
-                  <div className={styles.historyPagination}>
-                    <button
-                      type="button"
-                      className={styles.secondaryButton}
-                      onClick={() => handleHistoryPageChange(Math.max(0, historyPage - 1))}
-                      disabled={historyPage === 0 || historyLoading}
-                    >
-                      {t("teacherStudentDetails.finance.historyPrevious")}
-                    </button>
-
-                    <span>
-                      {t("teacherStudentDetails.finance.historyPage", {
-                        current: historyPage + 1,
-                        total: historyPageCount,
-                        count: historyTotal,
-                      })}
-                    </span>
-
-                    <button
-                      type="button"
-                      className={styles.secondaryButton}
-                      onClick={() =>
-                        handleHistoryPageChange(
-                          Math.min(historyPageCount - 1, historyPage + 1),
-                        )
-                      }
-                      disabled={
-                        historyPage >= historyPageCount - 1 || historyLoading
-                      }
-                    >
-                      {t("teacherStudentDetails.finance.historyNext")}
-                    </button>
-                  </div>
+                  <PaginationControls page={historyPage} pageSize={historyPageSize}
+                    total={historyTotal} disabled={historyLoading}
+                    onPageChange={handleHistoryPageChange}
+                    className={styles.historyPagination} buttonClassName={styles.secondaryButton}
+                    previousLabel={t("teacherStudentDetails.finance.historyPrevious")}
+                    nextLabel={t("teacherStudentDetails.finance.historyNext")}
+                    summary={t("teacherStudentDetails.finance.historyPage", {
+                      current: historyPage + 1, total: historyPageCount, count: historyTotal,
+                    })} />
                   </>
                 )}
               </section>
@@ -2410,6 +2385,10 @@ const TeacherStudentDetails = () => {
               />
             </div>
           )}
+        </article>
+
+        <article className={styles.card}>
+          <StudentMaterialAccess studentId={studentId} />
         </article>
 
         <article className={styles.card}>

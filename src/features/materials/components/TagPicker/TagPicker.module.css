@@ -1,0 +1,5 @@
+.picker{border:1px solid var(--color-border-strong);border-radius:var(--border-radius);padding:.65rem;display:grid;gap:.45rem;background:var(--color-surface)}
+.chips{display:flex;flex-wrap:wrap;gap:.35rem}.chip{border:1px solid var(--color-border);border-radius:999px;padding:.2rem .55rem;color:var(--color-text-primary);background:var(--color-surface-muted);cursor:pointer}
+.picker input{font:inherit;background:var(--color-surface);color:var(--color-text-primary);padding:.5rem;border:1px solid var(--color-border-strong);border-radius:var(--border-radius);width:100%;box-sizing:border-box}
+.suggestion{display:block;width:100%;text-align:left;padding:.35rem .6rem;border:0;border-radius:var(--border-radius);background:var(--color-surface-muted);color:var(--color-text-primary);cursor:pointer}.suggestion:hover{filter:brightness(.96)}
+.picker small{color:var(--color-text-secondary)}

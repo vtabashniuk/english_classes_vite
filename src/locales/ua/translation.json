@@ -780,7 +780,8 @@
         "notFound": "Урок не знайдено.",
         "generic": "Не вдалося оновити посилання на заняття."
       }
-    }
+    },
+    "pendingHomework": "Невиконаних завдань: {{count}}"
   },
   "teacherSettings": {
     "title": "Налаштування",
@@ -1457,7 +1458,24 @@
       "scheduledTeacherBody": "Заплановану паузу {{studentName}} скасовано. Навчання продовжується.",
       "automaticStudentBody": "Пауза в навчанні завершилась. Навчання відновлено.",
       "automaticTeacherBody": "Пауза в навчанні {{studentName}} завершилась. Навчання відновлено."
-    }
+    },
+    "assignmentOverdue": {
+      "title": "Нагадування про завдання",
+      "body": "Завдання «{{assignmentTitle}}» не виконано. Термін був {{dueDate}}.",
+      "openAssignments": "Перейти до завдань"
+    },
+    "materialsSharedBulk": {
+      "title": "Нові навчальні матеріали",
+      "body": "Викладач надав вам доступ до матеріалів ({{count}})."
+    },
+    "assignmentDue": {
+      "title": "Нагадування про завдання",
+      "body": "Завдання «{{assignmentTitle}}» потрібно виконати сьогодні, {{dueDate}}.",
+      "openAssignments": "Перейти до завдань"
+    },
+    "all": "Усі",
+    "onlyUnread": "Непрочитані",
+    "retention30": "Сповіщення зберігаються 30 днів."
   },
   "teacherRequests": {
     "title": "Запити",
@@ -1568,7 +1586,7 @@
       "title": "Назва",
       "category": "Категорія (необов’язково)",
       "url": "Посилання",
-      "description": "Опис (необов’язково)",
+      "description": "Опис *",
       "create": "Додати",
       "save": "Зберегти",
       "saving": "Збереження...",
@@ -1592,13 +1610,14 @@
     "title": "Матеріали",
     "description": "Навчальні матеріали, які викладач відкрив для вас.",
     "loading": "Завантаження матеріалів...",
-    "search": "Пошук за назвою, описом або категорією",
+    "search": "Пошук за назвою, описом, тегами або темою",
     "open": "Відкрити",
     "empty": "Викладач ще не надав вам матеріалів.",
     "noResults": "За вашим пошуком нічого не знайдено.",
     "errors": {
       "load": "Не вдалося завантажити матеріали."
-    }
+    },
+    "pageSummary": "Сторінка {{page}}"
   },
   "teacherAssignments": {
     "title": "Завдання",
@@ -1640,7 +1659,16 @@
     "cancelEdit": "Скасувати редагування",
     "edit": "Редагувати",
     "openCreate": "Додати завдання",
-    "cancel": "Скасувати"
+    "cancel": "Скасувати",
+    "groups": {
+      "pending": "Невиконані",
+      "completed": "Виконані"
+    },
+    "overdue": "Прострочено",
+    "groupEmpty": "Немає завдань у цій групі.",
+    "pendingCount": "Невиконаних завдань: {{count}}",
+    "lessonPending": "Невиконані завдання до цього уроку: {{count}}",
+    "lessonDueDateHint": "Дата дедлайну автоматично встановлюється за датою вибраного уроку."
   },
   "studentAssignments": {
     "title": "Завдання",
@@ -1658,7 +1686,12 @@
     "errors": {
       "load": "Не вдалося завантажити завдання.",
       "complete": "Не вдалося позначити завдання виконаним."
-    }
+    },
+    "groups": {
+      "pending": "Невиконані",
+      "completed": "Виконані"
+    },
+    "overdue": "Прострочено"
   },
   "teacherFinance": {
     "title": "Фінанси",
@@ -1777,5 +1810,125 @@
     "googleMeet": "Google Meet",
     "microsoftTeams": "Microsoft Teams",
     "generic": "Онлайн-заняття"
+  },
+  "materialsFeature": {
+    "studentAccess": "Матеріали учня",
+    "selectMaterial": "Оберіть матеріал",
+    "assign": "Призначити",
+    "revoke": "Відкликати доступ",
+    "restore": "Відновити доступ",
+    "revokeAll": "Відкликати всі",
+    "revoked": "Доступ відкликано",
+    "noGrants": "Матеріали ще не призначено",
+    "confirmRevokeAll": "Відкликати доступ до всіх матеріалів цього учня? Історія залишиться.",
+    "urls": "Посилання на ресурси (кожне з нового рядка)",
+    "tags": "Теги (необов’язково)",
+    "level": "Рівень",
+    "allLevels": "Усі рівні",
+    "folder": "Папка",
+    "noFolder": "Без папки",
+    "allFolders": "Усі папки",
+    "search": "Пошук матеріалів",
+    "searchPlaceholder": "Назва, опис, теги, тема…",
+    "createFolder": "Додати папку",
+    "folderPrompt": "Назва папки",
+    "validation": "Заповніть назву, опис та хоча б один ресурс.",
+    "invalidUrl": "Використовуйте лише коректні посилання http(s)",
+    "assignmentNeedsAccess": "Спочатку надайте учню доступ до матеріалу у вкладці «Матеріали».",
+    "resourcesTitle": "Ресурси матеріалу *",
+    "resourcesHint": "Кожне посилання має свою назву, яку бачитиме учень. Самі файли залишаються на зовнішніх сервісах.",
+    "resourceName": "Назва ресурсу {{number}} *",
+    "resourceNamePlaceholder": "Наприклад, Grammar Rules або Audio Practice",
+    "resourceUrl": "Посилання на ресурс *",
+    "addResource": "+ Додати ще ресурс",
+    "removeResource": "Прибрати ресурс {{number}}",
+    "tagsPlaceholder": "Grammar, Past Simple, A2",
+    "tagsHint": "Розділяйте теги комами або пробілами. Для тегів із кількох слів використовуйте коми (наприклад: Past Simple, A2).",
+    "resourceNameRequired": "Заповніть назву кожного ресурсу (до 200 символів).",
+    "openNamedResource": "Відкрити ресурс «{{title}}»",
+    "resourceNumber": "ресурс {{number}}",
+    "externalSource": "Зовнішнє посилання"
+  },
+  "materialsCatalog": {
+    "manageTags": "Довідник тегів",
+    "collections": "Тематичні добірки",
+    "newCollection": "Створити добірку",
+    "collectionName": "Назва добірки",
+    "collectionType": "Тип добірки",
+    "automatic": "Автоматична",
+    "manual": "Ручна",
+    "tagMatch": "Умова збігу тегів",
+    "matchAll": "Усі вибрані теги",
+    "matchAny": "Хоча б один тег",
+    "automaticHint": "Нові матеріали, що відповідають умовам, з’являються автоматично. Доступ учням не надається автоматично.",
+    "findForCollection": "Пошук матеріалів для добірки",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "rename": "Перейменувати",
+    "delete": "Видалити",
+    "edit": "Редагувати",
+    "viewCollection": "Переглянути",
+    "previewCount": "Знайдено матеріалів: {{count}} (макс. 100)",
+    "noMatches": "Матеріали не знайдено",
+    "noCollections": "Добірок поки немає",
+    "newTag": "Новий тег",
+    "add": "Додати",
+    "tagInput": "Вибрати тег або створити новий…",
+    "tagHelp": "Enter додає тег; багатослівні теги вводьте без розділення пробілами. Теги необов’язкові.",
+    "addTag": "Створити тег «{{name}}»",
+    "removeTag": "Прибрати тег «{{name}}»",
+    "tagsOptional": "Теги (необов’язково)",
+    "filterTag": "Тег",
+    "allTags": "Усі теги",
+    "mergeHint": "Перейменування в назву наявного тегу об’єднає їхні матеріали.",
+    "operationFailed": "Не вдалося виконати операцію з матеріалами.",
+    "tagSaved": "Тег збережено.",
+    "tagDeleted": "Тег видалено.",
+    "collectionSaved": "Добірку збережено.",
+    "collectionDeleted": "Добірку видалено.",
+    "deleteTagConfirm": "Видалити тег «{{name}}» з усіх матеріалів і автоматичних добірок?",
+    "deleteCollectionConfirm": "Видалити добірку «{{name}}»? Матеріали залишаться в бібліотеці.",
+    "collectionValidation": "Вкажіть назву добірки; для автоматичної виберіть рівень або теги.",
+    "accessRevoked": "Доступ до матеріалу відкликано.",
+    "accessRestored": "Доступ до матеріалу відновлено.",
+    "manualCount": "Матеріалів у добірці: {{count}}",
+    "selectHint": "Виберіть матеріали для надання учню або створення завдання. Вибір зберігається під час переходу між сторінками.",
+    "togglePage": "Вибрати / зняти на сторінці",
+    "selectedCount": "Вибрано: {{count}}",
+    "studentForCollection": "Учень",
+    "chooseStudent": "Оберіть учня",
+    "grantSelected": "Надати доступ",
+    "assignmentFromSelected": "Створити завдання",
+    "shareBeforeAssignment": "Спочатку надайте учню доступ до вибраних матеріалів.",
+    "bulkGranted": "Доступ до вибраних матеріалів надано.",
+    "closePreview": "Згорнути",
+    "selectionLimit": "За один раз можна вибрати до 100 матеріалів."
+  },
+  "commonPagination": {
+    "previous": "Назад",
+    "next": "Далі",
+    "summary": "Сторінка {{current}} із {{total}} · Усього: {{count}}"
+  },
+  "pagePreferences": {
+    "title": "Кількість записів на сторінці",
+    "description": "Особисті налаштування відображення. Вони не змінюють дані та не впливають на налаштування іншого користувача.",
+    "save": "Зберегти налаштування",
+    "saving": "Збереження…",
+    "saved": "Налаштування відображення збережено.",
+    "error": "Не вдалося зберегти налаштування відображення.",
+    "labels": {
+      "teacherMaterials": "Бібліотека матеріалів",
+      "teacherCollections": "Матеріали тематичної добірки",
+      "teacherCollectionList": "Тематичні добірки",
+      "teacherStudentMaterials": "Матеріали у картці учня",
+      "teacherPendingAssignments": "Невиконані завдання у картці учня",
+      "teacherCompletedAssignments": "Виконані завдання у картці учня",
+      "teacherNotifications": "Сповіщення викладача",
+      "studentMaterials": "Мої матеріали",
+      "studentPendingAssignments": "Мої невиконані завдання",
+      "studentCompletedAssignments": "Мої виконані завдання",
+      "studentNotifications": "Мої сповіщення"
+    },
+    "financeHistory": "Фінансова історія у картці учня"
   }
 }

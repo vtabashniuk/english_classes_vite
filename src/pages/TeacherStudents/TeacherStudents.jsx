@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 import { inviteStudent } from "../../features/students/api/studentInvitesApi";
+import { listTeacherPendingAssignmentCounts } from "../../features/assignments/api/assignmentsApi";
 import { listTeacherStudentsLifecycle } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
@@ -23,6 +24,7 @@ const TeacherStudents = () => {
   const intlLocale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
 
   const [students, setStudents] = useState([]);
+  const [pendingCounts, setPendingCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(false);
@@ -57,9 +59,15 @@ const TeacherStudents = () => {
 
     const initialize = async () => {
       try {
-        const nextStudents = await fetchStudents();
+        const [nextStudents, pendingResult] = await Promise.all([
+          fetchStudents(), listTeacherPendingAssignmentCounts(),
+        ]);
+        if (pendingResult.error) throw pendingResult.error;
+        const nextCounts = Object.fromEntries((pendingResult.data ?? [])
+          .map((row) => [row.student_id, Number(row.pending_count)]));
 
         if (!cancelled) {
+          setPendingCounts(nextCounts);
           setStudents(nextStudents);
         }
       } catch (error) {
@@ -187,6 +195,11 @@ const TeacherStudents = () => {
           )}
         </div>
 
+        {(pendingCounts[student.student_id] ?? 0) > 0 && (
+          <p className={styles.homeworkBadge}>
+            {t("teacherAssignments.pendingCount", { count: pendingCounts[student.student_id] })}
+          </p>
+        )}
         <Link
           to={`/teacher-dashboard/students/${student.student_id}`}
           className={styles.detailsButton}

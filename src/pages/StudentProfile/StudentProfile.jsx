@@ -11,6 +11,7 @@ import {
 } from "../../features/studentLifecycle/api/studentLifecycleApi";
 import { useAuth } from "../../context/useAuth";
 import useToast from "../../shared/toast/useToast";
+import PagePreferencesSettings from "../../shared/pagination/PagePreferencesSettings";
 
 import styles from "./StudentProfile.module.css";
 
@@ -309,6 +310,8 @@ const StudentProfile = () => {
             </button>
           </form>
         </article>
+
+        <div className={styles.fullWidth}><PagePreferencesSettings role="student" /></div>
 
         <article className={styles.card}>
           <h2>{t("studentProfile.emailTitle")}</h2>

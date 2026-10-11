@@ -842,3 +842,22 @@
   transform: none;
   box-shadow: none;
 }
+
+/* An assignment indicator is independent of lesson outcome/status colors. */
+.homeworkBadge {
+  position: absolute;
+  right: 0.28rem;
+  top: 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.13rem 0.32rem;
+  border-radius: 999px;
+  background: #fff1d6;
+  color: #8b4d00;
+  font-size: 0.69rem;
+  font-weight: 700;
+  line-height: 1.1;
+  box-shadow: 0 0 0 1px rgba(139,77,0,0.15);
+}
+.lesson:has(.homeworkBadge) .lessonTime { padding-right: 2.2rem; }

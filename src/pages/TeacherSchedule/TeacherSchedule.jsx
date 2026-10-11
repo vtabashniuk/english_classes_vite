@@ -20,6 +20,7 @@ import {
   listTeacherProjectedRecurringLessonsForRange,
 } from "../../features/lessons/api/recurringLessonsApi";
 import { listActiveStudents } from "../../features/profiles/api/profilesApi";
+import { listPendingHomeworkCountsForSchedule } from "../../features/assignments/api/assignmentsApi";
 import {
   getMyTeacherScheduleSettings,
   getMyTeacherWorkingHours,
@@ -335,6 +336,7 @@ const TeacherSchedule = () => {
   const [students, setStudents] = useState([]);
 
   const [lessons, setLessons] = useState([]);
+  const [homeworkCounts, setHomeworkCounts] = useState({});
 
   const [projectedRecurringLessons, setProjectedRecurringLessons] = useState([]);
 
@@ -787,6 +789,26 @@ const TeacherSchedule = () => {
       cancelled = true;
     };
   }, [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const start = startOfDay(addDays(weekStart, -1)).toISOString();
+    const end = startOfDay(addDays(weekStart, 8)).toISOString();
+    const refreshHomework = async () => {
+      const { data, error } = await listPendingHomeworkCountsForSchedule({ fromIso: start, toIso: end });
+      if (cancelled) return;
+      if (error) {
+        console.error("Schedule homework indicator load error:", error);
+        setHomeworkCounts({});
+      } else {
+        setHomeworkCounts(Object.fromEntries((data ?? []).map((item) => [item.lesson_id, Number(item.pending_count)])));
+      }
+    };
+    refreshHomework();
+    // When returning to the calendar after marking an assignment completed, refresh the badge.
+    window.addEventListener("focus", refreshHomework);
+    return () => { cancelled = true; window.removeEventListener("focus", refreshHomework); };
+  }, [weekStart]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2337,6 +2359,7 @@ const TeacherSchedule = () => {
                       calendarStartMinutes,
                     );
 
+                    const pendingHomeworkCount = lesson.isProjectedRecurring ? 0 : (homeworkCounts[lesson.id] ?? 0);
                     const lessonContent = (
                       <>
                         <strong className={styles.lessonTime}>
@@ -2353,6 +2376,12 @@ const TeacherSchedule = () => {
                           )}
                         </strong>
 
+                        {pendingHomeworkCount > 0 && (
+                          <span className={styles.homeworkBadge} title={t("teacherSchedule.pendingHomework", { count: pendingHomeworkCount })}
+                            aria-label={t("teacherSchedule.pendingHomework", { count: pendingHomeworkCount })}>
+                            📋 {pendingHomeworkCount}
+                          </span>
+                        )}
                         <span className={styles.lessonStudent}>
                           {lesson.profiles?.full_name ||
                             lesson.profiles?.email ||

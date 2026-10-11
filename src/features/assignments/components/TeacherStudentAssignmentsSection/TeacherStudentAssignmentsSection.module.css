@@ -118,3 +118,5 @@
     flex-direction: column;
   }
 }
+
+.groups{display:grid;gap:1.3rem}.assignmentGroup{display:grid;gap:.75rem}.assignmentGroup h3{margin:0;font-size:1rem;color:var(--color-text-primary)}.overdue{border-radius:999px;padding:.25rem .5rem;background:var(--color-error-bg);color:var(--color-error-text);font-size:.75rem;font-weight:600}.materialLink{display:inline-block;margin-right:.5rem;color:var(--color-primary-blue);font-size:.85rem}

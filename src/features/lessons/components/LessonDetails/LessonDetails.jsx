@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { listAssignedLessonHomework } from "../../../assignments/api/assignmentsApi";
 
 import Button from "../../../../components/common/ui/Button/Button";
 import { WEEKDAYS } from "../../../../constants/schedule";
@@ -63,8 +65,20 @@ const LessonDetails = ({
   handleCancelRecurringSeriesFromLesson,
 }) => {
   const { t } = useTranslation();
+  const [homeworkState, setHomeworkState] = useState({ lessonId: null, items: [], error: false });
+  useEffect(() => {
+    if (!lesson?.id) return undefined;
+    let cancelled = false;
+    listAssignedLessonHomework(lesson.id).then(({ data, error }) => {
+      if (!cancelled) setHomeworkState({ lessonId: lesson.id, items: data ?? [], error: Boolean(error) });
+    }).catch(() => {
+      if (!cancelled) setHomeworkState({ lessonId: lesson.id, items: [], error: true });
+    });
+    return () => { cancelled = true; };
+  }, [lesson?.id]);
 
   if (!lesson) return null;
+  const linkedHomework = homeworkState.lessonId === lesson.id ? homeworkState.items : [];
 
   const started = isLessonStarted(lesson);
 
@@ -93,6 +107,16 @@ const LessonDetails = ({
         <span>{t("teacherSchedule.status")}</span>
         <strong>{t(`teacherSchedule.statuses.${lesson.status}`)}</strong>
       </div>
+
+      {homeworkState.lessonId === lesson.id && linkedHomework.length > 0 && (
+        <div className={styles.homeworkAlert}>
+          <strong>{t("teacherAssignments.lessonPending", { count: linkedHomework.length })}</strong>
+          <ul>{linkedHomework.map((item) => <li key={item.id}>{item.title}</li>)}</ul>
+        </div>
+      )}
+      {homeworkState.lessonId === lesson.id && homeworkState.error && (
+        <p className={styles.homeworkError}>{t("teacherAssignments.errors.load")}</p>
+      )}
 
       {lesson.price_amount_minor != null && lesson.price_currency && (
         <div className={styles.detailItem}>

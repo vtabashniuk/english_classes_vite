@@ -4,13 +4,15 @@ import { useTranslation } from "react-i18next";
 import Button from "../../../../components/common/ui/Button/Button";
 import { saveAssignment } from "../../api/assignmentsApi";
 import { listStudentLessonsForAssignment } from "../../../lessons/api/lessonsApi";
-import { listMaterialsForAssignment } from "../../../materials/api/materialsApi";
+import { listGrantedMaterialsForStudentAssignment } from "../../../materials/api/materialsApi";
 import useToast from "../../../../shared/toast/useToast";
 import { getIntlLocale } from "../../../../utils/getIntlLocale";
+import { getMyTeacherScheduleSettings } from "../../../settings/api/teacherSettingsApi";
+import { getLessonDueDate } from "../../lib/lessonDueDate";
 
 import styles from "./AssignmentForm.module.css";
 
-const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => {
+const AssignmentForm = ({ studentId, assignment = null, initialMaterialIds = [], onSaved, onCancel }) => {
   const { t, i18n } = useTranslation();
   const toast = useToast();
   const locale = getIntlLocale(i18n.resolvedLanguage || i18n.language);
@@ -20,18 +22,28 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
   const [dueDate, setDueDate] = useState(assignment?.due_date || "");
   const [lessonId, setLessonId] = useState(assignment?.lesson_id || "");
   const [materialIds, setMaterialIds] = useState(
-    (assignment?.assignment_materials ?? [])
+    assignment ? (assignment.assignment_materials ?? [])
       .map((link) => link.materials?.id)
-      .filter(Boolean),
+      .filter(Boolean) : initialMaterialIds,
   );
   const [lessons, setLessons] = useState([]);
+  const [scheduleTimezone, setScheduleTimezone] = useState("Europe/Kyiv");
   const [materials, setMaterials] = useState([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [optionsError, setOptionsError] = useState("");
   const [saving, setSaving] = useState(false);
 
   const editingId = assignment?.id || null;
-  const groupedMaterials = useMemo(() => materials, [materials]);
+  const groupedMaterials = useMemo(() => {
+    const existing = new Set(materials.map((material) => material.id));
+    // Revoked links from an older assignment remain visible as history,
+    // but cannot be selected as new links.
+    const historical = (assignment?.assignment_materials ?? [])
+      .map((link) => link.materials)
+      .filter((material) => material && !existing.has(material.id))
+      .map((material) => ({ ...material, accessRevoked: true }));
+    return [...materials, ...historical];
+  }, [materials, assignment]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,13 +59,14 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
         const to = new Date();
         to.setDate(to.getDate() + 90);
 
-        const [materialsResult, lessonsResult] = await Promise.all([
-          listMaterialsForAssignment(),
+        const [materialsResult, lessonsResult, settingsResult] = await Promise.all([
+          listGrantedMaterialsForStudentAssignment(studentId),
           listStudentLessonsForAssignment({
             studentId,
             fromIso: from.toISOString(),
             toIso: to.toISOString(),
           }),
+          getMyTeacherScheduleSettings(),
         ]);
 
         if (materialsResult.error || lessonsResult.error) {
@@ -64,6 +77,7 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
 
         setMaterials(materialsResult.data ?? []);
         setLessons(lessonsResult.data ?? []);
+        setScheduleTimezone(settingsResult.data?.schedule_timezone || "Europe/Kyiv");
       } catch (error) {
         if (cancelled) return;
         console.error("Assignment form options load error:", error);
@@ -80,6 +94,16 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
     };
   }, [studentId, t]);
 
+  const handleLessonChange = (nextLessonId) => {
+    setLessonId(nextLessonId);
+    if (nextLessonId) {
+      const lesson = lessons.find((item) => item.id === nextLessonId);
+      if (lesson) setDueDate(getLessonDueDate(lesson.starts_at, scheduleTimezone));
+    } else {
+      setDueDate("");
+    }
+  };
+
   const toggleMaterial = (id) => {
     setMaterialIds((current) =>
       current.includes(id)
@@ -94,6 +118,7 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
       month: "short",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: scheduleTimezone,
     }).format(new Date(lesson.starts_at));
 
   const handleSubmit = async (event) => {
@@ -112,7 +137,9 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
           p_student_id: studentId,
           p_title: title.trim(),
           p_description: description.trim() || null,
-          p_due_date: dueDate || null,
+          p_due_date: lessonId
+            ? getLessonDueDate(lessons.find((item) => item.id === lessonId)?.starts_at, scheduleTimezone) || dueDate || null
+            : dueDate || null,
           p_lesson_id: lessonId || null,
           p_material_ids: materialIds,
         },
@@ -156,6 +183,7 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
               type="date"
               value={dueDate}
               onChange={(event) => setDueDate(event.target.value)}
+              disabled={Boolean(lessonId)}
             />
           </label>
 
@@ -163,7 +191,7 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
             <span>{t("teacherAssignments.lesson")}</span>
             <select
               value={lessonId}
-              onChange={(event) => setLessonId(event.target.value)}
+              onChange={(event) => handleLessonChange(event.target.value)}
               disabled={optionsLoading}
             >
               <option value="">{t("teacherAssignments.noLesson")}</option>
@@ -175,6 +203,8 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
             </select>
           </label>
         </div>
+
+        {lessonId && <p className={styles.dueHint}>{t("teacherAssignments.lessonDueDateHint")}</p>}
 
         <label className={styles.field}>
           <span>{t("teacherAssignments.assignmentTitle")}</span>
@@ -212,7 +242,7 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
                   />
                   <span>
                     {material.title}
-                    {material.category ? ` · ${material.category}` : ""}
+                    {material.accessRevoked ? ` (${t("materialsFeature.revoked")})` : ""}
                   </span>
                 </label>
               ))}
@@ -242,6 +272,10 @@ const AssignmentForm = ({ studentId, assignment = null, onSaved, onCancel }) => 
 
 const getAssignmentSaveError = (error, t, editing) => {
   const message = error?.message || "";
+
+  if (message.includes("MATERIAL_NOT_SHARED")) {
+    return t("materialsFeature.assignmentNeedsAccess");
+  }
 
   if (message.includes("ASSIGNMENT_COMPLETED")) {
     return t("teacherAssignments.errors.completed");

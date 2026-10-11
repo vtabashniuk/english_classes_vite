@@ -780,7 +780,8 @@
         "notFound": "Lesson not found.",
         "generic": "Could not update the lesson link."
       }
-    }
+    },
+    "pendingHomework": "Unfinished assignments: {{count}}"
   },
   "teacherSettings": {
     "title": "Settings",
@@ -1457,7 +1458,24 @@
       "scheduledTeacherBody": "The scheduled pause for {{studentName}} was cancelled. Learning continues.",
       "automaticStudentBody": "The learning pause has ended. Learning resumed.",
       "automaticTeacherBody": "The learning pause for {{studentName}} has ended. Learning resumed."
-    }
+    },
+    "assignmentOverdue": {
+      "title": "Assignment reminder",
+      "body": "The assignment “{{assignmentTitle}}” is incomplete. It was due on {{dueDate}}.",
+      "openAssignments": "View assignments"
+    },
+    "materialsSharedBulk": {
+      "title": "New learning materials",
+      "body": "Your teacher has shared {{count}} materials with you."
+    },
+    "assignmentDue": {
+      "title": "Assignment reminder",
+      "body": "Assignment “{{assignmentTitle}}” is due today, {{dueDate}}.",
+      "openAssignments": "Open assignments"
+    },
+    "all": "All",
+    "onlyUnread": "Unread",
+    "retention30": "Notifications are kept for 30 days."
   },
   "teacherRequests": {
     "title": "Requests",
@@ -1568,7 +1586,7 @@
       "title": "Title",
       "category": "Category (optional)",
       "url": "Link",
-      "description": "Description (optional)",
+      "description": "Description *",
       "create": "Add",
       "save": "Save",
       "saving": "Saving...",
@@ -1592,13 +1610,14 @@
     "title": "Materials",
     "description": "Learning materials your teacher has shared with you.",
     "loading": "Loading materials...",
-    "search": "Search by title, description, or category",
+    "search": "Search by title, description, tags or topic",
     "open": "Open",
     "empty": "Your teacher has not shared any materials yet.",
     "noResults": "Nothing matches your search.",
     "errors": {
       "load": "Could not load materials."
-    }
+    },
+    "pageSummary": "Page {{page}}"
   },
   "teacherAssignments": {
     "title": "Assignments",
@@ -1640,7 +1659,16 @@
     "cancelEdit": "Cancel editing",
     "edit": "Edit",
     "openCreate": "Add assignment",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "groups": {
+      "pending": "Incomplete",
+      "completed": "Completed"
+    },
+    "overdue": "Overdue",
+    "groupEmpty": "No assignments in this group.",
+    "pendingCount": "Incomplete assignments: {{count}}",
+    "lessonPending": "Incomplete assignments for this lesson: {{count}}",
+    "lessonDueDateHint": "The deadline automatically matches the selected lesson date."
   },
   "studentAssignments": {
     "title": "Assignments",
@@ -1658,7 +1686,12 @@
     "errors": {
       "load": "Could not load assignments.",
       "complete": "Could not mark the assignment as completed."
-    }
+    },
+    "groups": {
+      "pending": "Incomplete",
+      "completed": "Completed"
+    },
+    "overdue": "Overdue"
   },
   "teacherFinance": {
     "title": "Finance",
@@ -1777,5 +1810,125 @@
     "googleMeet": "Google Meet",
     "microsoftTeams": "Microsoft Teams",
     "generic": "Online meeting"
+  },
+  "materialsFeature": {
+    "studentAccess": "Student materials",
+    "selectMaterial": "Select material",
+    "assign": "Assign",
+    "revoke": "Revoke access",
+    "restore": "Restore access",
+    "revokeAll": "Revoke all",
+    "revoked": "Access revoked",
+    "noGrants": "No materials assigned yet",
+    "confirmRevokeAll": "Revoke access to all student materials? Assignment history will remain.",
+    "urls": "Resource links (one per line)",
+    "tags": "Tags (optional)",
+    "level": "Level",
+    "allLevels": "All levels",
+    "folder": "Folder",
+    "noFolder": "No folder",
+    "allFolders": "All folders",
+    "search": "Search materials",
+    "searchPlaceholder": "Title, description, tags, topic…",
+    "createFolder": "Add folder",
+    "folderPrompt": "Folder name",
+    "validation": "Enter a title, description, and at least one resource.",
+    "invalidUrl": "Use valid http(s) resource links",
+    "assignmentNeedsAccess": "Share the material with the student first in the Materials section.",
+    "resourcesTitle": "Material resources *",
+    "resourcesHint": "Give every link a meaningful name that the student will see. Files stay with external providers.",
+    "resourceName": "Resource {{number}} name *",
+    "resourceNamePlaceholder": "For example, Grammar Rules or Audio Practice",
+    "resourceUrl": "Resource URL *",
+    "addResource": "+ Add another resource",
+    "removeResource": "Remove resource {{number}}",
+    "tagsPlaceholder": "Grammar, Past Simple, A2",
+    "tagsHint": "Separate tags with commas or spaces. Use commas for multiword tags (for example: Past Simple, A2).",
+    "resourceNameRequired": "Enter a name for each resource (up to 200 characters).",
+    "openNamedResource": "Open “{{title}}”",
+    "resourceNumber": "resource {{number}}",
+    "externalSource": "External link"
+  },
+  "materialsCatalog": {
+    "manageTags": "Tag directory",
+    "collections": "Topic collections",
+    "newCollection": "Create collection",
+    "collectionName": "Collection name",
+    "collectionType": "Collection type",
+    "automatic": "Automatic",
+    "manual": "Manual",
+    "tagMatch": "Tag matching",
+    "matchAll": "Match all tags",
+    "matchAny": "Match any tag",
+    "automaticHint": "Matching new materials appear automatically. Student access is never granted automatically.",
+    "findForCollection": "Search materials for collection",
+    "save": "Save",
+    "cancel": "Cancel",
+    "rename": "Rename",
+    "delete": "Delete",
+    "edit": "Edit",
+    "viewCollection": "View",
+    "previewCount": "Materials found: {{count}} (max. 100)",
+    "noMatches": "No materials found",
+    "noCollections": "No collections yet",
+    "newTag": "New tag",
+    "add": "Add",
+    "tagInput": "Choose a tag or create one…",
+    "tagHelp": "Press Enter to add a tag; multiword tags can contain spaces. Tags are optional.",
+    "addTag": "Create tag “{{name}}”",
+    "removeTag": "Remove tag “{{name}}”",
+    "tagsOptional": "Tags (optional)",
+    "filterTag": "Tag",
+    "allTags": "All tags",
+    "mergeHint": "Renaming to an existing tag name merges their materials.",
+    "operationFailed": "Could not complete the materials operation.",
+    "tagSaved": "Tag saved.",
+    "tagDeleted": "Tag deleted.",
+    "collectionSaved": "Collection saved.",
+    "collectionDeleted": "Collection deleted.",
+    "deleteTagConfirm": "Delete tag “{{name}}” from all materials and automatic collections?",
+    "deleteCollectionConfirm": "Delete collection “{{name}}”? Materials stay in the library.",
+    "collectionValidation": "Enter a collection name; automatic collections require a level or tags.",
+    "accessRevoked": "Material access revoked.",
+    "accessRestored": "Material access restored.",
+    "manualCount": "Materials in collection: {{count}}",
+    "selectHint": "Select materials to share with a student or create homework. Selection is kept when switching pages.",
+    "togglePage": "Select / clear page",
+    "selectedCount": "Selected: {{count}}",
+    "studentForCollection": "Student",
+    "chooseStudent": "Choose a student",
+    "grantSelected": "Grant access",
+    "assignmentFromSelected": "Create assignment",
+    "shareBeforeAssignment": "Grant the student access to the selected materials first.",
+    "bulkGranted": "Access to selected materials granted.",
+    "closePreview": "Collapse",
+    "selectionLimit": "You can select up to 100 materials at a time."
+  },
+  "commonPagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "summary": "Page {{current}} of {{total}} · Total: {{count}}"
+  },
+  "pagePreferences": {
+    "title": "Items per page",
+    "description": "Personal display settings. They do not change records or another user’s settings.",
+    "save": "Save display settings",
+    "saving": "Saving…",
+    "saved": "Display preferences saved.",
+    "error": "Could not save display preferences.",
+    "labels": {
+      "teacherMaterials": "Materials library",
+      "teacherCollections": "Collection materials",
+      "teacherCollectionList": "Collections",
+      "teacherStudentMaterials": "Materials in student profile",
+      "teacherPendingAssignments": "Pending tasks in student profile",
+      "teacherCompletedAssignments": "Completed tasks in student profile",
+      "teacherNotifications": "Teacher notifications",
+      "studentMaterials": "My materials",
+      "studentPendingAssignments": "My pending tasks",
+      "studentCompletedAssignments": "My completed tasks",
+      "studentNotifications": "My notifications"
+    },
+    "financeHistory": "Finance history in student profile"
   }
 }

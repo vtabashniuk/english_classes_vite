@@ -334,3 +334,9 @@
     width: 100%;
   }
 }
+
+.filterRow { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; margin-bottom: 1rem; }
+.filterButton, .activeFilter { border: 1px solid var(--color-border-strong); border-radius: var(--border-radius); padding: .55rem .85rem; font: inherit; cursor: pointer; }
+.filterButton { background: var(--color-surface); color: var(--color-text-primary); }
+.activeFilter { background: var(--color-primary-blue); color: white; border-color: var(--color-primary-blue); }
+.retention { margin-left: auto; font-size: .83rem; color: var(--color-text-secondary); }

@@ -409,3 +409,5 @@
   color: var(--color-warning-text, var(--color-text-primary));
   background: var(--color-warning-bg, var(--color-surface));
 }
+
+.homeworkBadge{margin:.5rem 0;padding:.45rem .65rem;background:var(--color-error-bg);color:var(--color-error-text);border-radius:var(--border-radius);font-weight:600;font-size:.85rem}

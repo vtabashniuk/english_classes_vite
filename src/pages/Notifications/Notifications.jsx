@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 
 import { getTimezone } from "../../constants/timezones";
 import { useAuth } from "../../context/useAuth";
 import {
   listNotifications,
+  countUnreadNotifications,
   markAllNotificationsRead,
   markNotificationRead,
 } from "../../features/notifications/api/notificationsApi";
@@ -12,23 +14,22 @@ import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import { getIntlLocale } from "../../utils/getIntlLocale";
 
 import styles from "./Notifications.module.css";
-
-const fetchNotifications = async () => {
-  const { data, error } = await listNotifications();
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
-};
-
+import PaginationControls from "../../shared/pagination/PaginationControls";
+import { getPageCount } from "../../shared/pagination/pagination";
+import usePagePreferences from "../../shared/pagination/usePagePreferences";
 
 const Notifications = () => {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
+  const { sizes } = usePagePreferences();
+  const pageSize = profile?.role === "teacher" ? sizes.teacherNotifications : sizes.studentNotifications;
 
   const [notifications, setNotifications] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [page, setPage] = useState(0);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [processingId, setProcessingId] = useState(null);
@@ -40,54 +41,37 @@ const Notifications = () => {
   const language = i18n.resolvedLanguage || i18n.language;
   const intlLocale = getIntlLocale(language);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((item) => !item.is_read).length,
-    [notifications],
-  );
-
-
-
   useEffect(() => {
     let cancelled = false;
-
-    const refreshNotifications = async ({ showLoading = false } = {}) => {
+    const refresh = async (showLoading = false) => {
       try {
-        if (showLoading && !cancelled) {
-          setLoading(true);
+        if (showLoading && !cancelled) setLoading(true);
+        const [result, unread] = await Promise.all([
+          listNotifications({ page, pageSize, unreadOnly }), countUnreadNotifications(),
+        ]);
+        if (result.error || unread.error) throw result.error || unread.error;
+        if (cancelled) return;
+        const count = result.count ?? 0;
+        if (page >= getPageCount(count, pageSize)) {
+          setPage(getPageCount(count, pageSize) - 1);
+          return;
         }
-
-        const nextNotifications = await fetchNotifications();
-
-        if (!cancelled) {
-          setErrorMessage("");
-          setNotifications(nextNotifications);
-        }
+        setNotifications(result.data ?? []);
+        setTotal(count);
+        setUnreadCount(unread.count ?? 0);
+        setErrorMessage("");
       } catch (error) {
         console.error("Notification load error:", error);
-
-        if (!cancelled) {
-          setErrorMessage(t("notifications.errors.load"));
-        }
+        if (!cancelled) setErrorMessage(t("notifications.errors.load"));
       } finally {
-        if (showLoading && !cancelled) {
-          setLoading(false);
-        }
+        if (showLoading && !cancelled) setLoading(false);
       }
     };
-
-    refreshNotifications({ showLoading: true });
-
-    const handleFocus = () => {
-      refreshNotifications();
-    };
-
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [t]);
+    refresh(true);
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => { cancelled = true; window.removeEventListener("focus", onFocus); };
+  }, [page, pageSize, unreadOnly, reloadKey, t]);
 
   const formatDate = (value) =>
     new Intl.DateTimeFormat(intlLocale, {
@@ -199,6 +183,8 @@ const Notifications = () => {
       oldTime: oldStartsAt ? formatTime(oldStartsAt) : "—",
       duration: notification.data?.durationMinutes,
       assignmentTitle: notification.data?.assignmentTitle || "—",
+      count: notification.data?.count ?? 0,
+      dueDate: notification.data?.dueDate ? formatCalendarDate(notification.data.dueDate) : "—",
       materialTitle: notification.data?.materialTitle || "—",
       rateAmount: formatRateAmount(notification.data?.newAmountMinor),
       rateCurrency: notification.data?.newCurrency || "—",
@@ -229,6 +215,7 @@ const Notifications = () => {
         ),
       );
 
+      setReloadKey((value) => value + 1);
       window.dispatchEvent(new Event("notifications-changed"));
     } catch (error) {
       console.error("Mark notification read error:", error);
@@ -251,10 +238,9 @@ const Notifications = () => {
         throw error;
       }
 
-      setNotifications((current) =>
-        current.map((item) => ({ ...item, is_read: true })),
-      );
+      setNotifications((current) => current.map((item) => ({ ...item, is_read: true })));
 
+      setReloadKey((value) => value + 1);
       window.dispatchEvent(new Event("notifications-changed"));
     } catch (error) {
       console.error("Mark all notifications read error:", error);
@@ -305,6 +291,13 @@ const Notifications = () => {
         )}
       </div>
 
+      <div className={styles.filterRow}>
+        <button type="button" className={!unreadOnly ? styles.activeFilter : styles.filterButton}
+          onClick={() => { setUnreadOnly(false); setPage(0); }}>{t("notifications.all")}</button>
+        <button type="button" className={unreadOnly ? styles.activeFilter : styles.filterButton}
+          onClick={() => { setUnreadOnly(true); setPage(0); }}>{t("notifications.onlyUnread")}</button>
+        <span className={styles.retention}>{t("notifications.retention30")}</span>
+      </div>
       {errorMessage && <div className={styles.error}>{errorMessage}</div>}
 
       {notifications.length === 0 ? (
@@ -331,6 +324,11 @@ const Notifications = () => {
                   </div>
 
                   <p>{getBody(notification)}</p>
+                  {["assignment_overdue_reminder", "assignment_due_reminder"].includes(notification.type) && (
+                    <Link to="/student-area/assignments">
+                      {t("notifications.assignmentOverdue.openAssignments")}
+                    </Link>
+                  )}
 
                   {notification.type === "lesson_request_rejected" &&
                     notification.data?.comment && (
@@ -364,6 +362,11 @@ const Notifications = () => {
           })}
         </div>
       )}
+      <PaginationControls page={page} pageSize={pageSize} total={total}
+        disabled={loading || markingAll} onPageChange={setPage}
+        previousLabel={t("commonPagination.previous")} nextLabel={t("commonPagination.next")}
+        summary={t("commonPagination.summary", { current: page + 1,
+          total: getPageCount(total, pageSize), count: total })} />
     </section>
   );
 };

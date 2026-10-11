@@ -1,0 +1,8 @@
+.card { display: grid; gap: 1rem; padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-surface); box-shadow: var(--shadow-soft); }
+.card h2 { margin: 0; color: var(--color-text-primary); font-size: 1.25rem; }
+.help { margin: 0; color: var(--color-text-secondary); font-size: .9rem; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(225px, 1fr)); gap: 1rem; }
+.field { display: grid; gap: .45rem; color: var(--color-text-primary); font-size: .9rem; font-weight: 600; }
+.field select { box-sizing: border-box; width: 100%; min-height: 44px; padding: .65rem .8rem; border: 1px solid var(--color-border-strong); border-radius: var(--border-radius); background: var(--color-surface); color: var(--color-text-primary); font: inherit; }
+.save { justify-self: start; min-height: 44px; border-radius: var(--border-radius); border: 1px solid var(--color-primary-blue); padding: .65rem 1.2rem; background: var(--color-primary-blue); color: white; font: inherit; cursor: pointer; }
+.save:disabled { opacity: .55; cursor: not-allowed; }

@@ -90,3 +90,9 @@ export const updateMyFinancePreferences = ({
     p_free_cancellation_hours: freeCancellationHours,
     p_finance_history_page_size: historyPageSize,
   });
+
+// Existing finance history preference stays in teacher_settings for compatibility.
+export const updateMyFinanceHistoryPageSize = (teacherId, pageSize) =>
+  supabase.from("teacher_settings")
+    .update({ finance_history_page_size: pageSize })
+    .eq("teacher_id", teacherId);

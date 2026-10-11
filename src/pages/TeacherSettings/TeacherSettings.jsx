@@ -16,6 +16,7 @@ import {
   getMyTeacherScheduleSettings,
   getMyTeacherWorkingHours,
   updateMyFinancePreferences,
+  updateMyFinanceHistoryPageSize,
   updateMyScheduleSettings,
 } from "../../features/settings/api/teacherSettingsApi";
 import { TIMEZONES } from "../../constants/timezones";
@@ -42,6 +43,8 @@ import {
 } from "../../constants/schedule";
 import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import useToast from "../../shared/toast/useToast";
+import { useAuth } from "../../context/useAuth";
+import PagePreferencesSettings from "../../shared/pagination/PagePreferencesSettings";
 
 import styles from "./TeacherSettings.module.css";
 
@@ -62,6 +65,7 @@ const TeacherSettings = () => {
   const language = i18n.resolvedLanguage || i18n.language;
   const location = useLocation();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [timezone, setTimezone] = useState(DEFAULT_SCHEDULE_SETTINGS.timezone);
   const [workingHours, setWorkingHours] = useState(createDefaultWorkingHours);
@@ -792,6 +796,13 @@ const TeacherSettings = () => {
           </div>
         </form>
 
+        <PagePreferencesSettings role="teacher" financeHistorySize={historyPageSize}
+          onFinanceSave={async (value) => {
+            const { error } = await updateMyFinanceHistoryPageSize(user.id, value);
+            if (error) throw error;
+            setHistoryPageSize(value);
+          }} />
+
         <form
           id="finance-preferences"
           className={styles.card}
@@ -867,21 +878,7 @@ const TeacherSettings = () => {
             <small>{t("teacherSettings.financePreferences.freeCancellationHint")}</small>
           </label>
 
-          <label className={styles.field}>
-            <span>{t("teacherSettings.financePreferences.historyPageSize")}</span>
-            <select
-              value={historyPageSize}
-              onChange={(event) => setHistoryPageSize(Number(event.target.value))}
-              disabled={financePreferencesSaving}
-            >
-              {FINANCE_HISTORY_PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-            <small>{t("teacherSettings.financePreferences.historyPageSizeHint")}</small>
-          </label>
+
 
           {financePreferencesError && (
             <p className={styles.error}>{financePreferencesError}</p>

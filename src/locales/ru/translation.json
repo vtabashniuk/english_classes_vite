@@ -780,7 +780,8 @@
         "notFound": "Урок не найден.",
         "generic": "Не удалось обновить ссылку на занятие."
       }
-    }
+    },
+    "pendingHomework": "Невыполненных заданий: {{count}}"
   },
   "teacherSettings": {
     "title": "Настройки",
@@ -1457,7 +1458,24 @@
       "scheduledTeacherBody": "Запланированная пауза {{studentName}} отменена. Обучение продолжается.",
       "automaticStudentBody": "Пауза в обучении завершилась. Обучение возобновлено.",
       "automaticTeacherBody": "Пауза в обучении {{studentName}} завершилась. Обучение возобновлено."
-    }
+    },
+    "assignmentOverdue": {
+      "title": "Напоминание о задании",
+      "body": "Задание «{{assignmentTitle}}» не выполнено. Срок был {{dueDate}}.",
+      "openAssignments": "Перейти к заданиям"
+    },
+    "materialsSharedBulk": {
+      "title": "Новые учебные материалы",
+      "body": "Преподаватель открыл вам доступ к материалам ({{count}})."
+    },
+    "assignmentDue": {
+      "title": "Напоминание о задании",
+      "body": "Задание «{{assignmentTitle}}» нужно выполнить сегодня, {{dueDate}}.",
+      "openAssignments": "Перейти к заданиям"
+    },
+    "all": "Все",
+    "onlyUnread": "Непрочитанные",
+    "retention30": "Уведомления хранятся 30 дней."
   },
   "teacherRequests": {
     "title": "Запросы",
@@ -1568,7 +1586,7 @@
       "title": "Название",
       "category": "Категория (необязательно)",
       "url": "Ссылка",
-      "description": "Описание (необязательно)",
+      "description": "Описание *",
       "create": "Добавить",
       "save": "Сохранить",
       "saving": "Сохранение...",
@@ -1592,13 +1610,14 @@
     "title": "Материалы",
     "description": "Учебные материалы, которые преподаватель открыл для вас.",
     "loading": "Загрузка материалов...",
-    "search": "Поиск по названию, описанию или категории",
+    "search": "Поиск по названию, описанию, тегам или теме",
     "open": "Открыть",
     "empty": "Преподаватель ещё не предоставил вам материалов.",
     "noResults": "По вашему запросу ничего не найдено.",
     "errors": {
       "load": "Не удалось загрузить материалы."
-    }
+    },
+    "pageSummary": "Страница {{page}}"
   },
   "teacherAssignments": {
     "title": "Задания",
@@ -1640,7 +1659,16 @@
     "cancelEdit": "Отменить редактирование",
     "edit": "Редактировать",
     "openCreate": "Добавить задание",
-    "cancel": "Отмена"
+    "cancel": "Отмена",
+    "groups": {
+      "pending": "Невыполненные",
+      "completed": "Выполненные"
+    },
+    "overdue": "Просрочено",
+    "groupEmpty": "Нет заданий в этой группе.",
+    "pendingCount": "Невыполненных заданий: {{count}}",
+    "lessonPending": "Невыполненные задания к этому уроку: {{count}}",
+    "lessonDueDateHint": "Срок автоматически устанавливается по дате выбранного урока."
   },
   "studentAssignments": {
     "title": "Задания",
@@ -1658,7 +1686,12 @@
     "errors": {
       "load": "Не удалось загрузить задания.",
       "complete": "Не удалось отметить задание выполненным."
-    }
+    },
+    "groups": {
+      "pending": "Невыполненные",
+      "completed": "Выполненные"
+    },
+    "overdue": "Просрочено"
   },
   "teacherFinance": {
     "title": "Финансы",
@@ -1777,5 +1810,125 @@
     "googleMeet": "Google Meet",
     "microsoftTeams": "Microsoft Teams",
     "generic": "Онлайн-занятие"
+  },
+  "materialsFeature": {
+    "studentAccess": "Материалы ученика",
+    "selectMaterial": "Выберите материал",
+    "assign": "Назначить",
+    "revoke": "Отозвать доступ",
+    "restore": "Восстановить доступ",
+    "revokeAll": "Отозвать все",
+    "revoked": "Доступ отозван",
+    "noGrants": "Материалы ещё не назначены",
+    "confirmRevokeAll": "Отозвать доступ ко всем материалам ученика? История сохранится.",
+    "urls": "Ссылки на ресурсы (каждая с новой строки)",
+    "tags": "Теги (необязательно)",
+    "level": "Уровень",
+    "allLevels": "Все уровни",
+    "folder": "Папка",
+    "noFolder": "Без папки",
+    "allFolders": "Все папки",
+    "search": "Поиск материалов",
+    "searchPlaceholder": "Название, описание, теги, тема…",
+    "createFolder": "Добавить папку",
+    "folderPrompt": "Название папки",
+    "validation": "Заполните название, описание и хотя бы один ресурс.",
+    "invalidUrl": "Используйте корректные ссылки http(s)",
+    "assignmentNeedsAccess": "Сначала предоставьте ученику доступ к материалу в разделе «Материалы».",
+    "resourcesTitle": "Ресурсы материала *",
+    "resourcesHint": "Каждой ссылке задайте название, которое увидит ученик. Файлы остаются на внешних сервисах.",
+    "resourceName": "Название ресурса {{number}} *",
+    "resourceNamePlaceholder": "Например, Grammar Rules или Audio Practice",
+    "resourceUrl": "Ссылка на ресурс *",
+    "addResource": "+ Добавить ещё ресурс",
+    "removeResource": "Удалить ресурс {{number}}",
+    "tagsPlaceholder": "Grammar, Past Simple, A2",
+    "tagsHint": "Разделяйте теги запятыми или пробелами. Для тегов из нескольких слов используйте запятые (например: Past Simple, A2).",
+    "resourceNameRequired": "Укажите название каждого ресурса (до 200 символов).",
+    "openNamedResource": "Открыть ресурс «{{title}}»",
+    "resourceNumber": "ресурс {{number}}",
+    "externalSource": "Внешняя ссылка"
+  },
+  "materialsCatalog": {
+    "manageTags": "Справочник тегов",
+    "collections": "Тематические подборки",
+    "newCollection": "Создать подборку",
+    "collectionName": "Название подборки",
+    "collectionType": "Тип подборки",
+    "automatic": "Автоматическая",
+    "manual": "Ручная",
+    "tagMatch": "Условие совпадения тегов",
+    "matchAll": "Все выбранные теги",
+    "matchAny": "Хотя бы один тег",
+    "automaticHint": "Новые подходящие материалы появляются автоматически. Доступ ученикам автоматически не выдаётся.",
+    "findForCollection": "Поиск материалов для подборки",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "rename": "Переименовать",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "viewCollection": "Просмотреть",
+    "previewCount": "Найдено материалов: {{count}} (макс. 100)",
+    "noMatches": "Материалы не найдены",
+    "noCollections": "Подборок пока нет",
+    "newTag": "Новый тег",
+    "add": "Добавить",
+    "tagInput": "Выбрать тег или создать новый…",
+    "tagHelp": "Enter добавляет тег; теги из нескольких слов вводите с пробелами. Теги необязательны.",
+    "addTag": "Создать тег «{{name}}»",
+    "removeTag": "Убрать тег «{{name}}»",
+    "tagsOptional": "Теги (необязательно)",
+    "filterTag": "Тег",
+    "allTags": "Все теги",
+    "mergeHint": "Переименование в существующий тег объединит материалы.",
+    "operationFailed": "Не удалось выполнить операцию с материалами.",
+    "tagSaved": "Тег сохранён.",
+    "tagDeleted": "Тег удалён.",
+    "collectionSaved": "Подборка сохранена.",
+    "collectionDeleted": "Подборка удалена.",
+    "deleteTagConfirm": "Удалить тег «{{name}}» из всех материалов и автоматических подборок?",
+    "deleteCollectionConfirm": "Удалить подборку «{{name}}»? Материалы останутся в библиотеке.",
+    "collectionValidation": "Укажите название подборки; для автоматической выберите уровень или теги.",
+    "accessRevoked": "Доступ к материалу отозван.",
+    "accessRestored": "Доступ к материалу восстановлен.",
+    "manualCount": "Материалов в подборке: {{count}}",
+    "selectHint": "Выберите материалы для предоставления доступа ученику или создания задания. Выбор сохраняется при смене страниц.",
+    "togglePage": "Выбрать / снять на странице",
+    "selectedCount": "Выбрано: {{count}}",
+    "studentForCollection": "Ученик",
+    "chooseStudent": "Выберите ученика",
+    "grantSelected": "Предоставить доступ",
+    "assignmentFromSelected": "Создать задание",
+    "shareBeforeAssignment": "Сначала предоставьте ученику доступ к выбранным материалам.",
+    "bulkGranted": "Доступ к выбранным материалам предоставлен.",
+    "closePreview": "Свернуть",
+    "selectionLimit": "За один раз можно выбрать до 100 материалов."
+  },
+  "commonPagination": {
+    "previous": "Назад",
+    "next": "Далее",
+    "summary": "Страница {{current}} из {{total}} · Всего: {{count}}"
+  },
+  "pagePreferences": {
+    "title": "Количество записей на странице",
+    "description": "Личные настройки отображения. Они не изменяют данные и настройки другого пользователя.",
+    "save": "Сохранить настройки",
+    "saving": "Сохранение…",
+    "saved": "Настройки отображения сохранены.",
+    "error": "Не удалось сохранить настройки отображения.",
+    "labels": {
+      "teacherMaterials": "Библиотека материалов",
+      "teacherCollections": "Материалы тематической подборки",
+      "teacherCollectionList": "Тематические подборки",
+      "teacherStudentMaterials": "Материалы в карточке ученика",
+      "teacherPendingAssignments": "Невыполненные задания в карточке ученика",
+      "teacherCompletedAssignments": "Выполненные задания в карточке ученика",
+      "teacherNotifications": "Уведомления преподавателя",
+      "studentMaterials": "Мои материалы",
+      "studentPendingAssignments": "Мои невыполненные задания",
+      "studentCompletedAssignments": "Мои выполненные задания",
+      "studentNotifications": "Мои уведомления"
+    },
+    "financeHistory": "Финансовая история в карточке ученика"
   }
 }

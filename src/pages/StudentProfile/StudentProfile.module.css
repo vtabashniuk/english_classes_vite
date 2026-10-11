@@ -149,3 +149,5 @@
     grid-template-columns: 1fr;
   }
 }
+
+.fullWidth { grid-column: 1 / -1; }
