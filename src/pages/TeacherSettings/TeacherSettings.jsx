@@ -45,6 +45,7 @@ import { formatFinanceMoney } from "../../utils/formatFinanceMoney";
 import useToast from "../../shared/toast/useToast";
 import { useAuth } from "../../context/useAuth";
 import PagePreferencesSettings from "../../shared/pagination/PagePreferencesSettings";
+import ChangePasswordForm from "../../features/auth/components/ChangePasswordForm";
 
 import styles from "./TeacherSettings.module.css";
 
@@ -634,6 +635,14 @@ const TeacherSettings = () => {
       </header>
 
       <div className={styles.content}>
+        <section id="security" className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h2>{t("security.password.title")}</h2>
+            <p>{t("security.password.description")}</p>
+          </div>
+          <ChangePasswordForm />
+        </section>
+
         <form id="schedule-settings" className={styles.card} onSubmit={handleSubmit}>
           <div className={styles.cardHeader}>
             <h2>{t("teacherSettings.scheduleTitle")}</h2>

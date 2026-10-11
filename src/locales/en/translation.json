@@ -1930,5 +1930,25 @@
       "studentNotifications": "My notifications"
     },
     "financeHistory": "Finance history in student profile"
+  },
+  "security": {
+    "password": {
+      "title": "Security",
+      "description": "Change the password you use to sign in.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "submit": "Change password",
+      "saving": "Changing password...",
+      "currentRequired": "Enter your current password.",
+      "tooShort": "The new password must be at least 8 characters long.",
+      "mismatch": "The new passwords do not match.",
+      "samePassword": "The new password must be different from the current password.",
+      "saved": "Password changed successfully.",
+      "currentIncorrect": "The current password is incorrect.",
+      "saveError": "Could not change the password.",
+      "tooWeak": "The new password does not meet the security requirements.",
+      "reauthRequired": "Changing the password requires additional sign-in verification. Sign in again or use password recovery."
+    }
   }
 }

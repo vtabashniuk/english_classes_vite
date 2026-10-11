@@ -2,6 +2,8 @@ import { supabase } from "../../../shared/api/supabaseClient";
 
 export const getSession = () => supabase.auth.getSession();
 
+export const getAuthenticatedUser = () => supabase.auth.getUser();
+
 export const onAuthStateChange = (callback) =>
   supabase.auth.onAuthStateChange(callback);
 
