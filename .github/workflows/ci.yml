@@ -12,7 +12,7 @@ on:
       - main
   workflow_dispatch:
 
-# Build and tests must never require access to Supabase or Vercel secrets.
+# All checks use repository code and an isolated local database; no cloud secrets.
 permissions:
   contents: read
 
@@ -20,7 +20,7 @@ jobs:
   checks:
     name: Quality checks
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
       - name: Checkout repository
@@ -49,3 +49,14 @@ jobs:
 
       - name: Build Vite application
         run: npm run build
+
+      # The CLI version is read from the root package-lock.json by the action.
+      # Starts PostgreSQL in Docker and applies committed local migrations only.
+      - name: Set up Supabase CLI for local SQL tests
+        uses: supabase/setup-cli@v3
+
+      - name: Start isolated local PostgreSQL
+        run: supabase db start
+
+      - name: Run local RLS and RPC regression tests
+        run: supabase test db --local
