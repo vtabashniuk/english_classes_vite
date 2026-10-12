@@ -147,6 +147,24 @@ async function login(email, password) {
   return data.session.access_token;
 }
 
+async function cleanupDisposableAuthUsers() {
+  // Look up ONLY this run's UUID-marked disposable Auth users, in case an HTTP
+  // response failed after the Edge Function had already created the user.
+  for (const email of syntheticEmails) {
+    // The strings are generated from a UUID, never taken from untrusted input.
+    const rows = sql(`SELECT id::text FROM auth.users WHERE lower(email)='${email}';`)
+      .split(/\r?\n/).filter((x) => /^[a-f0-9-]{36}$/.test(x));
+    for (const id of rows) authIds.add(id);
+  }
+  let deleted = 0;
+  for (const id of authIds) {
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error) throw new Error(`Failed to remove disposable Auth user ${id}: ${error.message}`);
+    deleted++;
+  }
+  console.log(`Local cleanup: deleted ${deleted} disposable Auth users; pending invitation cascades with teacher profile.`);
+}
+
 console.log('Gate 2d: LOCAL invite-student HTTP test. No cloud, migrations, or hook changes.');
 try {
   // Preflight: fails before creating any test users if the local function or Mailpit is not reachable.
@@ -228,22 +246,8 @@ try {
   console.error(`\nGATE 2d FAILED: ${error instanceof Error ? error.message : String(error)}`);
   process.exitCode = 1;
 } finally {
-  // Look up ONLY this run's UUID-marked disposable Auth users, in case an HTTP
-  // response failed after the Edge Function had already created the user.
   try {
-    for (const email of syntheticEmails) {
-      // The strings are generated from a UUID, never taken from untrusted input.
-      const rows = sql(`SELECT id::text FROM auth.users WHERE lower(email)='${email}';`)
-        .split(/\r?\n/).filter((x) => /^[a-f0-9-]{36}$/.test(x));
-      for (const id of rows) authIds.add(id);
-    }
-    let deleted = 0;
-    for (const id of authIds) {
-      const { error } = await admin.auth.admin.deleteUser(id);
-      if (error) throw new Error(`Failed to remove disposable Auth user ${id}: ${error.message}`);
-      deleted++;
-    }
-    console.log(`Local cleanup: deleted ${deleted} disposable Auth users; pending invitation cascades with teacher profile.`);
+    await cleanupDisposableAuthUsers();
   } catch (error) {
     result = 'FAIL';
     process.exitCode = 1;
