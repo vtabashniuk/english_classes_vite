@@ -1,37 +1,43 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 
 import PublicLayout from "./Layouts/PublicLayout/PublicLayout";
 import MainLayout from "./Layouts/MainLayout";
 import HeaderLayout from "./Layouts/HeaderLayout";
 import DashboardLayout from "./Layouts/DashboardLayout/DashboardLayout";
-
-import HomePage from "./pages/HomePage/HomePage";
-import AboutMePage from "./pages/AboutMePage";
-import LoginPage from "./pages/LoginPage/LoginPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-
-import StudentDashboard from "./pages/StudentDashboard/StudentDashboard";
-import StudentSchedule from "./pages/StudentSchedule/StudentSchedule";
-import StudentProfile from "./pages/StudentProfile/StudentProfile";
-import StudentAssignments from "./pages/StudentAssignments/StudentAssignments";
-import StudentMaterials from "./pages/StudentMaterials/StudentMaterials";
-
-import TeacherDashboard from "./pages/TeacherDashboard/TeacherDashboard";
-import TeacherSettings from "./pages/TeacherSettings/TeacherSettings";
-import TeacherFinance from "./pages/TeacherFinance/TeacherFinance";
-import TeacherSchedule from "./pages/TeacherSchedule/TeacherSchedule";
-import TeacherStudents from "./pages/TeacherStudents/TeacherStudents";
-import TeacherStudentDetails from "./pages/TeacherStudentDetails/TeacherStudentDetails";
-import TeacherRequests from "./pages/TeacherRequests/TeacherRequests";
-import TeacherMaterials from "./pages/TeacherMaterials/TeacherMaterials";
-import Notifications from "./pages/Notifications/Notifications";
-
-import AuthCallback from "./pages/AuthCallback";
-import NotFoundPage from "./pages/NotFoundPage";
-import SetPasswordPage from "./pages/SetPasswordPage/SetPasswordPage";
-
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import RouteLoading from "./components/common/RouteLoading";
+
+// Page components are loaded only when their route is visited.
+// Keep auth providers, layouts, and protected-route checks eager.
+const HomePage = lazy(() => import("./pages/HomePage/HomePage"));
+const AboutMePage = lazy(() => import("./pages/AboutMePage/AboutMePage"));
+const LoginPage = lazy(() => import("./pages/LoginPage/LoginPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage/ResetPasswordPage"));
+const StudentDashboard = lazy(() => import("./pages/StudentDashboard/StudentDashboard"));
+const StudentSchedule = lazy(() => import("./pages/StudentSchedule/StudentSchedule"));
+const StudentProfile = lazy(() => import("./pages/StudentProfile/StudentProfile"));
+const StudentAssignments = lazy(() => import("./pages/StudentAssignments/StudentAssignments"));
+const StudentMaterials = lazy(() => import("./pages/StudentMaterials/StudentMaterials"));
+const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard/TeacherDashboard"));
+const TeacherSettings = lazy(() => import("./pages/TeacherSettings/TeacherSettings"));
+const TeacherFinance = lazy(() => import("./pages/TeacherFinance/TeacherFinance"));
+const TeacherSchedule = lazy(() => import("./pages/TeacherSchedule/TeacherSchedule"));
+const TeacherStudents = lazy(() => import("./pages/TeacherStudents/TeacherStudents"));
+const TeacherStudentDetails = lazy(() => import("./pages/TeacherStudentDetails/TeacherStudentDetails"));
+const TeacherRequests = lazy(() => import("./pages/TeacherRequests/TeacherRequests"));
+const TeacherMaterials = lazy(() => import("./pages/TeacherMaterials/TeacherMaterials"));
+const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback/AuthCallback"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage/NotFoundPage"));
+const SetPasswordPage = lazy(() => import("./pages/SetPasswordPage/SetPasswordPage"));
+
+const showPage = (Component) => (
+  <Suspense fallback={<RouteLoading />}>
+    <Component />
+  </Suspense>
+);
 
 const router = createBrowserRouter([
   {
@@ -43,7 +49,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <HomePage />,
+            element: showPage(HomePage),
           },
         ],
       },
@@ -53,21 +59,21 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <AboutMePage />,
+            element: showPage(AboutMePage),
           },
         ],
       },
       {
         path: "/login",
-        element: <LoginPage />,
+        element: showPage(LoginPage),
       },
       {
         path: "/forgot-password",
-        element: <ForgotPasswordPage />,
+        element: showPage(ForgotPasswordPage),
       },
       {
         path: "/reset-password",
-        element: <ResetPasswordPage />,
+        element: showPage(ResetPasswordPage),
       },
     ],
   },
@@ -81,27 +87,27 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <StudentDashboard />,
+        element: showPage(StudentDashboard),
       },
       {
         path: "schedule",
-        element: <StudentSchedule />,
+        element: showPage(StudentSchedule),
       },
       {
         path: "profile",
-        element: <StudentProfile />,
+        element: showPage(StudentProfile),
       },
       {
         path: "notifications",
-        element: <Notifications />,
+        element: showPage(Notifications),
       },
       {
         path: "assignments",
-        element: <StudentAssignments />,
+        element: showPage(StudentAssignments),
       },
       {
         path: "materials",
-        element: <StudentMaterials />,
+        element: showPage(StudentMaterials),
       },
     ],
   },
@@ -115,53 +121,53 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <TeacherDashboard />,
+        element: showPage(TeacherDashboard),
       },
       {
         path: "settings",
-        element: <TeacherSettings />,
+        element: showPage(TeacherSettings),
       },
       {
         path: "schedule",
-        element: <TeacherSchedule />,
+        element: showPage(TeacherSchedule),
       },
       {
         path: "students",
-        element: <TeacherStudents />,
+        element: showPage(TeacherStudents),
       },
       {
         path: "students/:studentId",
-        element: <TeacherStudentDetails />,
+        element: showPage(TeacherStudentDetails),
       },
       {
         path: "requests",
-        element: <TeacherRequests />,
+        element: showPage(TeacherRequests),
       },
       {
         path: "notifications",
-        element: <Notifications />,
+        element: showPage(Notifications),
       },
       {
         path: "materials",
-        element: <TeacherMaterials />,
+        element: showPage(TeacherMaterials),
       },
       {
         path: "finance",
-        element: <TeacherFinance />,
+        element: showPage(TeacherFinance),
       },
     ],
   },
   {
     path: "/auth/callback",
-    element: <AuthCallback />,
+    element: showPage(AuthCallback),
   },
   {
     path: "/set-password",
-    element: <SetPasswordPage />,
+    element: showPage(SetPasswordPage),
   },
   {
     path: "*",
-    element: <NotFoundPage />,
+    element: showPage(NotFoundPage),
   },
 ]);
 
