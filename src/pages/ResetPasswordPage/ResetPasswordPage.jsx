@@ -2,21 +2,21 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { useAuth } from "../context/useAuth";
+import { useAuth } from "../../context/useAuth";
 import {
   exchangeCodeForSession,
   getAuthenticatedUser,
   updateCurrentUser,
-} from "../features/auth/api/authApi";
-import { validateNewPassword } from "../features/auth/lib/passwordFlowAccess";
+} from "../../features/auth/api/authApi";
+import { validateNewPassword } from "../../features/auth/lib/passwordFlowAccess";
 import {
   canUsePasswordFlow,
   clearPasswordFlow,
   grantPasswordFlow,
   subscribePasswordFlow,
-} from "../features/auth/lib/passwordFlowState";
-import PasswordField from "../features/auth/components/PasswordField";
-import useToast from "../shared/toast/useToast";
+} from "../../features/auth/lib/passwordFlowState";
+import PasswordField from "../../features/auth/components/PasswordField";
+import useToast from "../../shared/toast/useToast";
 
 import styles from "./ResetPasswordPage.module.css";
 

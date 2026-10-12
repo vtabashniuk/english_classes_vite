@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { requestPasswordReset } from "../features/auth/api/authApi";
-import useToast from "../shared/toast/useToast";
+import { requestPasswordReset } from "../../features/auth/api/authApi";
+import useToast from "../../shared/toast/useToast";
 
 import styles from "./ForgotPasswordPage.module.css";
 

@@ -2,9 +2,9 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { exchangeCodeForSession, getAuthenticatedUser } from "../features/auth/api/authApi";
-import { grantPasswordFlow } from "../features/auth/lib/passwordFlowState";
-import { getProfileById } from "../features/profiles/api/profilesApi";
+import { exchangeCodeForSession, getAuthenticatedUser } from "../../features/auth/api/authApi";
+import { grantPasswordFlow } from "../../features/auth/lib/passwordFlowState";
+import { getProfileById } from "../../features/profiles/api/profilesApi";
 
 const AuthCallback = () => {
   const navigate = useNavigate();
