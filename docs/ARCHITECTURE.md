@@ -1,54 +1,49 @@
-# Application architecture
+# CRM architecture (as of 2026-10-12)
 
-## Current direction
-
-The UI layer does not access Supabase directly. Database tables, RPC calls, Auth calls, and Edge Functions are accessed through feature-specific API modules.
+## Runtime structure
 
 ```text
-pages / components
-       |
-       v
-features/*
-  api / hooks / lib
-       |
-       v
-shared/api/supabaseClient.js
-       |
-       v
-Supabase
-  Auth
-  Postgres + RLS + RPC
-  Edge Functions
+Vercel: React 19 / React Router 7 / Vite 8
+  pages + layouts + shared UI (toast, pagination, i18n)
+      ↓
+  src/features/* (components, hooks, lib, API)
+      ↓
+  src/shared/api/supabaseClient.js (browser anon key only)
+      ↓
+Supabase: Auth + PostgreSQL (RLS, RPC, triggers, migrations)
+          + Edge Functions + local pgTAP integration tests
 ```
 
-## Feature boundaries
+The frontend has no direct Supabase client import in its UI; `npm run check:architecture` enforces this boundary.
 
-- `features/auth` — Supabase Auth operations.
-- `features/profiles` — user/student profile reads and profile RPC updates.
-- `features/students` — student invitation workflow.
-- `features/lessons` — lesson and recurring lesson queries/commands.
-- `features/lessonRequests` — extra-lesson requests and availability.
-- `features/notifications` — notification reads and mark-read RPCs.
-- `features/materials` — learning materials and sharing.
-- `features/assignments` — assignment reads and commands.
-- `features/settings` — teacher schedule settings.
-- `features/schedule/lib` — pure calendar/date utilities and backend error mapping.
-- `features/dashboard/hooks` — shared dashboard indicator state.
-- `shared/api` — infrastructure that is not tied to one business feature.
+## Implemented domains
 
-## Rules for new code
+- `features/auth`: auth APIs, password-change service/form, invite/recovery authorization, idle logout guard.
+- `features/students`, `features/profiles`, `features/studentLifecycle`: teacher/student relationships and access lifecycle.
+- `features/studentFinancialAccess`: student access policy based on debt and authorized overrides.
+- `features/lessons`, `features/lessonRequests`, `features/schedule`: lesson slots, requests, blocks, recurring lessons, reschedules and cancellations.
+- `features/finance`: transactions, monetary formatting and tax-related application logic.
+- `features/materials`, `features/assignments`: material catalogue/collections, grants and assignments.
+- `features/notifications`: notifications and their read states.
+- `features/settings`, `features/dashboard`: settings and dashboard state.
+- `src/locales/{ua,ru,en}`: UI translations.
 
-1. Pages and components must not import the Supabase client directly.
-2. New database access belongs in the appropriate `features/<feature>/api` module.
-3. Multi-table business operations should prefer database RPCs so they stay transactional.
-4. Database invariants belong in Postgres constraints/RLS/RPCs; UI validation is only an additional convenience.
-5. Finance should be introduced as its own feature and should not store a mutable `student.balance` as the source of truth. Balance should be derived from financial ledger entries.
-6. Payment-provider integration should be kept separate from ledger transactions.
+The SQL migrations under `supabase/migrations/` are the schema source of truth. Rules requiring consistency across rows, financial ledgers or users must be enforced by the database (RLS, constraints, triggers/RPC), not only by UI checks. Never mutate stored payment operations to recompute balances; use the implemented ledger/compensating operations.
 
-## Backend source control
+## Meeting links and materials
 
-The current Edge Function is now stored at:
+Lesson meeting links are provider-neutral `meeting_url` values; UI may identify Zoom, Google Meet or Microsoft Teams for display. Materials are stored as metadata, descriptions, tags and external resources, with teacher/student access enforced by the backend.
 
-`supabase/functions/invite-student/index.ts`
+## Auth and deployment boundaries
 
-The live Postgres schema is still the source of truth until database migrations are brought under version control. Future schema/RPC/RLS changes should be captured as migrations before being applied to production.
+- The frontend receives **public** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` only.
+- Privileged Supabase keys are restricted to backend Edge Functions and carefully controlled local-only administrative scripts.
+- Existing student invitations, password recovery and manual password changes have different authorized flows.
+- The activity timeout is enforced in the application (90 minutes teacher, 60 minutes student, warning 2 minutes before); it is not a claim of server-side JWT revocation or a change in browser storage when a tab closes.
+- Merging to protected `main` may trigger Vercel deployment, whereas database migrations and Edge Functions are deployed separately.
+
+## Testing and delivery
+
+`Quality checks` in `.github/workflows/ci.yml` runs npm install from lockfile, architecture validation, JavaScript tests, ESLint, Vite build, a Docker-backed local Supabase DB, and pgTAP tests. The `main` ruleset requires the check to succeed before merging a Pull Request.
+
+See `docs/LOCAL_SETUP.md` and `docs/RELEASE_RUNBOOK.md`. External OAuth (Google, Apple, Microsoft) and online payment-provider integration remain separate planned work, not completed functionality.
