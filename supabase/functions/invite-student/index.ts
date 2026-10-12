@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { resolveInvitationMethod } from "./invitation-mode.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -75,6 +76,13 @@ Deno.serve(async (req) => {
     const normalizedFullName =
       typeof fullName === "string" ? fullName.trim() : "";
 
+    let invitationMethod: string;
+    try {
+      invitationMethod = resolveInvitationMethod(body?.invitationMethod);
+    } catch {
+      return jsonResponse({ error: "Невідомий спосіб запрошення." }, 400);
+    }
+
     if (!normalizedEmail) {
       return jsonResponse({ error: "Email є обов'язковим." }, 400);
     }
@@ -85,6 +93,51 @@ Deno.serve(async (req) => {
         persistSession: false,
       },
     });
+
+    if (invitationMethod === "google_no_email") {
+      // The identity in this RPC is always taken from the validated JWT.
+      // No Auth user, profile, teacher/student link, or email is created here.
+      const { data: invitationId, error: invitationError } =
+        await supabaseAdmin.rpc("create_pending_google_invitation", {
+          p_teacher_id: user.id,
+          p_email: normalizedEmail,
+          p_full_name: normalizedFullName,
+        });
+
+      if (invitationError) {
+        console.error("Pending Google invitation RPC error:", invitationError);
+        const message = invitationError.message ?? "";
+        if (message.includes("INVITATION_ACCOUNT_ALREADY_EXISTS")) {
+          return jsonResponse(
+            { error: "Користувач із таким email уже існує. Потрібен окремий сценарій прив'язування." },
+            409,
+          );
+        }
+        if (message.includes("INVITATION_INVALID_DETAILS")) {
+          return jsonResponse({ error: "Перевірте email та ім'я учня." }, 400);
+        }
+        if (message.includes("INVITATION_TEACHER_NOT_ACTIVE")) {
+          return jsonResponse({ error: "Запрошувати учнів може лише активний викладач." }, 403);
+        }
+        return jsonResponse(
+          { error: "Не вдалося зберегти Google-запрошення." },
+          500,
+        );
+      }
+
+      if (!invitationId) {
+        return jsonResponse({ error: "Не вдалося отримати ID запрошення." }, 500);
+      }
+
+      return jsonResponse({
+        success: true,
+        email: normalizedEmail,
+        invitationId,
+        invitationMethod: "google_no_email",
+        pendingActivation: true,
+        emailSent: false,
+      }, 200);
+    }
 
     const appUrl = (
       Deno.env.get("APP_URL") ??
