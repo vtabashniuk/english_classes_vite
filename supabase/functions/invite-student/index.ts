@@ -261,21 +261,103 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { data, error: inviteError } =
-      await supabaseAdmin.auth.admin.inviteUserByEmail(normalizedEmail, {
-        data: {
-          full_name: normalizedFullName,
-          role: "student",
-        },
-        redirectTo,
+    // Gate 3a.2-A: only the trusted server can issue admission tickets. The
+    // caller's JWT has been verified and the active teacher profile checked.
+    // The ticket is never returned to the browser or written to logs.
+    const { data: admissionTicket, error: admissionError } =
+      await supabaseAdmin.rpc("issue_email_invitation_admission", {
+        p_teacher_id: user.id,
+        p_email: normalizedEmail,
       });
 
+    if (admissionError) {
+      const code = admissionError.message ?? "";
+      if (code.includes("ADMISSION_ACCOUNT_ALREADY_EXISTS")) {
+        return jsonResponse(
+          { error: "Користувач із таким email уже існує. Перевірте його профіль." },
+          409,
+        );
+      }
+      if (code.includes("ADMISSION_INVALID_EMAIL")) {
+        return jsonResponse({ error: "Перевірте правильність email." }, 400);
+      }
+      if (code.includes("ADMISSION_TEACHER_NOT_ACTIVE")) {
+        return jsonResponse(
+          { error: "Запрошувати учнів може лише активний викладач." },
+          403,
+        );
+      }
+      console.error("Email admission issue failed:", admissionError.code);
+      return jsonResponse({ error: "Не вдалося підготувати email-запрошення." }, 500);
+    }
+
+    // The SQL function is the only issuer. An unexpected RPC response must
+    // fail closed, never bypass admission by inviting without a ticket.
+    if (typeof admissionTicket !== "string" ||
+        !/^[0-9a-f-]{36}\.[0-9a-f-]{36}$/.test(admissionTicket)) {
+      console.error("Email admission issue returned an invalid result.");
+      return jsonResponse({ error: "Не вдалося підготувати email-запрошення." }, 500);
+    }
+
+    // If the Hook is enabled it consumes the ticket *inside Auth*; revocation
+    // then returns false. While the Hook is disabled (Gate 3a.2-A), always
+    // revoke the otherwise unused ticket immediately after the Auth call.
+    // This prevents a live admission capability remaining in user_metadata.
+    const revokeUnusedAdmission = async () => {
+      try {
+        const { error } = await supabaseAdmin.rpc(
+          "revoke_email_invitation_admission",
+          { p_ticket: admissionTicket },
+        );
+        if (error) console.error("Email admission revoke failed:", error.code);
+      } catch (error) {
+        console.error(
+          "Email admission revoke request failed:",
+          error instanceof Error ? error.name : "unknown",
+        );
+      }
+    };
+
+    let inviteResult;
+    try {
+      inviteResult = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        normalizedEmail,
+        {
+          data: {
+            full_name: normalizedFullName,
+            role: "student",
+            crm_email_invite_ticket: admissionTicket,
+          },
+          redirectTo,
+        },
+      );
+    } catch (error) {
+      // A transport failure is ambiguous: Auth might have created the user.
+      // Never delete or blindly retry it without checking the actual state.
+      await revokeUnusedAdmission();
+      console.error("Email invitation transport failure:",
+        error instanceof Error ? error.name : "unknown");
+      return jsonResponse(
+        { error: "Стан запрошення невідомий. Перевірте учня перед повторною спробою." },
+        502,
+      );
+    }
+
+    await revokeUnusedAdmission();
+
+    const { data, error: inviteError } = inviteResult;
     if (inviteError) {
-      console.error("Invite error:", inviteError);
+      console.error("Invite error:", inviteError.code ?? inviteError.name);
+      if (inviteError.status === 0 || inviteError.name === "AuthRetryableFetchError") {
+        return jsonResponse(
+          { error: "Стан запрошення невідомий. Перевірте учня перед повторною спробою." },
+          502,
+        );
+      }
       return jsonResponse({ error: inviteError.message }, 400);
     }
 
-    const studentId = data.user?.id;
+    const studentId = data?.user?.id;
 
     if (!studentId) {
       throw new Error("Invite succeeded without a user id.");
