@@ -303,18 +303,24 @@ Deno.serve(async (req) => {
     // then returns false. While the Hook is disabled (Gate 3a.2-A), always
     // revoke the otherwise unused ticket immediately after the Auth call.
     // This prevents a live admission capability remaining in user_metadata.
-    const revokeUnusedAdmission = async () => {
+    const revokeUnusedAdmission = async (): Promise<boolean> => {
       try {
-        const { error } = await supabaseAdmin.rpc(
+        const { data: revoked, error } = await supabaseAdmin.rpc(
           "revoke_email_invitation_admission",
           { p_ticket: admissionTicket },
         );
         if (error) console.error("Email admission revoke failed:", error.code);
+        // false means this ticket was already consumed or revoked; when a
+        // successful fresh invite created an Auth user, this establishes that
+        // the enabled Hook consumed it. true means the Hook was OFF and the
+        // ticket has just been revoked (Gate 3a.2-A compatibility).
+        return !error && revoked === false;
       } catch (error) {
         console.error(
           "Email admission revoke request failed:",
           error instanceof Error ? error.name : "unknown",
         );
+        return false;
       }
     };
 
@@ -343,7 +349,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    await revokeUnusedAdmission();
+    const hookConsumedAdmission = await revokeUnusedAdmission();
 
     const { data, error: inviteError } = inviteResult;
     if (inviteError) {
@@ -390,6 +396,36 @@ Deno.serve(async (req) => {
         },
         409,
       );
+    }
+
+    // Gate 3a.2-B: once the Hook consumes a ticket it must not remain as a usable
+    // string in Auth user_metadata after the invitation is completed.
+    // GoTrue can merge user_metadata updates, so explicitly overwrite the
+    // sensitive key with null; preserve the existing full_name/role fields.
+    // This is defense-in-depth: the Hook already consumed the ticket, and
+    // the server attempted to revoke any unused ticket immediately above.
+    // Gate 3a.2-A (Hook OFF) keeps its original revoked-ticket observation.
+    // Never roll back a successfully linked student if metadata scrubbing
+    // fails: report it internally without logging the ticket itself.
+    if (hookConsumedAdmission) {
+      try {
+        const { error: scrubError, data: scrubResult } =
+          await supabaseAdmin.auth.admin.updateUserById(studentId, {
+            user_metadata: {
+              ...(data?.user?.user_metadata ?? {}),
+              crm_email_invite_ticket: null,
+            },
+          });
+
+        if (scrubError ||
+            typeof scrubResult?.user?.user_metadata?.crm_email_invite_ticket === "string") {
+          console.error("Invitation metadata scrub failed:",
+            scrubError?.code ?? "ticket still present");
+        }
+      } catch (error) {
+        console.error("Invitation metadata scrub transport failure:",
+          error instanceof Error ? error.name : "unknown");
+      }
     }
 
     return jsonResponse(
