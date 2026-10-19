@@ -28,6 +28,14 @@ VALUES
   ('71000000-0000-4000-8000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated','authenticated','ci.student.a@crm-tests.invalid','!',now(), '{"provider":"email","providers":["email"]}', '{"role":"student"}', now(), now()),
   ('71000000-0000-4000-8000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated','authenticated','ci.student.b@crm-tests.invalid','!',now(), '{"provider":"email","providers":["email"]}', '{"role":"student"}', now(), now());
 
+-- TEST FIXTURE ONLY: under postgres, provision synthetic teachers explicitly.
+-- Production role assignment must never trust auth.users.raw_user_meta_data.
+UPDATE public.profiles SET role = 'teacher'::public.user_role
+WHERE id IN (
+ '71000000-0000-4000-8000-000000000001'::uuid,
+ '71000000-0000-4000-8000-000000000002'::uuid
+);
+
 -- handle_new_user() creates profiles with the expected roles.
 INSERT INTO public.teacher_students (teacher_id, student_id)
 VALUES

@@ -22,6 +22,14 @@ INSERT INTO auth.users (
  ('78000000-0000-4000-8000-000000000002','00000000-0000-0000-0000-000000000000','authenticated','authenticated','recurrence.teacher.b@crm-tests.invalid','!',now(),'{"provider":"email","providers":["email"]}', '{"role":"teacher"}',now(),now()),
  ('78000000-0000-4000-8000-000000000003','00000000-0000-0000-0000-000000000000','authenticated','authenticated','recurrence.student.a@crm-tests.invalid','!',now(),'{"provider":"email","providers":["email"]}', '{"role":"student"}',now(),now());
 
+-- TEST FIXTURE ONLY: under postgres, provision synthetic teachers explicitly.
+-- Production role assignment must never trust auth.users.raw_user_meta_data.
+UPDATE public.profiles SET role = 'teacher'::public.user_role
+WHERE id IN (
+ '78000000-0000-4000-8000-000000000001'::uuid,
+ '78000000-0000-4000-8000-000000000002'::uuid
+);
+
 INSERT INTO public.teacher_students (teacher_id, student_id)
 VALUES ('78000000-0000-4000-8000-000000000001','78000000-0000-4000-8000-000000000003');
 INSERT INTO public.teacher_settings (teacher_id)
