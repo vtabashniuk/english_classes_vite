@@ -1,4 +1,6 @@
 import { recordPasswordAuthEvent } from "../lib/passwordFlowState";
+import { clearGoogleOAuthStart, rememberGoogleOAuthStart } from "../lib/googleOAuthFlow";
+import { GOOGLE_OAUTH_UI_ENABLED } from "../lib/googleOAuthConfig";
 import { supabase } from "../../../shared/api/supabaseClient";
 
 // Register early enough to capture one-time email-link auth events.
@@ -34,3 +36,27 @@ export const updateCurrentUser = (attributes) =>
 
 export const requestPasswordReset = ({ email, redirectTo }) =>
   supabase.auth.resetPasswordForEmail(email, { redirectTo });
+
+// Supabase redirects to the CRM's *separate* Google callback.
+// The existing /auth/callback stays reserved for email invitation links.
+export const signInWithGoogle = async () => {
+  if (!GOOGLE_OAUTH_UI_ENABLED) {
+    return { data: null, error: new Error("GOOGLE_OAUTH_DISABLED") };
+  }
+  try {
+    rememberGoogleOAuthStart();
+  } catch {
+    return { data: null, error: new Error("GOOGLE_OAUTH_STORAGE_UNAVAILABLE") };
+  }
+  try {
+    const result = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/google/callback` },
+    });
+    if (result.error) clearGoogleOAuthStart();
+    return result;
+  } catch (error) {
+    clearGoogleOAuthStart();
+    return { data: null, error };
+  }
+};

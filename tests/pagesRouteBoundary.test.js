@@ -14,7 +14,7 @@ const routeModules = Array.from(
 );
 
 test("all page imports are lazy, have a real entry point and are referenced by a route", () => {
-  assert.equal(routeModules.length, 22);
+  assert.equal(routeModules.length, 24); // Includes the two Google OAuth Gate 4 pages.
   assert.doesNotMatch(router, /import\s+\w+\s+from\s+["']\.\/pages\//);
   for (const { component, importPath } of routeModules) {
     const moduleFile = path.join(root, "src", `${importPath.slice(2)}.jsx`);
@@ -33,7 +33,7 @@ test("all page JSX files live in matching directories", () => {
 });
 
 test("moved recovery and callback pages resolve local imports and styles", () => {
-  const moved = ["AboutMePage", "AuthCallback", "ForgotPasswordPage", "NotFoundPage", "ResetPasswordPage"];
+  const moved = ["AboutMePage", "AuthCallback", "ForgotPasswordPage", "GoogleAuthCallback", "GoogleInvitationAcceptance", "NotFoundPage", "ResetPasswordPage"];
   for (const name of moved) {
     const filePath = path.join(pagesDir, name, `${name}.jsx`);
     const text = readFileSync(filePath, "utf8");

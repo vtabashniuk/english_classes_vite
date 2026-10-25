@@ -30,6 +30,8 @@ const TeacherRequests = lazy(() => import("./pages/TeacherRequests/TeacherReques
 const TeacherMaterials = lazy(() => import("./pages/TeacherMaterials/TeacherMaterials"));
 const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback/AuthCallback"));
+const GoogleAuthCallback = lazy(() => import("./pages/GoogleAuthCallback/GoogleAuthCallback"));
+const GoogleInvitationAcceptance = lazy(() => import("./pages/GoogleInvitationAcceptance/GoogleInvitationAcceptance"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage/NotFoundPage"));
 const SetPasswordPage = lazy(() => import("./pages/SetPasswordPage/SetPasswordPage"));
 
@@ -156,6 +158,14 @@ const router = createBrowserRouter([
         element: showPage(TeacherFinance),
       },
     ],
+  },
+  {
+    path: "/auth/google/callback",
+    element: showPage(GoogleAuthCallback),
+  },
+  {
+    path: "/google/accept-invitation",
+    element: showPage(GoogleInvitationAcceptance),
   },
   {
     path: "/auth/callback",

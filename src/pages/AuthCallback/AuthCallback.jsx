@@ -2,60 +2,49 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { exchangeCodeForSession, getAuthenticatedUser } from "../../features/auth/api/authApi";
-import { grantPasswordFlow } from "../../features/auth/lib/passwordFlowState";
+import { getAuthenticatedUser } from "../../features/auth/api/authApi";
+import { canUsePasswordFlow, clearPasswordFlow } from "../../features/auth/lib/passwordFlowState";
 import { getProfileById } from "../../features/profiles/api/profilesApi";
 
+// Supabase admin inviteUserByEmail uses a verified implicit invite callback.
+// An arbitrary PKCE `?code=` cannot prove it was issued for an invitation:
+// NEVER exchange it here and NEVER mint a password-flow grant from it.
 const AuthCallback = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
   useEffect(() => {
     let active = true;
-    const handleCallback = async () => {
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (!code) {
-        navigate("/login", { replace: true });
+    const finish = async () => {
+      if (new URLSearchParams(window.location.search).has("code")) {
+        clearPasswordFlow();
+        if (active) navigate("/login", { replace: true });
         return;
       }
-
-      // Supabase must verify the email-link code; an existing session
-      // is never sufficient to authorize the invitation password screen.
-      const { error } = await exchangeCodeForSession(code);
+      // The Supabase SDK must have verified the implicit invite tokens and
+      // emitted the matching SIGNED_IN event (passwordFlowState.js).
+      const { data, error } = await getAuthenticatedUser();
+      const userId = data?.user?.id;
       if (!active) return;
-      if (error) {
-        console.error("Auth callback error:", error);
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      const { data: userData, error: userError } = await getAuthenticatedUser();
-      const userId = userData?.user?.id;
-      if (!active) return;
-      if (userError || !userId) {
+      if (error || !userId || !canUsePasswordFlow("invite", userId)) {
+        clearPasswordFlow();
         navigate("/login", { replace: true });
         return;
       }
       const { data: profile, error: profileError } = await getProfileById(userId);
       if (!active) return;
       if (profileError || profile?.role !== "student") {
+        clearPasswordFlow();
         navigate("/login", { replace: true });
-        return;
+      } else {
+        navigate("/set-password", { replace: true });
       }
-
-      grantPasswordFlow("invite", userId);
-      navigate("/set-password", { replace: true });
     };
-
-    handleCallback();
+    void finish();
     return () => { active = false; };
   }, [navigate]);
 
-  return (
-    <section>
-      <p>{t("auth.callback.finishing")}</p>
-    </section>
-  );
+  return <section><p>{t("auth.callback.finishing")}</p></section>;
 };
 
 export default AuthCallback;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   getSession,
@@ -25,91 +25,71 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Requests from an earlier Auth UUID must never overwrite a later session.
+  const authRevision = useRef(0);
+  const currentUserId = useRef(null);
+
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
+    let revision = 0;
 
-    const initializeAuth = async () => {
-      try {
-        const {
-          data: { session: currentSession },
-          error,
-        } = await getSession();
-
-        if (error) {
-          throw error;
-        }
-
-        if (!isMounted) {
-          return;
-        }
-
-        setSession(currentSession);
-
-        if (currentSession?.user) {
-          const currentProfile = await loadProfile(currentSession.user.id);
-
-          if (isMounted) {
-            setProfile(currentProfile);
-          }
-        } else {
-          setProfile(null);
-        }
-      } catch (error) {
-        console.error("Помилка ініціалізації авторизації:", error);
-
-        if (isMounted) {
-          setSession(null);
-          setProfile(null);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    initializeAuth();
-
-    const {
-      data: { subscription },
-    } = onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-
-      if (!newSession?.user) {
-        setProfile(null);
+    const applySession = (nextSession) => {
+      if (!mounted) return;
+      const request = ++revision;
+      authRevision.current = request;
+      const userId = nextSession?.user?.id ?? null;
+      currentUserId.current = userId;
+      setSession(nextSession);
+      setProfile(null);
+      if (!userId) {
         setLoading(false);
         return;
       }
-
       setLoading(true);
-
+      // Avoid awaiting Supabase queries inside onAuthStateChange (Auth lock).
       setTimeout(async () => {
-        const currentProfile = await loadProfile(newSession.user.id);
-
-        if (isMounted) {
-          setProfile(currentProfile);
+        const nextProfile = await loadProfile(userId);
+        if (mounted && request === revision && currentUserId.current === userId) {
+          setProfile(nextProfile?.id === userId ? nextProfile : null);
           setLoading(false);
         }
       }, 0);
+    };
+
+    // Subscribe before reading session; a later Auth event wins any race.
+    const { data: { subscription } } = onAuthStateChange((_event, nextSession) => {
+      applySession(nextSession);
+    });
+    getSession().then(({ data, error }) => {
+      if (!mounted || revision !== 0) return;
+      if (error) console.error("Помилка ініціалізації авторизації:", error);
+      applySession(error ? null : data?.session);
+    }).catch((error) => {
+      if (!mounted || revision !== 0) return;
+      console.error("Помилка ініціалізації авторизації:", error);
+      applySession(null);
     });
 
     return () => {
-      isMounted = false;
+      mounted = false;
+      revision += 1;
+      authRevision.current = revision;
+      currentUserId.current = null;
       subscription.unsubscribe();
     };
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (!session?.user) {
-      setProfile(null);
+    const userId = session?.user?.id;
+    if (!userId || currentUserId.current !== userId) return null;
+    const request = authRevision.current;
+    const nextProfile = await loadProfile(userId);
+    if (authRevision.current !== request || currentUserId.current !== userId) {
       return null;
     }
-
-    const currentProfile = await loadProfile(session.user.id);
-    setProfile(currentProfile);
-
-    return currentProfile;
-  }, [session]);
+    setProfile(nextProfile?.id === userId ? nextProfile : null);
+    return nextProfile?.id === userId ? nextProfile : null;
+  }, [session?.user?.id]);
 
   const signOut = useCallback(async (options) => {
     const { error } = await signOutUser(options);

@@ -400,6 +400,27 @@
       "loggingOut": "Signing out…",
       "logoutError": "Could not sign out. Access to the CRM is temporarily locked. Check your connection and try again.",
       "retryLogout": "Retry sign-out"
+    },
+    "google": {
+      "signIn": "Continue with Google",
+      "startError": "Could not start Google sign-in. Please try again.",
+      "callbackTitle": "Google sign-in",
+      "callbackError": "We could not verify your Google session. Please sign in again.",
+      "backToLogin": "Sign out and return to login",
+      "loginLink": "Login page",
+      "invitationTitle": "Confirm your teacher",
+      "invitationDescription": "Choose the teacher who invited you. The link will be created only after your confirmation.",
+      "noInvitations": "No active invitations found. Please contact your teacher.",
+      "chooseTeacher": "Available invitations",
+      "unnamedTeacher": "Teacher",
+      "expiresAt": "Expires: {{date}}",
+      "confirmTeacher": "Confirm the invitation from “{{name}}”?",
+      "accept": "Accept invitation",
+      "accepting": "Accepting...",
+      "acceptError": "Could not accept the invitation. Please check its status and try again.",
+      "loadError": "Could not verify your Google session or load invitations.",
+      "signOut": "Sign out",
+      "signOutError": "Could not sign out."
     }
   },
   "notFound": {
@@ -467,7 +488,13 @@
       "success": "Invitation sent successfully.",
       "alreadyLinked": "This student is already on your list. No new email was sent.",
       "relationshipRestored": "The student link was restored. No new email was sent.",
-      "emailRateLimit": "The email sending limit has been reached. Please try inviting the student later."
+      "emailRateLimit": "The email sending limit has been reached. Please try inviting the student later.",
+      "methodLabel": "Invitation method",
+      "emailMethod": "Email and password",
+      "googleMethod": "Google — no email sent",
+      "googleDescription": "Save an invitation for this Google email. No message is sent, and an account is only created on the student’s first Google sign-in.",
+      "googleSubmit": "Create Google invitation",
+      "googleSuccess": "Google invitation created. Tell the student to sign in with Google using the provided email. No invitation email was sent."
     },
     "empty": {
       "title": "No students yet",
@@ -490,7 +517,19 @@
       "debtor": "Blocked due to debt"
     },
     "pauseUntil": "Paused until",
-    "pausePeriod": "Pause period"
+    "pausePeriod": "Pause period",
+    "googleInvitations": {
+      "title": "Awaiting Google confirmation",
+      "description": "Before first sign-in these are invitations, not student accounts. Expired invitations are hidden.",
+      "empty": "No active Google invitations.",
+      "expires": "Valid until: {{date}}",
+      "cancel": "Cancel invitation",
+      "cancelling": "Cancelling...",
+      "confirmCancel": "Cancel the Google invitation for {{email}}?",
+      "cancelSuccess": "Google invitation cancelled.",
+      "cancelError": "Could not cancel the invitation. Refresh the list and try again.",
+      "loadError": "Could not load Google invitations."
+    }
   },
   "teacherSchedule": {
     "title": "Schedule",

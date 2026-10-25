@@ -411,3 +411,57 @@
 }
 
 .homeworkBadge{margin:.5rem 0;padding:.45rem .65rem;background:var(--color-error-bg);color:var(--color-error-text);border-radius:var(--border-radius);font-weight:600;font-size:.85rem}
+
+/* Gate 4.4-B: teacher-side Google invitation management. */
+.methodChoices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  padding: 0 0 1.25rem;
+  margin: 0 0 1.25rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.methodChoices legend {
+  margin-bottom: 0.8rem;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.methodChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.methodChoice input { accent-color: var(--color-primary-blue); }
+
+.pendingSection { margin: 0 0 2rem; }
+.pendingHint, .pendingEmpty {
+  color: var(--color-text-secondary);
+  margin: 0.75rem 0 1rem;
+}
+.pendingList { display: grid; gap: 0.75rem; }
+.pendingItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+}
+.pendingInfo { display: grid; gap: 0.3rem; min-width: 0; overflow-wrap: anywhere; }
+.pendingInfo strong { color: var(--color-text-primary); }
+.pendingInfo span, .pendingInfo small { color: var(--color-text-secondary); }
+.pendingItem .cancelButton { flex-shrink: 0; }
+.pendingItem .cancelButton:disabled { opacity: 0.55; cursor: wait; }
+
+@media (max-width: 700px) {
+  .pendingItem { align-items: stretch; flex-direction: column; }
+  .pendingItem .cancelButton { width: 100%; }
+}

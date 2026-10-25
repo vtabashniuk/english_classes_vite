@@ -38,11 +38,17 @@ jobs:
       - name: Install dependencies from lockfile
         run: npm ci
 
+      - name: Check release hygiene (tracked files and OAuth config)
+        run: node scripts/check-release-hygiene.mjs
+
       - name: Check architecture boundaries
         run: npm run check:architecture
 
-      - name: Run unit tests
+      - name: Run existing unit tests
         run: node --test tests/*.test.js
+
+      - name: Run Google OAuth and release-safety tests
+        run: node --test scripts/tests/*.test.mjs
 
       - name: Check ESLint
         run: npm run lint
@@ -56,7 +62,15 @@ jobs:
         uses: supabase/setup-cli@v3
 
       - name: Start isolated local PostgreSQL
+        # The test action only starts the database, not the Google Auth provider.
+        # Placeholder values avoid depending on developer Google credentials.
+        env:
+          SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: ci-unused.apps.googleusercontent.com
+          SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET: ci-unused
         run: supabase db start
 
       - name: Run local RLS and RPC regression tests
+        env:
+          SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: ci-unused.apps.googleusercontent.com
+          SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET: ci-unused
         run: supabase test db --local

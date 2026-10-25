@@ -162,3 +162,7 @@
 .forgotButton:hover {
   text-decoration: underline;
 }
+
+.googleButton { display: block; width: 100%; margin-top: 1rem; padding: 0.8rem 1rem; font: inherit; font-weight: 600; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-primary-blue); border-radius: var(--border-radius); cursor: pointer; }
+.googleButton:hover:not(:disabled) { background: var(--glass-bg); }
+.googleButton:disabled { cursor: wait; opacity: 0.6; }

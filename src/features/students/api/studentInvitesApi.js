@@ -1,8 +1,10 @@
+import { buildStudentInvitationBody } from "../lib/studentInvitationMethod";
 import { supabase } from "../../../shared/api/supabaseClient";
 
-export const inviteStudent = async ({ email, fullName }) => {
+export const inviteStudent = async ({ email, fullName, invitationMethod }) => {
+  const body = buildStudentInvitationBody({ email, fullName, invitationMethod });
   const { data, error } = await supabase.functions.invoke("invite-student", {
-    body: { email, fullName },
+    body,
   });
 
   if (!error) {
