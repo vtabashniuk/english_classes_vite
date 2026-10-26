@@ -144,3 +144,12 @@ vite.config.ts.timestamp-*
 # IDE
 .idea/
 .vscode/
+
+# Project-root archives are transfer/build artifacts, not application source.
+/*.zip
+/*.7z
+/*.rar
+
+# Explicit Edge Function local secrets (also covered by .env patterns above).
+/supabase/functions/.env
+/supabase/functions/.env.local

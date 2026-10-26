@@ -176,77 +176,57 @@ Deno.serve(async (req) => {
         );
       }
 
-      const { data: relationships, error: relationshipsError } =
-        await supabaseAdmin
-          .from("teacher_students")
-          .select("teacher_id, is_active")
-          .eq("student_id", existingProfile.id);
-
-      if (relationshipsError) {
-        console.error("Relationship lookup error:", relationshipsError);
-        throw new Error("Не вдалося перевірити зв'язок учня з викладачем.");
-      }
-
-      const activeRelationship = relationships?.find((item) => item.is_active);
-
-      if (activeRelationship && activeRelationship.teacher_id !== user.id) {
-        return jsonResponse(
-          { error: "Учень уже прив'язаний до іншого активного викладача." },
-          409,
-        );
-      }
-
-      if (activeRelationship?.teacher_id === user.id) {
-        // Idempotent invite: from the product point of view the relationship is
-        // already correct, so do not surface this as an application error.
-        return jsonResponse(
-          {
-            success: true,
-            userId: existingProfile.id,
-            email: normalizedEmail,
-            existingUser: true,
-            alreadyLinked: true,
-          },
-          200,
-        );
-      }
-
-      const historicalOtherTeacher = relationships?.find(
-        (item) => item.teacher_id !== user.id,
+      // Gate 4.5-B: the decision to restore a relationship is performed by a
+      // single guarded DB transaction. A Google-only student must explicitly
+      // accept their Google invitation; email mode must not bypass consent.
+      const { data: linkStatus, error: linkError } = await supabaseAdmin.rpc(
+        "link_existing_student_email_invitation",
+        {
+          p_teacher_id: user.id,
+          p_student_id: existingProfile.id,
+          p_email: normalizedEmail,
+        },
       );
 
-      if (historicalOtherTeacher) {
-        return jsonResponse(
-          {
-            error:
-              "Учень раніше був прив'язаний до іншого викладача. Потрібне окреме перенесення учня.",
-          },
-          409,
-        );
+      if (linkError) {
+        const code = linkError.message ?? "";
+        if (code.includes("EMAIL_LINK_PENDING_GOOGLE_INVITATION")) {
+          return jsonResponse(
+            { error: "Для цього email уже є Google-запрошення. Завершіть його через Google або скасуйте перед переходом на Email + пароль." },
+            409,
+          );
+        }
+        if (code.includes("EMAIL_LINK_GOOGLE_ACCEPTANCE_REQUIRED")) {
+          return jsonResponse(
+            { error: "Цей Google-акаунт можна прив'язати до викладача лише через підтвердження Google-запрошення." },
+            409,
+          );
+        }
+        if (code.includes("EMAIL_LINK_OTHER_ACTIVE_TEACHER")) {
+          return jsonResponse(
+            { error: "Учень уже прив'язаний до іншого активного викладача." },
+            409,
+          );
+        }
+        if (code.includes("EMAIL_LINK_OTHER_HISTORICAL_TEACHER")) {
+          return jsonResponse(
+            { error: "Учень раніше був прив'язаний до іншого викладача. Потрібне окреме перенесення учня." },
+            409,
+          );
+        }
+        if (code.includes("EMAIL_LINK_STUDENT_NOT_AVAILABLE")) {
+          return jsonResponse({ error: "Профіль учня недоступний або змінився." }, 409);
+        }
+        if (code.includes("EMAIL_LINK_TEACHER_NOT_ACTIVE")) {
+          return jsonResponse({ error: "Запрошувати учнів може лише активний викладач." }, 403);
+        }
+        console.error("Existing student email relationship RPC error:", linkError.code);
+        return jsonResponse({ error: "Не вдалося перевірити зв'язок викладача з учнем." }, 500);
       }
 
-      const ownHistoricalRelationship = relationships?.find(
-        (item) => item.teacher_id === user.id,
-      );
-
-      const { error: relationshipError } = ownHistoricalRelationship
-        ? await supabaseAdmin
-            .from("teacher_students")
-            .update({ is_active: true })
-            .eq("teacher_id", user.id)
-            .eq("student_id", existingProfile.id)
-        : await supabaseAdmin.from("teacher_students").insert({
-            teacher_id: user.id,
-            student_id: existingProfile.id,
-            is_active: true,
-          });
-
-      if (relationshipError) {
-        console.error("Existing student relationship error:", relationshipError);
-        return jsonResponse(
-          { error: "Не вдалося відновити зв'язок викладача з учнем." },
-          409,
-        );
+      if (linkStatus !== "already_linked" && linkStatus !== "relationship_restored") {
+        console.error("Existing student email relationship RPC returned unexpected state.");
+        return jsonResponse({ error: "Не вдалося перевірити зв'язок викладача з учнем." }, 500);
       }
 
       return jsonResponse(
@@ -255,7 +235,9 @@ Deno.serve(async (req) => {
           userId: existingProfile.id,
           email: normalizedEmail,
           existingUser: true,
-          relationshipRestored: true,
+          ...(linkStatus === "already_linked"
+            ? { alreadyLinked: true }
+            : { relationshipRestored: true }),
         },
         200,
       );
@@ -272,6 +254,12 @@ Deno.serve(async (req) => {
 
     if (admissionError) {
       const code = admissionError.message ?? "";
+      if (code.includes("ADMISSION_GOOGLE_INVITATION_PENDING")) {
+        return jsonResponse(
+          { error: "Для цього email уже є Google-запрошення. Спочатку скасуйте його, якщо потрібно запросити через Email + пароль." },
+          409,
+        );
+      }
       if (code.includes("ADMISSION_ACCOUNT_ALREADY_EXISTS")) {
         return jsonResponse(
           { error: "Користувач із таким email уже існує. Перевірте його профіль." },

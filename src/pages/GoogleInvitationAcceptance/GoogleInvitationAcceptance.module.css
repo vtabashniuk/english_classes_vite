@@ -1,0 +1,13 @@
+.page { min-height: 80dvh; display: grid; place-items: center; padding: 2rem 1rem; color: var(--color-text-primary); }
+.card { width: min(100%, 560px); background: var(--color-surface); border: var(--glass-border); border-radius: var(--border-radius); padding: 2rem; box-shadow: var(--shadow-soft); }
+.card h1 { color: var(--color-primary-blue); margin-top: 0; }
+.choices { display: grid; gap: 0.8rem; border: 0; padding: 1.2rem 0; }
+.choice { display: flex; align-items: start; gap: 0.8rem; border: 1px solid #9ca3af; border-radius: 0.75rem; padding: 1rem; cursor: pointer; }
+.choice input { margin-top: 0.3rem; }
+.choice span { display: grid; gap: 0.35rem; }
+.choice small { color: var(--color-text-secondary); }
+.primary, .secondary { padding: 0.8rem 1rem; font: inherit; border-radius: var(--border-radius); cursor: pointer; width: 100%; margin-top: 0.75rem; }
+.primary { background: var(--color-primary-blue); color: white; border: 0; }
+.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.secondary { background: transparent; color: var(--color-text-primary); border: 1px solid #9ca3af; }
+.error { color: var(--color-error-text); background: var(--color-error-bg); padding: 1rem; border-radius: 0.75rem; }

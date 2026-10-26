@@ -4,10 +4,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 
 import {
   signInWithPassword,
+  signInWithGoogle,
   signOut,
 } from "../../features/auth/api/authApi";
 import { getLoginProfileById } from "../../features/profiles/api/profilesApi";
 import { useAuth } from "../../context/useAuth";
+import { GOOGLE_OAUTH_UI_ENABLED } from "../../features/auth/lib/googleOAuthConfig";
 
 import styles from "./LoginPage.module.css";
 
@@ -72,6 +74,18 @@ const LoginPage = () => {
     navigate(getDashboardPath(profileData.role), { replace: true });
   };
 
+  const handleGoogleLogin = async () => {
+    setIsSubmitting(true);
+    setErrorMessage("");
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) throw error;
+    } catch {
+      setErrorMessage(t("auth.google.startError"));
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.card}>
@@ -118,6 +132,17 @@ const LoginPage = () => {
             {isSubmitting ? t("auth.login.signingIn") : t("auth.login.signIn")}
           </button>
         </form>
+
+        {GOOGLE_OAUTH_UI_ENABLED && (
+          <button
+            type="button"
+            className={styles.googleButton}
+            disabled={isSubmitting}
+            onClick={handleGoogleLogin}
+          >
+            {t("auth.google.signIn")}
+          </button>
+        )}
 
         <button
           type="button"

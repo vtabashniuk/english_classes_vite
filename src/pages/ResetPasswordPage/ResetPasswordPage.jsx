@@ -12,7 +12,6 @@ import { validateNewPassword } from "../../features/auth/lib/passwordFlowAccess"
 import {
   canUsePasswordFlow,
   clearPasswordFlow,
-  grantPasswordFlow,
   subscribePasswordFlow,
 } from "../../features/auth/lib/passwordFlowState";
 import PasswordField from "../../features/auth/components/PasswordField";
@@ -58,7 +57,12 @@ const ResetPasswordPage = () => {
         if (identityError || !data?.user?.id) {
           setRecoveryError(true);
         } else {
-          grantPasswordFlow("recovery", data.user.id);
+          // Exchanging a code only authenticates a session. It does NOT prove
+          // this code came from a password recovery email. Only Supabase's
+          // verified PASSWORD_RECOVERY event may grant recovery UI access.
+          if (!canUsePasswordFlow("recovery", data.user.id)) {
+            setRecoveryError(true);
+          }
           window.history.replaceState({}, document.title, "/reset-password");
         }
         setIsPreparing(false);

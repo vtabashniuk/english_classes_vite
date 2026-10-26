@@ -1,0 +1,72 @@
+/* Only the Google OAuth callback screen: no global LoginPage styling changes. */
+.page {
+  min-height: 80dvh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background: var(--color-gradient-hero);
+  color: var(--color-text-primary);
+}
+
+.card {
+  width: min(100%, 460px);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: var(--glass-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.title {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.7rem, 4vw, 2.2rem);
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+
+.message {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: var(--border-radius);
+  background: var(--color-primary-blue);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: break-word;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.backButton:hover {
+  background: var(--color-hover);
+}
+
+.backButton:focus-visible {
+  outline: 3px solid var(--color-primary-blue);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .backButton {
+    width: 100%;
+  }
+}
