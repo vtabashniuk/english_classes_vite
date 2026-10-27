@@ -13,6 +13,7 @@ import RouteLoading from "./components/common/RouteLoading";
 const HomePage = lazy(() => import("./pages/HomePage/HomePage"));
 const AboutMePage = lazy(() => import("./pages/AboutMePage/AboutMePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage/LoginPage"));
+const PublicInfoPage = lazy(() => import("./pages/PublicInfoPage/PublicInfoPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage/ResetPasswordPage"));
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard/StudentDashboard"));
@@ -68,6 +69,18 @@ const router = createBrowserRouter([
       {
         path: "/login",
         element: showPage(LoginPage),
+      },
+      {
+        path: "/about",
+        element: showPage(PublicInfoPage),
+      },
+      {
+        path: "/privacy",
+        element: showPage(PublicInfoPage),
+      },
+      {
+        path: "/terms",
+        element: showPage(PublicInfoPage),
       },
       {
         path: "/forgot-password",

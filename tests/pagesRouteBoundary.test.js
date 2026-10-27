@@ -14,7 +14,7 @@ const routeModules = Array.from(
 );
 
 test("all page imports are lazy, have a real entry point and are referenced by a route", () => {
-  assert.equal(routeModules.length, 24); // Includes the two Google OAuth Gate 4 pages.
+  assert.equal(routeModules.length, 25); // Includes the two Google OAuth Gate 4 pages and public information page.
   assert.doesNotMatch(router, /import\s+\w+\s+from\s+["']\.\/pages\//);
   for (const { component, importPath } of routeModules) {
     const moduleFile = path.join(root, "src", `${importPath.slice(2)}.jsx`);
