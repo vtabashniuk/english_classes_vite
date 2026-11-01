@@ -30,9 +30,9 @@ SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=YOUR_EXISTING_LOCAL_GOOGLE_OAUTH_CLIENT_
 
 Set the real value privately, copied from the Google Cloud local Web OAuth client or a trusted previous local config backup. **Do not send it or the secret in chat.** Keep the existing `VITE_*` values unchanged. The client secret is still read via `env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)`; continue using the established masked PowerShell environment-variable workflow before `supabase start`, or store the secret safely in the ignored root `.env`. No Google client credentials belong in the tracked `config.toml`.
 
-Keep `APP_URL=http://127.0.0.1:3000` in **`supabase/functions/.env`** (ignored by Git); `VITE_APP_URL` in the root `.env` does not set the Edge Function's server-side `APP_URL`.
+Keep `APP_URL=http://127.0.0.1:5173` in **`supabase/functions/.env`** (ignored by Git); `VITE_APP_URL` in the root `.env` does not set the Edge Function's server-side `APP_URL`.
 
-The current `vite.config.js` still defaults to port **5173**. For the Gate 4 localhost OAuth configuration shown above, start Vite specifically on port **3000** using `npm run dev -- --port 3000`. Do not run two different frontend ports and assume the redirects are interchangeable.
+After stabilization S2, the standard Vite dev port is **5173**. Open **http://127.0.0.1:5173**. If Vite switches ports because 5173 is busy, free that port or update the local Auth URLs accordingly. The earlier S1-only switch to port 3000 was superseded. Production redirect settings must be managed separately.
 
 The patch does **not** require `supabase stop`, `supabase start`, or `db reset` just to run Node/ESLint/build checks. Configuration is reloaded the next time the local stack is restarted.
 

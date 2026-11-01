@@ -1,4 +1,4 @@
-# CRM architecture (as of 2026-10-12)
+# CRM architecture (updated 2026-10-27)
 
 ## Runtime structure
 
@@ -22,7 +22,7 @@ The frontend has no direct Supabase client import in its UI; `npm run check:arch
 - `features/students`, `features/profiles`, `features/studentLifecycle`: teacher/student relationships and access lifecycle.
 - `features/studentFinancialAccess`: student access policy based on debt and authorized overrides.
 - `features/lessons`, `features/lessonRequests`, `features/schedule`: lesson slots, requests, blocks, recurring lessons, reschedules and cancellations.
-- `features/finance`: transactions, monetary formatting and tax-related application logic.
+- `features/finance`: transactions, shared teacher/student derived balance helper, teacher-published (RLS-secured) manual payment instructions and tax-related application logic.
 - `features/materials`, `features/assignments`: material catalogue/collections, grants and assignments.
 - `features/notifications`: notifications and their read states.
 - `features/settings`, `features/dashboard`: settings and dashboard state.
@@ -46,4 +46,4 @@ Lesson meeting links are provider-neutral `meeting_url` values; UI may identify 
 
 `Quality checks` in `.github/workflows/ci.yml` runs npm install from lockfile, architecture validation, JavaScript tests, ESLint, Vite build, a Docker-backed local Supabase DB, and pgTAP tests. The `main` ruleset requires the check to succeed before merging a Pull Request.
 
-See `docs/LOCAL_SETUP.md` and `docs/RELEASE_RUNBOOK.md`. External OAuth (Google, Apple, Microsoft) and online payment-provider integration remain separate planned work, not completed functionality.
+See `docs/LOCAL_SETUP.md`, `docs/AUTH_CURRENT_STATE_2026_10_27.md` and `docs/RELEASE_RUNBOOK.md`. Google OAuth (invitation admission, callback, consent and verified identity linking) is implemented and tested locally; this does not establish that the provider is enabled or approved in Production. Apple/Microsoft OAuth and online payment-provider integration remain deferred.

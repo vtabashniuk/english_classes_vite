@@ -18,6 +18,7 @@ const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage/ForgotP
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage/ResetPasswordPage"));
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard/StudentDashboard"));
 const StudentSchedule = lazy(() => import("./pages/StudentSchedule/StudentSchedule"));
+const StudentBalance = lazy(() => import("./pages/StudentBalance/StudentBalance"));
 const StudentProfile = lazy(() => import("./pages/StudentProfile/StudentProfile"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments/StudentAssignments"));
 const StudentMaterials = lazy(() => import("./pages/StudentMaterials/StudentMaterials"));
@@ -107,6 +108,10 @@ const router = createBrowserRouter([
       {
         path: "schedule",
         element: showPage(StudentSchedule),
+      },
+      {
+        path: "balance",
+        element: showPage(StudentBalance),
       },
       {
         path: "profile",

@@ -2166,5 +2166,42 @@
         }
       ]
     }
+  },
+  "studentBalance": {
+    "title": "Balance & payments",
+    "description": "Your lesson balance and payment information.",
+    "currentBalance": "Current balance",
+    "balanceNote": "The balance uses the same ledger as the teacher’s student card. Positive means prepaid credit, negative means debt. Different currencies are not combined.",
+    "paymentTitle": "How to pay",
+    "noPaymentDetails": "Your teacher has not published payment details yet.",
+    "forCurrency": "Payment details for {{currency}}",
+    "recipient": "Recipient",
+    "bank": "Bank",
+    "iban": "IBAN / account",
+    "purpose": "Payment reference",
+    "qrAlt": "Payment QR code for {{currency}}",
+    "openPaymentLink": "Open payment link",
+    "manualPaymentsNote": "This page does not automatically collect payments. The teacher records the payment in your balance.",
+    "loadError": "Could not load the balance or payment instructions. Try again later."
+  },
+  "paymentInstructions": {
+    "title": "Student payment instructions",
+    "description": "Set student-visible instructions for each currency. Internal CRM payment accounts are never published automatically.",
+    "currency": "Currency",
+    "recipient": "Recipient",
+    "iban": "IBAN / account number (never card security details)",
+    "bank": "Bank name",
+    "purpose": "Payment reference",
+    "notes": "Extra instructions",
+    "paymentUrl": "HTTPS payment link (optional)",
+    "qrImageUrl": "HTTPS QR-code image URL (optional)",
+    "publish": "Publish these instructions to active students",
+    "qrHelp": "You can provide a link to a ready-made QR image on a publicly accessible HTTPS host. Do not publish single-use or personalized QR codes, CVV or API keys.",
+    "invalidUrl": "URLs must start with https:// and contain no spaces.",
+    "loadError": "Could not load payment instructions.",
+    "saveError": "Could not save payment instructions.",
+    "saved": "Payment instructions saved.",
+    "save": "Save instructions",
+    "saving": "Saving…"
   }
 }

@@ -15,6 +15,7 @@ import {
   transferManualStudentPayment,
 } from "../../features/finance/api/financeApi";
 import { sortFinanceOperationsNewestFirst } from "../../features/finance/lib/financeSort";
+import { getStudentBalanceDisplay } from "../../features/finance/lib/studentBalance";
 import PaginationControls from "../../shared/pagination/PaginationControls";
 import { getPageCount, getPageRange } from "../../shared/pagination/pagination";
 import {
@@ -349,24 +350,8 @@ const TeacherStudentDetails = () => {
     };
   }, [historyDateFrom, historyDateTo, historyPage, historyPageSize, studentId, t]);
 
-  const balancesByCurrency = useMemo(
-    () =>
-      Object.fromEntries(
-        (financeOverview?.balances ?? []).map((item) => [
-          item.currency,
-          Number(item.balance_minor),
-        ]),
-      ),
-    [financeOverview],
-  );
-
-  const activeBillingCurrency =
-    financeOverview?.currentRate?.currency ||
-    financeOverview?.settings?.billing_currency ||
-    DEFAULT_CURRENCY;
-
-  const primaryBalanceMinor =
-    balancesByCurrency[activeBillingCurrency] ?? 0;
+  const { balancesByCurrency, billingCurrency: activeBillingCurrency, primaryBalanceMinor } =
+    useMemo(() => getStudentBalanceDisplay(financeOverview), [financeOverview]);
   const today = getLocalDateString();
 
   const eligiblePaymentAccounts = useMemo(

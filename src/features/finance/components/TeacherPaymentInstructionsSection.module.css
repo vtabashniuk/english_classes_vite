@@ -1,0 +1,13 @@
+.card { padding: 1.5rem; border: 1px solid var(--color-border); border-radius: var(--border-radius); background: var(--color-surface); box-shadow: var(--shadow-soft); }
+.card h2 { margin: 0 0 .35rem; }
+.form { display: grid; gap: 1rem; max-width: 680px; }
+.form label { display: grid; gap: .4rem; font-size: .9rem; font-weight: 600; }
+.form input, .form select, .form textarea { box-sizing: border-box; width: 100%; padding: .75rem; font: inherit; color: var(--color-text-primary); background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--border-radius); }
+.form textarea { resize: vertical; }
+.form .checkbox { display: flex; align-items: center; gap: .75rem; }
+.checkbox input { width: auto; }
+.form button { justify-self: start; padding: .7rem 1.5rem; border: 0; border-radius: var(--border-radius); color: white; background: var(--color-primary-blue); font: inherit; cursor: pointer; }
+.form button:disabled { opacity: .6; }
+.hint { color: var(--color-text-secondary); line-height: 1.5; }
+.error { color: #b53439; }
+.notice { color: #237f49; }
