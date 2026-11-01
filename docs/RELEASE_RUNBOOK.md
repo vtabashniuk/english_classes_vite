@@ -10,12 +10,13 @@
 ## Before requesting merge
 
 1. Verify the diff contains only approved files; ensure no `.env*` secrets, backup archives, `node_modules`, `dist` or real student exports have been included. `.env.example` is safe only when it contains placeholders.
-2. Run `npm run check:architecture`, `node --test tests/*.test.js`, `npm run lint`, `npm run build` and `npx supabase test db --local` (with a running local DB).
-3. Ensure no completed business feature was changed without a demonstrated defect and regression test.
-4. Inspect the GitHub Pull Request, all commits and the required `Quality checks` status.
-5. Confirm whether merging into `main` will trigger an automatic Vercel Production deployment and plan the timing accordingly.
+2. Run `npm run check:architecture`, `node --test tests/*.test.js`, `node --test scripts/tests/*.test.mjs`, `npm run lint`, `npm run build` and `npx supabase test db --local` (with a running local DB).
+3. Package releases only from a reviewed Git commit (e.g. `git archive --format=zip --output=release.zip HEAD`), then validate the actual file: `node scripts/check-release-archive.mjs release.zip`. This is distinct from `check-release-hygiene.mjs`, which inspects Git-tracked paths. Do not distribute raw working-directory ZIPs containing `supabase/.temp`, `.env` or other local secrets.
+4. Ensure no completed business feature was changed without a demonstrated defect and regression test.
+5. Inspect the GitHub Pull Request, all commits and the required `Quality checks` status.
+6. Confirm whether merging into `main` will trigger an automatic Vercel Production deployment and plan the timing accordingly.
 
-## Database changes (only if a release includes a new migration)
+## Database changes (S2 requires the `20261027120000_teacher_payment_instructions.sql` migration)
 
 1. Add a new SQL migration; never rewrite a migration already applied in the cloud.
 2. Test on a disposable local database and review RLS grants, triggers, financial effects and migration order.
@@ -44,9 +45,17 @@ Deploy only the reviewed function; confirm cloud configuration such as `APP_URL`
 - For a backend or database defect, stop further changes, preserve diagnostics, assess data impact, and execute the prepared forward recovery plan; do not run ad-hoc rollbacks or delete financial history.
 - Do not disable protected checks merely to merge.
 
+## Student balance / payment instruction smoke test
+
+1. On a local DB with the S2 migration, as teacher set UAH instructions and keep unpublished: student must not see them.
+2. Publish instructions, test linked student sees them; unlinked student and a different teacher must not see them; revoke link and verify access disappears.
+3. Record an ordinary manual test payment through existing teacher workflow; confirm both student and teacher show the same UAH balance without refresh caching, and USD/EUR remain independent.
+4. Check QR image and HTTPS payment link; external QR image must be hosted in a trusted location and may expose a network request to the host. No money is debited from viewing/opening the link.
+
 ## Known deferred items
 
-- External sign-in providers (Google, Apple, Microsoft) planned separately in stage 1.6.
+- Google OAuth code, invitation admission and student consent were verified locally. Last known Production Auth Hook was ON and email invitations operational; current Production Google provider status is **not independently verified**. Run Production preflight and obtain explicit approval before activating Google. Apple and Microsoft sign-in are not implemented.
+- Student balance page uses the same ledger-based financial read model as the teacher card; student payment instructions require the S2 migration and teacher publication in Settings. No automatic online payment is integrated.
 - Custom SMTP with own domain, and online payments, deferred to their respective deployment stages.
 - Potential timezone discrepancy in assignment reminders when teacher schedule timezone differs from `Europe/Kyiv` requires scenario-based confirmation before code changes.
 - Bundle splitting for the current router is an optimization candidate only; do not claim improved load time without measurements.

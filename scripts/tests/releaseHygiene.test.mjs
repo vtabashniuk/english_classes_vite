@@ -35,6 +35,6 @@ test('local Auth redirects retain Google callback and email setup/recovery', () 
   const match = config.match(/additional_redirect_urls\s*=\s*\[([\s\S]*?)\]/);
   assert.ok(match, 'auth.additional_redirect_urls must be configured');
   for (const path of ['/auth/google/callback', '/set-password', '/reset-password']) {
-    assert.ok(match[1].includes(`http://127.0.0.1:3000${path}`), `missing local redirect ${path}`);
+    assert.ok(match[1].includes(`http://127.0.0.1:5173${path}`), `missing local redirect ${path}`);
   }
 });

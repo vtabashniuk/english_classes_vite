@@ -13,10 +13,12 @@ import RouteLoading from "./components/common/RouteLoading";
 const HomePage = lazy(() => import("./pages/HomePage/HomePage"));
 const AboutMePage = lazy(() => import("./pages/AboutMePage/AboutMePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage/LoginPage"));
+const PublicInfoPage = lazy(() => import("./pages/PublicInfoPage/PublicInfoPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage/ForgotPasswordPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage/ResetPasswordPage"));
 const StudentDashboard = lazy(() => import("./pages/StudentDashboard/StudentDashboard"));
 const StudentSchedule = lazy(() => import("./pages/StudentSchedule/StudentSchedule"));
+const StudentBalance = lazy(() => import("./pages/StudentBalance/StudentBalance"));
 const StudentProfile = lazy(() => import("./pages/StudentProfile/StudentProfile"));
 const StudentAssignments = lazy(() => import("./pages/StudentAssignments/StudentAssignments"));
 const StudentMaterials = lazy(() => import("./pages/StudentMaterials/StudentMaterials"));
@@ -70,6 +72,18 @@ const router = createBrowserRouter([
         element: showPage(LoginPage),
       },
       {
+        path: "/about",
+        element: showPage(PublicInfoPage),
+      },
+      {
+        path: "/privacy",
+        element: showPage(PublicInfoPage),
+      },
+      {
+        path: "/terms",
+        element: showPage(PublicInfoPage),
+      },
+      {
         path: "/forgot-password",
         element: showPage(ForgotPasswordPage),
       },
@@ -94,6 +108,10 @@ const router = createBrowserRouter([
       {
         path: "schedule",
         element: showPage(StudentSchedule),
+      },
+      {
+        path: "balance",
+        element: showPage(StudentBalance),
       },
       {
         path: "profile",

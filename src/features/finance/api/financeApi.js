@@ -1,32 +1,35 @@
 import { supabase } from "../../../shared/api/supabaseClient";
 
-export const getStudentFinanceOverview = async (studentId) => {
+export const getStudentFinanceOverview = async (studentId, { teacherId = null } = {}) => {
+  // Same financial read model for teacher and student. For the student route,
+  // scope all queries to the current active teacher link, never sum across teachers.
+  const scope = (query) => teacherId ? query.eq("teacher_id", teacherId) : query;
   const [settingsResult, rateResult, scheduledRatesResult, balancesResult] = await Promise.all([
-    supabase
+    scope(supabase
       .from("student_billing_settings")
       .select(
         "student_id, billing_currency, online_payments_enabled, charge_missed_lessons",
       )
-      .eq("student_id", studentId)
+      .eq("student_id", studentId))
       .maybeSingle(),
-    supabase
+    scope(supabase
       .from("student_current_lesson_rates")
       .select(
         "id, student_id, amount_minor, currency, effective_from, effective_to",
       )
-      .eq("student_id", studentId)
+      .eq("student_id", studentId))
       .maybeSingle(),
-    supabase
+    scope(supabase
       .from("student_scheduled_lesson_rates")
       .select(
         "id, student_id, amount_minor, currency, effective_from, effective_to",
       )
-      .eq("student_id", studentId)
+      .eq("student_id", studentId))
       .order("effective_from", { ascending: true }),
-    supabase
+    scope(supabase
       .from("student_finance_balances")
       .select("student_id, currency, balance_minor")
-      .eq("student_id", studentId),
+      .eq("student_id", studentId)),
   ]);
 
   const error =

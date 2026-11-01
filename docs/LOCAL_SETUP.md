@@ -30,7 +30,7 @@ npx supabase status
 
 The local API normally listens at `http://127.0.0.1:54321`; database port 54322, Studio 54323 and Mailpit 54324 are configured in `supabase/config.toml`. Use the actual values printed by `supabase status` rather than assuming they are unchanged.
 
-When using local Auth through the frontend, ensure the local Auth Site URL and allowed redirect URLs match the frontend's actual origin, commonly `http://localhost:5173`; the checked-in default `supabase/config.toml` does not currently target this Vite port. Keep any environment-specific auth configuration separate from Production unless it is reviewed and intended for commit.
+The checked-in Vite development server uses the standard **`http://127.0.0.1:5173`**; this matches the local Auth Site URL, callback allowlist, `.env.example` and Edge Function `APP_URL` documented for local tests. Open Vite using **127.0.0.1**, not `localhost`, so the origin matches the configured redirects. Check the actual port printed by Vite: if 5173 is occupied, Vite may choose another port. Update local Auth URL/redirect allowlist and app URL together, or free port 5173. Keep Production Auth settings separate from this local configuration.
 
 Start Vite:
 
@@ -45,6 +45,7 @@ npm run dev
 ```powershell
 npm run check:architecture
 node --test tests/*.test.js
+node --test scripts/tests/*.test.mjs
 npm run lint
 npm run build
 npx supabase test db --local
@@ -59,3 +60,7 @@ Local Auth sends mail to Mailpit, visible through the local Supabase stack; it d
 ## Windows troubleshooting
 
 If `npm ci` fails on `EPERM` while removing a Rolldown `.node` binary, stop running Vite/Node processes that hold the file, then rerun `npm ci`. Only if necessary, remove **local** `node_modules` and reinstall. Removing `node_modules` does not remove code or database records.
+
+## Student balance and payment instructions (S2)
+
+Requires local migration `20261027120000_teacher_payment_instructions.sql`. Teacher edits public payment instructions for UAH/USD/EUR on their Settings page; student sees published items in `/student-area/balance`. These are informative only; recording received payments remains the teacher's existing manual finance workflow. A QR image is entered as a trusted public HTTPS image URL; no file upload or payment gateway has been added.

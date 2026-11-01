@@ -2005,5 +2005,203 @@
       "tooWeak": "The new password does not meet the security requirements.",
       "reauthRequired": "Changing the password requires additional sign-in verification. Sign in again or use password recovery."
     }
+  },
+  "publicInfo": {
+    "updated": "Updated: 26 October 2026",
+    "navigationLabel": "Public service information",
+    "navigation": {
+      "about": "About",
+      "privacy": "Privacy policy",
+      "terms": "Terms of use",
+      "signIn": "Sign in"
+    },
+    "contactTitle": "Contact about the service and personal data",
+    "contactText": "For questions about the CRM, access to your account, correction or deletion of data, contact:",
+    "about": {
+      "title": "About English Classes CRM",
+      "lead": "A space for organizing one-to-one online English lessons and communication between teachers and students.",
+      "sections": [
+        {
+          "title": "What the CRM is for",
+          "paragraphs": [
+            "The service brings lesson schedules, learning materials, homework and notifications together in one personal account. It helps teachers manage lessons and students follow their progress."
+          ]
+        },
+        {
+          "title": "Features",
+          "paragraphs": [],
+          "bullets": [
+            "View your timetable, upcoming lessons and online meeting links.",
+            "Access learning materials, tasks, due dates and lesson notifications.",
+            "Request rescheduling and track the status of requests.",
+            "View lesson history, recorded payments and learning balance based on your role."
+          ]
+        },
+        {
+          "title": "Who can use it",
+          "paragraphs": [
+            "The service is invitation-only. Students cannot create accounts through open self-registration. Sign-in is available by email and password or through Google for accounts authorized to use the CRM."
+          ]
+        },
+        {
+          "title": "Support and policies",
+          "paragraphs": [
+            "Please read the Privacy Policy and Terms of Use before using the service. The Privacy Policy includes a contact address for questions."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "lead": "How English Classes CRM uses data to organize online learning, accounts and teacher–student interactions.",
+      "sections": [
+        {
+          "title": "1. Data we process",
+          "paragraphs": [
+            "Depending on your role, the CRM may process:"
+          ],
+          "bullets": [
+            "Account information: name, email, role, profile status and access settings.",
+            "For Google sign-in: verified email, Google identifier and basic profile details supplied by Google (such as name and avatar).",
+            "Learning records: schedules, lesson status, rescheduling, assignments, resources, meeting links, notifications and teacher notes.",
+            "Lesson-related financial records: prices, charges, payment amounts and currencies, balances and adjustments.",
+            "Technical data needed for authentication, session security, language preferences and site performance measurement."
+          ]
+        },
+        {
+          "title": "2. Why we use data",
+          "paragraphs": [
+            "Data is used to provide invitation-based access, identify participants, schedule and record lessons, present tasks and resources, send learning notifications, maintain financial records and protect CRM access."
+          ]
+        },
+        {
+          "title": "3. Google Sign-In",
+          "paragraphs": [
+            "Google is used only as an authentication option. Google Sign-In does not request access to Gmail messages, Google Drive files or Google Calendar. Your Google password is not shared with the CRM. Signing in with Google does not remove the invitation requirement."
+          ]
+        },
+        {
+          "title": "4. Who can access data",
+          "paragraphs": [
+            "Teachers work with student data within their teaching relationships. Students can access their own accounts and the information intended for them. Access is restricted through authentication, roles and database access policies. Service administration may require technical access for support and security."
+          ]
+        },
+        {
+          "title": "5. Third-party services",
+          "paragraphs": [
+            "The service uses Supabase (authentication, database and server functions), Vercel (web hosting and Speed Insights) and Google (sign-in). Learning resources and meeting links may lead to independent third-party services; their own policies apply when you visit them."
+          ]
+        },
+        {
+          "title": "6. Sessions, local storage and performance",
+          "paragraphs": [
+            "Your browser may store session tokens, your language choice and temporary sign-in state in localStorage or sessionStorage. Vercel Speed Insights is used to monitor site performance. Infrastructure providers may also generate technical logs."
+          ]
+        },
+        {
+          "title": "7. Retention and security",
+          "paragraphs": [
+            "Data is held to operate the learning service and maintain related records. Some records may be retained after lessons end where needed for accounting, responding to requests or legal obligations. You can ask about specific retention periods and deletion procedures using the contact below. No internet service can guarantee absolute security."
+          ]
+        },
+        {
+          "title": "8. Your rights and requests",
+          "paragraphs": [
+            "You can request access, correction, restriction of processing or deletion of your data. Requests are reviewed in light of other participants’ rights and applicable legal requirements. Where required, a minor student’s participation and data use should be agreed with their legal guardian."
+          ]
+        },
+        {
+          "title": "9. Changes to this policy",
+          "paragraphs": [
+            "This policy may change when CRM features or data practices change. The current version and update date will appear on this page."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of use",
+      "lead": "Rules for teachers and students using English Classes CRM.",
+      "sections": [
+        {
+          "title": "1. Purpose of the service",
+          "paragraphs": [
+            "English Classes CRM is a supporting tool for online learning: scheduling, assignments, resources, lesson and payment records. Specific lesson, payment and cancellation terms are agreed separately between the teacher and student; the CRM displays related records."
+          ]
+        },
+        {
+          "title": "2. Invitation-only access",
+          "paragraphs": [
+            "Personal accounts are available only after an invitation and account activation. Uninvited self-registration is not supported. Users sign in via email and password or Google where access has been granted."
+          ]
+        },
+        {
+          "title": "3. Account security",
+          "paragraphs": [
+            "Users are responsible for protecting their account access and should not share their credentials. If you suspect unauthorized access, contact the address below."
+          ]
+        },
+        {
+          "title": "4. Scheduling and learning records",
+          "paragraphs": [
+            "Schedules, rescheduling, attendance, assignments and financial records may change based on participants’ decisions and CRM settings. If a record differs from your agreement, ask your teacher to clarify it."
+          ]
+        },
+        {
+          "title": "5. Materials and external links",
+          "paragraphs": [
+            "Learning materials are provided for lesson-related use subject to the rights of their owners. Do not redistribute them without permission. Meeting links and third-party resources may be governed by those services’ separate terms."
+          ]
+        },
+        {
+          "title": "6. Restricted access and availability",
+          "paragraphs": [
+            "Access may be restricted when lessons end, security rules are violated or as a result of lesson and payment settings. Service interruptions may occur due to maintenance or outages at external providers."
+          ]
+        },
+        {
+          "title": "7. Updates and contact",
+          "paragraphs": [
+            "The current terms are published here. Use the contact below for questions about accounts, lesson records or these terms."
+          ]
+        }
+      ]
+    }
+  },
+  "studentBalance": {
+    "title": "Balance & payments",
+    "description": "Your lesson balance and payment information.",
+    "currentBalance": "Current balance",
+    "balanceNote": "The balance uses the same ledger as the teacher’s student card. Positive means prepaid credit, negative means debt. Different currencies are not combined.",
+    "paymentTitle": "How to pay",
+    "noPaymentDetails": "Your teacher has not published payment details yet.",
+    "forCurrency": "Payment details for {{currency}}",
+    "recipient": "Recipient",
+    "bank": "Bank",
+    "iban": "IBAN / account",
+    "purpose": "Payment reference",
+    "qrAlt": "Payment QR code for {{currency}}",
+    "openPaymentLink": "Open payment link",
+    "manualPaymentsNote": "This page does not automatically collect payments. The teacher records the payment in your balance.",
+    "loadError": "Could not load the balance or payment instructions. Try again later."
+  },
+  "paymentInstructions": {
+    "title": "Student payment instructions",
+    "description": "Set student-visible instructions for each currency. Internal CRM payment accounts are never published automatically.",
+    "currency": "Currency",
+    "recipient": "Recipient",
+    "iban": "IBAN / account number (never card security details)",
+    "bank": "Bank name",
+    "purpose": "Payment reference",
+    "notes": "Extra instructions",
+    "paymentUrl": "HTTPS payment link (optional)",
+    "qrImageUrl": "HTTPS QR-code image URL (optional)",
+    "publish": "Publish these instructions to active students",
+    "qrHelp": "You can provide a link to a ready-made QR image on a publicly accessible HTTPS host. Do not publish single-use or personalized QR codes, CVV or API keys.",
+    "invalidUrl": "URLs must start with https:// and contain no spaces.",
+    "loadError": "Could not load payment instructions.",
+    "saveError": "Could not save payment instructions.",
+    "saved": "Payment instructions saved.",
+    "save": "Save instructions",
+    "saving": "Saving…"
   }
 }

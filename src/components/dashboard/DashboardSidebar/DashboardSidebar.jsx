@@ -92,6 +92,10 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
       labelKey: "dashboardNav.schedule",
     },
     {
+      to: "/student-area/balance",
+      labelKey: "dashboardNav.balance",
+    },
+    {
       to: "/student-area/notifications",
       labelKey: "dashboardNav.notifications",
     },
@@ -102,10 +106,6 @@ const DashboardSidebar = ({ isOpen = false, onClose = () => {} }) => {
     {
       to: "/student-area/materials",
       labelKey: "dashboardNav.materials",
-    },
-    {
-      to: "/student-area/balance",
-      labelKey: "dashboardNav.balance",
     },
   ];
 

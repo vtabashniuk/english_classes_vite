@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 
 import {
   signInWithPassword,
@@ -159,6 +159,12 @@ const LoginPage = () => {
         >
           {t("common.backHome")}
         </button>
+
+        <nav className={styles.publicLinks} aria-label={t("publicInfo.navigationLabel")}>
+          <Link to="/about">{t("publicInfo.navigation.about")}</Link>
+          <Link to="/privacy">{t("publicInfo.navigation.privacy")}</Link>
+          <Link to="/terms">{t("publicInfo.navigation.terms")}</Link>
+        </nav>
       </section>
     </main>
   );

@@ -83,6 +83,25 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "TEACHER_REQUIRED" }, 403);
     }
 
+    // Check ownership through the caller's RLS-protected read BEFORE any
+    // service_role RPC that can create/finalize financial records.
+    // A missing, inaccessible or foreign payment gets the same 403 response.
+    const { data: ownedPayment, error: ownershipError } = await supabaseUser
+      .from("payments")
+      .select("id")
+      .eq("id", paymentId)
+      .eq("teacher_id", user.id)
+      .maybeSingle();
+
+    if (ownershipError) {
+      console.error("Payment ownership lookup error:", ownershipError);
+      return jsonResponse({ error: "PAYMENT_OWNERSHIP_LOOKUP_FAILED" }, 500);
+    }
+
+    if (!ownedPayment) {
+      return jsonResponse({ error: "FORBIDDEN" }, 403);
+    }
+
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
