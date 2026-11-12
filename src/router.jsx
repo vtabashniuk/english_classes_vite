@@ -91,6 +91,10 @@ const router = createBrowserRouter([
         path: "/reset-password",
         element: showPage(ResetPasswordPage),
       },
+      {
+        path: "*",
+        element: showPage(NotFoundPage),
+      },
     ],
   },
   {
@@ -128,6 +132,10 @@ const router = createBrowserRouter([
       {
         path: "materials",
         element: showPage(StudentMaterials),
+      },
+      {
+        path: "*",
+        element: showPage(NotFoundPage),
       },
     ],
   },
@@ -175,6 +183,10 @@ const router = createBrowserRouter([
         path: "finance",
         element: showPage(TeacherFinance),
       },
+      {
+        path: "*",
+        element: showPage(NotFoundPage),
+      },
     ],
   },
   {
@@ -192,10 +204,6 @@ const router = createBrowserRouter([
   {
     path: "/set-password",
     element: showPage(SetPasswordPage),
-  },
-  {
-    path: "*",
-    element: showPage(NotFoundPage),
   },
 ]);
 
