@@ -425,7 +425,9 @@
   },
   "notFound": {
     "title": "Page not found",
-    "backHome": "Back to home"
+    "description": "The address may be incorrect, or the page may have moved.",
+    "backHome": "Back to home",
+    "backDashboard": "Back to dashboard"
   },
   "teacherDashboard": {
     "title": "Overview",
