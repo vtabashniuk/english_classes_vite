@@ -1,0 +1,31 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: var(--color-overlay, rgb(0 0 0 / 55%));
+}
+.panel {
+  width: min(100%, 28rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  border: 1px solid var(--color-border, #d5dbe2);
+  border-radius: var(--border-radius, 0.8rem);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #172035);
+  box-shadow: 0 18px 55px rgb(0 0 0 / 25%);
+  padding: 1.5rem;
+}
+.title { margin: 0 0 0.75rem; font-size: 1.25rem; line-height: 1.3; }
+.description { margin: 0; line-height: 1.5; color: var(--color-text-secondary, #566173); }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+.button { min-height: 44px; padding: 0.65rem 1rem; border-radius: 0.55rem; font: inherit; font-weight: 600; cursor: pointer; }
+.button:focus-visible { outline: 3px solid var(--color-primary-blue, #2363bb); outline-offset: 2px; }
+.button:disabled { opacity: 0.6; cursor: not-allowed; }
+.cancel { background: var(--color-surface, #fff); color: var(--color-text-primary, #172035); border: 1px solid var(--color-border-strong, #8893a3); }
+.confirm { background: var(--color-primary-blue, #2363bb); color: var(--color-on-primary, #fff); border: 1px solid var(--color-primary-blue, #2363bb); }
+.dangerButton { background: var(--color-error-text, #b42318); border: 1px solid var(--color-error-text, #b42318); color: #fff; }
+.danger { border-top: 3px solid var(--color-error-text, #b42318); }
+@media (max-width: 420px) { .panel { padding: 1.15rem; } .actions { flex-direction: column-reverse; } .button { width: 100%; } }
