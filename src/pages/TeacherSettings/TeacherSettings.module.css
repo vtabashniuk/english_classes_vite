@@ -358,3 +358,9 @@
     gap: 0.65rem;
   }
 }
+
+/* Stage S0.6.3.3a: preserve mounted form drafts across tab switches. */
+.tabPanel { display: grid; gap: 1.25rem; min-width: 0; }
+.tabPanel[hidden] { display: none; }
+.profileHelp { color: var(--color-text-secondary); margin: 0; }
+.profileEmail { color: var(--color-text-primary); margin: 0; overflow-wrap: anywhere; }
