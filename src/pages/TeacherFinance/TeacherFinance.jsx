@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import TaxPeriod from "../../features/finance/components/TaxPeriod";
 
 import {
   getMyCurrentTaxProfile,
@@ -341,7 +342,9 @@ const TeacherFinance = () => {
         <article className={styles.summaryCard}>
           <span>{t("teacherFinance.studentsPaid")}</span>
           <strong className={styles.largeMetric}>{paidStudentCount}</strong>
-          <small>{t("teacherFinance.successfulPayments", { count: receipts.length })}</small>
+          <small>
+            {t("teacherFinance.successfulPayments", { count: receipts.length })}
+          </small>
         </article>
 
         <article className={styles.summaryCard}>
@@ -362,12 +365,21 @@ const TeacherFinance = () => {
           <span>{t("teacherFinance.taxAccrued")}</span>
           <strong className={styles.largeMetric}>
             {peTaxEnabled
-              ? formatFinanceMoney(selectedTaxTotals.total_tax_minor, "UAH", language)
+              ? formatFinanceMoney(
+                  selectedTaxTotals.total_tax_minor,
+                  "UAH",
+                  language,
+                )
               : "—"}
           </strong>
           <small>
             {peTaxEnabled
-              ? formatTaxPeriodLabel(taxPeriodRange.start, taxViewMode, language, t)
+              ? formatTaxPeriodLabel(
+                  taxPeriodRange.start,
+                  taxViewMode,
+                  language,
+                  t,
+                )
               : t("teacherFinance.notPeShort")}
           </small>
         </article>
@@ -400,7 +412,12 @@ const TeacherFinance = () => {
                     </small>
                   </div>
                   <strong className={styles.debtValue}>
-                    −{formatFinanceMoney(item.debt_minor, item.billing_currency, language)}
+                    −
+                    {formatFinanceMoney(
+                      item.debt_minor,
+                      item.billing_currency,
+                      language,
+                    )}
                   </strong>
                 </Link>
               ))}
@@ -474,7 +491,10 @@ const TeacherFinance = () => {
               <h2>{t("teacherFinance.receiptsTitle")}</h2>
               <p>{t("teacherFinance.receiptsHint")}</p>
             </div>
-            <Link className={styles.linkButton} to="/teacher-dashboard/settings#payment-accounts">
+            <Link
+              className={styles.linkButton}
+              to="/teacher-dashboard/settings#payment-accounts"
+            >
               {t("teacherFinance.manageAccounts")}
             </Link>
           </div>
@@ -510,7 +530,9 @@ const TeacherFinance = () => {
                 <input
                   type="date"
                   value={receiptFrom}
-                  onChange={(event) => handleReceiptDateChange("from", event.target.value)}
+                  onChange={(event) =>
+                    handleReceiptDateChange("from", event.target.value)
+                  }
                 />
               </label>
               <label>
@@ -518,7 +540,9 @@ const TeacherFinance = () => {
                 <input
                   type="date"
                   value={receiptTo}
-                  onChange={(event) => handleReceiptDateChange("to", event.target.value)}
+                  onChange={(event) =>
+                    handleReceiptDateChange("to", event.target.value)
+                  }
                 />
               </label>
             </div>
@@ -527,14 +551,18 @@ const TeacherFinance = () => {
           <div className={styles.segmentedControl}>
             <button
               type="button"
-              className={receiptGroupMode === "students" ? styles.segmentActive : ""}
+              className={
+                receiptGroupMode === "students" ? styles.segmentActive : ""
+              }
               onClick={() => setReceiptGroupMode("students")}
             >
               {t("teacherFinance.byStudents")}
             </button>
             <button
               type="button"
-              className={receiptGroupMode === "accounts" ? styles.segmentActive : ""}
+              className={
+                receiptGroupMode === "accounts" ? styles.segmentActive : ""
+              }
               onClick={() => setReceiptGroupMode("accounts")}
             >
               {t("teacherFinance.byAccounts")}
@@ -549,7 +577,9 @@ const TeacherFinance = () => {
 
           {receiptsError && <p className={styles.error}>{receiptsError}</p>}
           {receiptsLoading ? (
-            <p className={styles.muted}>{t("teacherFinance.receiptsLoading")}</p>
+            <p className={styles.muted}>
+              {t("teacherFinance.receiptsLoading")}
+            </p>
           ) : receiptGroups.length > 0 ? (
             <div className={styles.receiptGroups}>
               {receiptGroups.map((group) => (
@@ -586,12 +616,18 @@ const TeacherFinance = () => {
                           <small>
                             {receiptGroupMode === "students"
                               ? item.account_name
-                              : item.student_name || item.student_email || t("teacherFinance.unknownStudent")}
+                              : item.student_name ||
+                                item.student_email ||
+                                t("teacherFinance.unknownStudent")}
                           </small>
                         </div>
                         <div className={styles.receiptAmountBlock}>
                           <strong>
-                            {formatFinanceMoney(item.amount_minor, item.currency, language)}
+                            {formatFinanceMoney(
+                              item.amount_minor,
+                              item.currency,
+                              language,
+                            )}
                           </strong>
                           {receiptGroupMode === "students" && (
                             <small>
@@ -625,7 +661,10 @@ const TeacherFinance = () => {
               <h2>{t("teacherFinance.profileTitle")}</h2>
               <p>{t("teacherFinance.profileDashboardHint")}</p>
             </div>
-            <Link className={styles.linkButton} to="/teacher-dashboard/settings#tax-profile">
+            <Link
+              className={styles.linkButton}
+              to="/teacher-dashboard/settings#tax-profile"
+            >
               {t("teacherFinance.editTaxProfile")}
             </Link>
           </div>
@@ -643,13 +682,20 @@ const TeacherFinance = () => {
 
           {peTaxEnabled ? (
             <div className={styles.parameterSnapshot}>
-              {getVisibleParameterRows(currentTaxProfile, parameterMap).map((item) => (
-                <div key={item.code} className={styles.parameterRow}>
-                  <span>{formatParameterName(item.code, t)}</span>
-                  <strong>{formatResolvedParameter(item.value, language)}</strong>
-                </div>
-              ))}
-              <Link className={styles.inlineLink} to="/teacher-dashboard/settings#tax-parameters">
+              {getVisibleParameterRows(currentTaxProfile, parameterMap).map(
+                (item) => (
+                  <div key={item.code} className={styles.parameterRow}>
+                    <span>{formatParameterName(item.code, t)}</span>
+                    <strong>
+                      {formatResolvedParameter(item.value, language)}
+                    </strong>
+                  </div>
+                ),
+              )}
+              <Link
+                className={styles.inlineLink}
+                to="/teacher-dashboard/settings#tax-parameters"
+              >
                 {t("teacherFinance.editTaxParameters")}
               </Link>
             </div>
@@ -659,12 +705,18 @@ const TeacherFinance = () => {
 
           <div className={styles.scheduledBlock}>
             <h3>{t("teacherFinance.scheduledChanges")}</h3>
-            {scheduledTaxProfiles.length === 0 && scheduledParameterOverrides.length === 0 ? (
-              <p className={styles.muted}>{t("teacherFinance.noScheduledChanges")}</p>
+            {scheduledTaxProfiles.length === 0 &&
+            scheduledParameterOverrides.length === 0 ? (
+              <p className={styles.muted}>
+                {t("teacherFinance.noScheduledChanges")}
+              </p>
             ) : (
               <div className={styles.scheduledList}>
                 {scheduledTaxProfiles.map((profile) => (
-                  <div key={`profile-${profile.id}`} className={styles.scheduledItem}>
+                  <div
+                    key={`profile-${profile.id}`}
+                    className={styles.scheduledItem}
+                  >
                     <div>
                       <span>{t("teacherFinance.profileChange")}</span>
                       <strong>{formatTaxProfile(profile, t)}</strong>
@@ -673,7 +725,10 @@ const TeacherFinance = () => {
                   </div>
                 ))}
                 {scheduledParameterOverrides.map((item) => (
-                  <div key={`parameter-${item.id}`} className={styles.scheduledItem}>
+                  <div
+                    key={`parameter-${item.id}`}
+                    className={styles.scheduledItem}
+                  >
                     <div>
                       <span>{formatParameterName(item.code, t)}</span>
                       <strong>{formatParameterOverride(item, language)}</strong>
@@ -700,14 +755,18 @@ const TeacherFinance = () => {
                 <div className={styles.segmentedControl}>
                   <button
                     type="button"
-                    className={taxViewMode === "quarter" ? styles.segmentActive : ""}
+                    className={
+                      taxViewMode === "quarter" ? styles.segmentActive : ""
+                    }
                     onClick={() => setTaxViewMode("quarter")}
                   >
                     {t("teacherFinance.quarter")}
                   </button>
                   <button
                     type="button"
-                    className={taxViewMode === "month" ? styles.segmentActive : ""}
+                    className={
+                      taxViewMode === "month" ? styles.segmentActive : ""
+                    }
                     onClick={() => setTaxViewMode("month")}
                   >
                     {t("teacherFinance.monthMode")}
@@ -715,11 +774,20 @@ const TeacherFinance = () => {
                 </div>
 
                 <div className={styles.periodNavigation}>
-                  <button type="button" className={styles.iconButton} onClick={() => shiftTaxPeriod(-1)}>
+                  <button
+                    type="button"
+                    className={styles.iconButton}
+                    onClick={() => shiftTaxPeriod(-1)}
+                  >
                     ←
                   </button>
                   <strong>
-                    {formatTaxPeriodLabel(taxPeriodRange.start, taxViewMode, language, t)}
+                    {formatTaxPeriodLabel(
+                      taxPeriodRange.start,
+                      taxViewMode,
+                      language,
+                      t,
+                    )}
                   </strong>
                   <button
                     type="button"
@@ -735,23 +803,43 @@ const TeacherFinance = () => {
               <div className={styles.taxTotalsGrid}>
                 <TaxMetric
                   label={t("teacherFinance.income")}
-                  value={formatFinanceMoney(selectedTaxTotals.income_base_uah_minor, "UAH", language)}
+                  value={formatFinanceMoney(
+                    selectedTaxTotals.income_base_uah_minor,
+                    "UAH",
+                    language,
+                  )}
                 />
                 <TaxMetric
                   label={t("teacherFinance.singleTax")}
-                  value={formatFinanceMoney(selectedTaxTotals.single_tax_minor, "UAH", language)}
+                  value={formatFinanceMoney(
+                    selectedTaxTotals.single_tax_minor,
+                    "UAH",
+                    language,
+                  )}
                 />
                 <TaxMetric
                   label={t("teacherFinance.militaryLevy")}
-                  value={formatFinanceMoney(selectedTaxTotals.military_levy_minor, "UAH", language)}
+                  value={formatFinanceMoney(
+                    selectedTaxTotals.military_levy_minor,
+                    "UAH",
+                    language,
+                  )}
                 />
                 <TaxMetric
                   label={t("teacherFinance.esv")}
-                  value={formatFinanceMoney(selectedTaxTotals.esv_minor, "UAH", language)}
+                  value={formatFinanceMoney(
+                    selectedTaxTotals.esv_minor,
+                    "UAH",
+                    language,
+                  )}
                 />
                 <TaxMetric
                   label={t("teacherFinance.total")}
-                  value={formatFinanceMoney(selectedTaxTotals.total_tax_minor, "UAH", language)}
+                  value={formatFinanceMoney(
+                    selectedTaxTotals.total_tax_minor,
+                    "UAH",
+                    language,
+                  )}
                   emphasized
                 />
               </div>
@@ -780,13 +868,44 @@ const TeacherFinance = () => {
                     <tbody>
                       {selectedTaxRows.map((row) => (
                         <tr key={row.month_start}>
-                          <td>{formatMonth(row.month_start, language)}</td>
-                          <td>{formatFinanceMoney(row.income_base_uah_minor, "UAH", language)}</td>
-                          <td>{formatFinanceMoney(row.single_tax_minor, "UAH", language)}</td>
-                          <td>{formatFinanceMoney(row.military_levy_minor, "UAH", language)}</td>
-                          <td>{formatFinanceMoney(row.esv_minor, "UAH", language)}</td>
                           <td>
-                            <strong>{formatFinanceMoney(row.total_tax_minor, "UAH", language)}</strong>
+                            <TaxPeriod
+                              monthStart={row.month_start}
+                              language={language}
+                            />
+                          </td>
+                          <td>
+                            {formatFinanceMoney(
+                              row.income_base_uah_minor,
+                              "UAH",
+                              language,
+                            )}
+                          </td>
+                          <td>
+                            {formatFinanceMoney(
+                              row.single_tax_minor,
+                              "UAH",
+                              language,
+                            )}
+                          </td>
+                          <td>
+                            {formatFinanceMoney(
+                              row.military_levy_minor,
+                              "UAH",
+                              language,
+                            )}
+                          </td>
+                          <td>
+                            {formatFinanceMoney(row.esv_minor, "UAH", language)}
+                          </td>
+                          <td>
+                            <strong>
+                              {formatFinanceMoney(
+                                row.total_tax_minor,
+                                "UAH",
+                                language,
+                              )}
+                            </strong>
                           </td>
                         </tr>
                       ))}
@@ -794,11 +913,15 @@ const TeacherFinance = () => {
                   </table>
                 </div>
               ) : (
-                <p className={styles.muted}>{t("teacherFinance.noTaxRowsForPeriod")}</p>
+                <p className={styles.muted}>
+                  {t("teacherFinance.noTaxRowsForPeriod")}
+                </p>
               )}
             </>
           ) : (
-            <p className={styles.info}>{t("teacherFinance.taxNotApplicable")}</p>
+            <p className={styles.info}>
+              {t("teacherFinance.taxNotApplicable")}
+            </p>
           )}
         </section>
       </div>
