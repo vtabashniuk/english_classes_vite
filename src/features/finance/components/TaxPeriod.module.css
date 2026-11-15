@@ -1,0 +1,12 @@
+.taxPeriod {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.taxPeriodYear {
+  font-size: 0.85em;
+  font-weight: 400;
+  opacity: 0.65;
+}
