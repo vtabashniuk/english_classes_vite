@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useToast from "../toast/useToast";
 import usePagePreferences from "./usePagePreferences";
 import { PAGE_SIZE_OPTIONS, STUDENT_PAGE_KEYS, TEACHER_PAGE_KEYS } from "./pagePreferences";
 import styles from "./PagePreferencesSettings.module.css";
 
-export default function PagePreferencesSettings({ role, financeHistorySize, onFinanceSave }) {
+export default function PagePreferencesSettings({ role, financeHistorySize, onFinanceSave, onDirtyChange }) {
   const { t } = useTranslation();
   const toast = useToast();
   const { sizes, ready, save } = usePagePreferences();
@@ -14,6 +14,9 @@ export default function PagePreferencesSettings({ role, financeHistorySize, onFi
   const [financeDraft, setFinanceDraft] = useState(null);
   const keys = role === "teacher" ? TEACHER_PAGE_KEYS : STUDENT_PAGE_KEYS;
   const current = draft ?? sizes;
+  const isDirty = keys.some((key) => current[key] !== sizes[key]) ||
+    (role === "teacher" && financeDraft !== null && Number(financeDraft) !== Number(financeHistorySize ?? 20));
+  useEffect(() => { onDirtyChange?.(isDirty); }, [onDirtyChange, isDirty]);
 
 
   const submit = async (event) => {
@@ -52,7 +55,7 @@ export default function PagePreferencesSettings({ role, financeHistorySize, onFi
           </select>
         </label>}
       </div>
-      <button className={styles.save} type="submit" disabled={!ready || busy || (!draft && financeDraft === null)}>
+      <button className={styles.save} type="submit" disabled={!ready || busy || !isDirty}>
         {busy ? t("pagePreferences.saving") : t("pagePreferences.save")}
       </button>
     </form>

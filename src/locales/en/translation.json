@@ -1016,7 +1016,16 @@
       "allowOpenEndedLessonsHint": "When disabled, an end date is required for new or edited lesson series. Existing open-ended series are not changed.",
       "horizonWeeks": "Open-ended series horizon, weeks",
       "horizonWeeksHint": "For series without an end date, the system keeps this many weeks of concrete lessons and blocks materialized ahead. The series rule continues reserving the slot beyond the horizon."
-    }
+    },
+    "tabs": {
+      "profile": "Profile",
+      "learning": "Learning",
+      "finance": "Finance",
+      "taxes": "Taxes",
+      "display": "Display",
+      "security": "Security"
+    },
+    "profileComingNext": "Editing teacher personal details will be added in a separate step. The account email is shown below."
   },
   "teacherStudentDetails": {
     "back": "Back to students",
@@ -2205,5 +2214,11 @@
     "saved": "Payment instructions saved.",
     "save": "Save instructions",
     "saving": "Saving…"
+  },
+  "settingsUnsaved": {
+    "title": "Unsaved changes",
+    "description": "You have unsaved settings. Continuing will discard these changes.",
+    "stay": "Stay",
+    "leave": "Leave without saving"
   }
 }

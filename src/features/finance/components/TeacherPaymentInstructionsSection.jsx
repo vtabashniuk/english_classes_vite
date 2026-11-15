@@ -21,11 +21,12 @@ const fromRow = (item) => ({
 });
 const validHttps = (value) => !value || /^https:\/\/[^\s/]+(?:\/[^\s]*)?$/i.test(value);
 
-const TeacherPaymentInstructionsSection = () => {
+const TeacherPaymentInstructionsSection = ({ onDirtyChange }) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [currency, setCurrency] = useState("UAH");
   const [items, setItems] = useState({});
+  const [savedItems, setSavedItems] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +38,11 @@ const TeacherPaymentInstructionsSection = () => {
     getMyTeacherPaymentInstructions(user.id).then(({ data, error: loadError }) => {
       if (!active) return;
       if (loadError) setError(t("paymentInstructions.loadError"));
-      else setItems(Object.fromEntries((data ?? []).map((row) => [row.currency, fromRow(row)])));
+      else {
+        const loaded = Object.fromEntries((data ?? []).map((row) => [row.currency, fromRow(row)]));
+        setSavedItems(loaded);
+        setItems(loaded);
+      }
     }).catch((cause) => {
       console.error("Payment instructions load error:", cause);
       if (active) setError(t("paymentInstructions.loadError"));
@@ -46,25 +51,60 @@ const TeacherPaymentInstructionsSection = () => {
   }, [user?.id, t]);
 
   const item = items[currency] ?? blank(currency);
+  const hasPendingChanges = CURRENCIES.some(
+    (code) =>
+      JSON.stringify(items[code] ?? blank(code)) !==
+      JSON.stringify(savedItems[code] ?? blank(code)),
+  );
+  useEffect(() => { onDirtyChange?.(!loading && hasPendingChanges); }, [onDirtyChange, loading, hasPendingChanges]);
   const edit = (key, value) => {
     setNotice("");
     setItems((current) => ({ ...current, [currency]: { ...(current[currency] ?? blank(currency)), [key]: value } }));
   };
   const save = async (event) => {
     event.preventDefault();
-    setError(""); setNotice("");
-    if (!validHttps(item.paymentUrl.trim()) || !validHttps(item.qrImageUrl.trim())) {
-      setError(t("paymentInstructions.invalidUrl")); return;
+    setError("");
+    setNotice("");
+
+    if (
+      !validHttps(item.paymentUrl.trim()) ||
+      !validHttps(item.qrImageUrl.trim())
+    ) {
+      setError(t("paymentInstructions.invalidUrl"));
+      return;
     }
+
     try {
       setSaving(true);
-      const { error: saveError } = await saveTeacherPaymentInstructions(user.id, item);
+
+      const { error: saveError } = await saveTeacherPaymentInstructions(
+        user.id,
+        item,
+      );
       if (saveError) throw saveError;
+
+      const nextSavedItems = {
+        ...savedItems,
+        [currency]: { ...item },
+      };
+
+      setSavedItems(nextSavedItems);
+
+      onDirtyChange?.(
+        CURRENCIES.some(
+          (code) =>
+            JSON.stringify(items[code] ?? blank(code)) !==
+            JSON.stringify(nextSavedItems[code] ?? blank(code)),
+        ),
+      );
+
       setNotice(t("paymentInstructions.saved"));
     } catch (cause) {
       console.error("Payment instructions save error:", cause);
       setError(t("paymentInstructions.saveError"));
-    } finally { setSaving(false); }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fields = [

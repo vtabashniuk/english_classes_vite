@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useEffect } from "react";
 
 import useToast from "../../../shared/toast/useToast";
 import { useChangePassword } from "../hooks/useChangePassword";
@@ -9,10 +10,13 @@ import styles from "./ChangePasswordForm.module.css";
 const KEY = "security.password";
 
 /** One shared self-service form for both teacher and student. */
-const ChangePasswordForm = () => {
+const ChangePasswordForm = ({ onDirtyChange }) => {
   const { t } = useTranslation();
   const toast = useToast();
   const form = useChangePassword({ onSuccess: () => toast.success(t(`${KEY}.saved`)) });
+
+  const dirty = Boolean(form.currentPassword || form.newPassword || form.confirmPassword);
+  useEffect(() => { onDirtyChange?.(dirty); }, [onDirtyChange, dirty]);
 
   return (
     <form className={styles.form} onSubmit={form.submit} autoComplete="on">

@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import SettingsTabs from "../../shared/settings/SettingsTabBar";
+import {
+  getSettingsTab,
+  withSettingsTab,
+  getLegacyTeacherSettingsTab,
+} from "../../shared/settings/settingsTabs";
 import TeacherPaymentInstructionsSection from "../../features/finance/components/TeacherPaymentInstructionsSection";
 
 import {
@@ -47,8 +53,20 @@ import useToast from "../../shared/toast/useToast";
 import { useAuth } from "../../context/useAuth";
 import PagePreferencesSettings from "../../shared/pagination/PagePreferencesSettings";
 import ChangePasswordForm from "../../features/auth/components/ChangePasswordForm";
+import useUnsavedChangesGuard from "../../shared/unsavedChanges/useUnsavedChangesGuard";
+import UnsavedChangesDialog from "../../shared/unsavedChanges/UnsavedChangesDialog";
+import ConfirmDialog from "../../shared/dialog/ConfirmDialog";
 
 import styles from "./TeacherSettings.module.css";
+
+const TEACHER_TABS = [
+  "profile",
+  "learning",
+  "finance",
+  "taxes",
+  "display",
+  "security",
+];
 
 const DEFAULT_PARAMETER_VALUES = {
   minimum_wage_minor: "",
@@ -62,12 +80,39 @@ const DEFAULT_PARAMETER_VALUES = {
   group3_military_levy_rate: "",
 };
 
+// Discarding must reset the draft values, not only release the navigation blocker.
+// Remounting the settings content reloads the last persisted values for every form,
+// including independent drafts in child components and all payment currencies.
 const TeacherSettings = () => {
+  const [discardRevision, setDiscardRevision] = useState(0);
+  return (
+    <TeacherSettingsContent
+      key={discardRevision}
+      onDiscard={() => setDiscardRevision((revision) => revision + 1)}
+    />
+  );
+};
+
+const TeacherSettingsContent = ({ onDiscard }) => {
   const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage || i18n.language;
   const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab =
+    getLegacyTeacherSettingsTab(location.hash) ||
+    getSettingsTab(location.search, TEACHER_TABS);
+  const handleTabChange = (tab) => {
+    navigate({
+      pathname: location.pathname,
+      search: withSettingsTab(location.search, tab),
+      hash: "",
+    });
+  };
   const toast = useToast();
   const { user } = useAuth();
+  const { setFormDirty, isPromptOpen, stay, leave } = useUnsavedChangesGuard();
+  const baselines = useRef({});
+  const [pendingParameterDate, setPendingParameterDate] = useState(null);
 
   const [timezone, setTimezone] = useState(DEFAULT_SCHEDULE_SETTINGS.timezone);
   const [workingHours, setWorkingHours] = useState(createDefaultWorkingHours);
@@ -88,8 +133,10 @@ const TeacherSettings = () => {
   const [financialBlockingEnabled, setFinancialBlockingEnabled] = useState(
     DEFAULT_FINANCE_SETTINGS.financialBlockingEnabled,
   );
-  const [financialBlockingDebtThresholdLessons, setFinancialBlockingDebtThresholdLessons] =
-    useState(DEFAULT_FINANCE_SETTINGS.financialBlockingDebtThresholdLessons);
+  const [
+    financialBlockingDebtThresholdLessons,
+    setFinancialBlockingDebtThresholdLessons,
+  ] = useState(DEFAULT_FINANCE_SETTINGS.financialBlockingDebtThresholdLessons);
   const [freeCancellationHours, setFreeCancellationHours] = useState(
     DEFAULT_FINANCE_SETTINGS.freeCancellationHours,
   );
@@ -101,14 +148,18 @@ const TeacherSettings = () => {
   const [currentTaxProfile, setCurrentTaxProfile] = useState(null);
   const [taxpayerType, setTaxpayerType] = useState("none");
   const [peGroup, setPeGroup] = useState(3);
-  const [taxEffectiveFrom, setTaxEffectiveFrom] = useState(getBrowserDateString());
+  const [taxEffectiveFrom, setTaxEffectiveFrom] = useState(
+    getBrowserDateString(),
+  );
   const [taxEditing, setTaxEditing] = useState(false);
 
   const [parameterOverrides, setParameterOverrides] = useState([]);
   const [parameterEffectiveFrom, setParameterEffectiveFrom] = useState(
     getBrowserDateString(),
   );
-  const [parameterValues, setParameterValues] = useState(DEFAULT_PARAMETER_VALUES);
+  const [parameterValues, setParameterValues] = useState(
+    DEFAULT_PARAMETER_VALUES,
+  );
   const [parameterSources, setParameterSources] = useState({});
 
   const [paymentAccounts, setPaymentAccounts] = useState([]);
@@ -121,7 +172,8 @@ const TeacherSettings = () => {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [financePreferencesSaving, setFinancePreferencesSaving] = useState(false);
+  const [financePreferencesSaving, setFinancePreferencesSaving] =
+    useState(false);
   const [financePreferencesError, setFinancePreferencesError] = useState("");
 
   const [taxSaving, setTaxSaving] = useState(false);
@@ -132,6 +184,66 @@ const TeacherSettings = () => {
 
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountError, setAccountError] = useState("");
+
+  // Snapshots contain ordinary settings only; passwords never enter this registry.
+  const scheduleDraft = JSON.stringify({
+    timezone,
+    workingHours,
+    lessonDurationMinutes: Number(lessonDurationMinutes),
+    reschedulePricePolicy,
+    allowOpenEndedRecurringLessons,
+    recurringGenerationHorizonWeeks: Number(recurringGenerationHorizonWeeks),
+  });
+  const financeDraft = JSON.stringify({
+    lowBalanceThresholdLessons: Number(lowBalanceThresholdLessons),
+    financialBlockingEnabled: Boolean(financialBlockingEnabled),
+    financialBlockingDebtThresholdLessons: Number(
+      financialBlockingDebtThresholdLessons,
+    ),
+    freeCancellationHours: Number(freeCancellationHours),
+    historyPageSize: Number(historyPageSize),
+  });
+  const taxDraft = JSON.stringify({
+    taxpayerType,
+    peGroup: taxpayerType === "pe" ? Number(peGroup) : null,
+    taxEffectiveFrom,
+  });
+  const parameterDraft = JSON.stringify({
+    parameterEffectiveFrom,
+    parameterValues,
+  });
+  const accountDraft = JSON.stringify({
+    accountName: accountName.trim(),
+    accountCurrency,
+    accountOwnerType,
+    accountType,
+  });
+  useEffect(() => {
+    if (loading) return;
+    for (const [id, value] of Object.entries({
+      schedule: scheduleDraft,
+      finance: financeDraft,
+      taxProfile: taxEditing ? taxDraft : null,
+      taxParameters: parameterDraft,
+      account: accountDraft,
+    })) {
+      if (value === null) {
+        setFormDirty(id, false);
+        continue;
+      }
+      if (baselines.current[id] === undefined) baselines.current[id] = value;
+      setFormDirty(id, baselines.current[id] !== value);
+    }
+  }, [
+    loading,
+    scheduleDraft,
+    financeDraft,
+    taxDraft,
+    taxEditing,
+    parameterDraft,
+    accountDraft,
+    setFormDirty,
+  ]);
 
   const scheduledTaxProfiles = useMemo(
     () =>
@@ -161,7 +273,9 @@ const TeacherSettings = () => {
     profileForParameterDate?.taxpayer_type === "pe"
       ? Number(profileForParameterDate.pe_group)
       : null;
-  const hasAnyPeProfile = taxProfiles.some((profile) => profile.taxpayer_type === "pe");
+  const hasAnyPeProfile = taxProfiles.some(
+    (profile) => profile.taxpayer_type === "pe",
+  );
   const peTaxEnabled = currentTaxProfile?.taxpayer_type === "pe";
   const resolvedAccountOwnerType =
     peTaxEnabled && accountOwnerType === "pe" ? "pe" : "personal";
@@ -236,7 +350,7 @@ const TeacherSettings = () => {
         setFinancialBlockingEnabled(
           Boolean(
             data?.financial_blocking_enabled ??
-              DEFAULT_FINANCE_SETTINGS.financialBlockingEnabled,
+            DEFAULT_FINANCE_SETTINGS.financialBlockingEnabled,
           ),
         );
         setFinancialBlockingDebtThresholdLessons(
@@ -378,6 +492,8 @@ const TeacherSettings = () => {
       });
       if (error) throw error;
 
+      baselines.current.schedule = scheduleDraft;
+      setFormDirty("schedule", false);
       setTeacherToday(getDateInTimeZone(timezone));
       toast.success(t("teacherSettings.messages.saved"));
     } catch (error) {
@@ -451,6 +567,14 @@ const TeacherSettings = () => {
       setFinancialBlockingEnabled(Boolean(financialBlockingEnabled));
       setFinancialBlockingDebtThresholdLessons(debtThreshold);
       setFreeCancellationHours(cancellationHours);
+      baselines.current.finance = JSON.stringify({
+        lowBalanceThresholdLessons: threshold,
+        financialBlockingEnabled: Boolean(financialBlockingEnabled),
+        financialBlockingDebtThresholdLessons: debtThreshold,
+        freeCancellationHours: cancellationHours,
+        historyPageSize: resolvedHistoryPageSize,
+      });
+      setFormDirty("finance", false);
       setHistoryPageSize(resolvedHistoryPageSize);
       toast.success(t("teacherSettings.financePreferences.messages.saved"));
     } catch (error) {
@@ -462,7 +586,8 @@ const TeacherSettings = () => {
   };
 
   const startTaxEditing = () => {
-    const baseProfile = currentTaxProfile ?? scheduledTaxProfiles.at(-1) ?? null;
+    const baseProfile =
+      currentTaxProfile ?? scheduledTaxProfiles.at(-1) ?? null;
     setTaxpayerType(baseProfile?.taxpayer_type ?? "none");
     setPeGroup(Number(baseProfile?.pe_group ?? 3));
     setTaxEffectiveFrom(teacherToday);
@@ -503,6 +628,8 @@ const TeacherSettings = () => {
 
       setTaxProfiles(profilesResult.data ?? []);
       setCurrentTaxProfile(currentResult.data ?? null);
+      baselines.current.taxProfile = taxDraft;
+      setFormDirty("taxProfile", false);
       setTaxEditing(false);
       toast.success(t("teacherSettings.tax.messages.saved"));
     } catch (error) {
@@ -513,22 +640,43 @@ const TeacherSettings = () => {
     }
   };
 
-  const handleParameterDateChange = async (nextDate) => {
-    setParameterEffectiveFrom(nextDate);
+  const applyParameterDateChange = async (nextDate) => {
     setParameterError("");
     if (!nextDate) return;
-
     try {
       const result = await getMyTaxParameters(nextDate);
       if (result.error) throw result.error;
+      const nextValues = resolvedParameterValues(result.data ?? []);
+      setParameterEffectiveFrom(nextDate);
       applyResolvedParameters(result.data ?? [], {
         setParameterValues,
         setParameterSources,
       });
+      baselines.current.taxParameters = JSON.stringify({
+        parameterEffectiveFrom: nextDate,
+        parameterValues: nextValues,
+      });
+      setFormDirty("taxParameters", false);
     } catch (error) {
       console.error("Load tax parameters for date error:", error);
       setParameterError(t("teacherSettings.finance.parametersError"));
     }
+  };
+
+  const handleParameterDateChange = (nextDate) => {
+    if (nextDate === parameterEffectiveFrom) return;
+
+    const hasDirtyParameters =
+      !loading &&
+      baselines.current.taxParameters !== undefined &&
+      baselines.current.taxParameters !== parameterDraft;
+
+    if (hasDirtyParameters) {
+      setPendingParameterDate(nextDate);
+      return;
+    }
+
+    void applyParameterDateChange(nextDate);
   };
 
   const handleParameterSubmit = async (event) => {
@@ -571,6 +719,11 @@ const TeacherSettings = () => {
         setParameterValues,
         setParameterSources,
       });
+      baselines.current.taxParameters = JSON.stringify({
+        parameterEffectiveFrom,
+        parameterValues: resolvedParameterValues(parametersResult.data ?? []),
+      });
+      setFormDirty("taxParameters", false);
       setParameterOverrides(overridesResult.data ?? []);
       toast.success(t("teacherSettings.finance.parametersSaved"));
     } catch (error) {
@@ -608,6 +761,13 @@ const TeacherSettings = () => {
       if (accountsResult.error) throw accountsResult.error;
 
       setPaymentAccounts(accountsResult.data ?? []);
+      baselines.current.account = JSON.stringify({
+        accountName: "",
+        accountCurrency,
+        accountOwnerType,
+        accountType,
+      });
+      setFormDirty("account", false);
       setAccountName("");
       toast.success(t("teacherSettings.finance.accountCreated"));
     } catch (error) {
@@ -635,612 +795,837 @@ const TeacherSettings = () => {
         </div>
       </header>
 
+      <SettingsTabs
+        tabs={TEACHER_TABS.map((id) => ({
+          id,
+          label: t(`teacherSettings.tabs.${id}`),
+        }))}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        label={t("teacherSettings.title")}
+      />
       <div className={styles.content}>
-        <section id="security" className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>{t("security.password.title")}</h2>
-            <p>{t("security.password.description")}</p>
-          </div>
-          <ChangePasswordForm />
-        </section>
-
-        <form id="schedule-settings" className={styles.card} onSubmit={handleSubmit}>
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherSettings.scheduleTitle")}</h2>
-            <p>{t("teacherSettings.scheduleDescription")}</p>
-          </div>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.timezone")}</span>
-            <select value={timezone} onChange={(event) => setTimezone(event.target.value)}>
-              {TIMEZONES.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {t(item.labelKey)}
-                </option>
-              ))}
-            </select>
-            <small>{t("teacherSettings.timezoneHint")}</small>
-          </label>
-
-          <div className={styles.workingDays}>
-            <div className={styles.workingDaysHeader}>
-              <strong>{t("teacherSettings.workingDaysTitle")}</strong>
-              <small>{t("teacherSettings.workingDaysHint")}</small>
+        <div className={styles.tabPanel} hidden={activeTab !== "profile"}>
+          <section className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.tabs.profile")}</h2>
+            </div>
+            <p className={styles.profileHelp}>
+              {t("teacherSettings.profileComingNext")}
+            </p>
+            <p className={styles.profileEmail}>{user?.email || "—"}</p>
+          </section>
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "security"}>
+          <section id="security" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>{t("security.password.title")}</h2>
+              <p>{t("security.password.description")}</p>
+            </div>
+            <ChangePasswordForm
+              onDirtyChange={(dirty) => setFormDirty("password", dirty)}
+            />
+          </section>
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "learning"}>
+          <form
+            id="schedule-settings"
+            className={styles.card}
+            onSubmit={handleSubmit}
+          >
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.scheduleTitle")}</h2>
+              <p>{t("teacherSettings.scheduleDescription")}</p>
             </div>
 
-            {workingHours.map((item) => {
-              const day = WEEKDAYS.find((weekday) => weekday.value === item.weekday);
+            <label className={styles.field}>
+              <span>{t("teacherSettings.timezone")}</span>
+              <select
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+              >
+                {TIMEZONES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(item.labelKey)}
+                  </option>
+                ))}
+              </select>
+              <small>{t("teacherSettings.timezoneHint")}</small>
+            </label>
 
-              return (
-                <div key={item.weekday} className={styles.workingDayRow}>
-                  <label className={styles.workingDayToggle}>
-                    <input
-                      type="checkbox"
-                      checked={item.isWorking}
-                      onChange={(event) =>
-                        handleWorkingHoursChange(
-                          item.weekday,
-                          "isWorking",
-                          event.target.checked,
-                        )
-                      }
-                    />
-                    <span>{t(`teacherSettings.weekdays.${day.key}`)}</span>
-                  </label>
-
-                  <div className={styles.workingDayTimes}>
-                    <input
-                      type="time"
-                      step="1800"
-                      value={item.workdayStart}
-                      disabled={!item.isWorking}
-                      aria-label={t("teacherSettings.workdayStart")}
-                      onChange={(event) =>
-                        handleWorkingHoursChange(
-                          item.weekday,
-                          "workdayStart",
-                          event.target.value,
-                        )
-                      }
-                    />
-                    <span>—</span>
-                    <input
-                      type="time"
-                      step="1800"
-                      value={item.workdayEnd}
-                      disabled={!item.isWorking}
-                      aria-label={t("teacherSettings.workdayEnd")}
-                      onChange={(event) =>
-                        handleWorkingHoursChange(
-                          item.weekday,
-                          "workdayEnd",
-                          event.target.value,
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.lessonDuration")}</span>
-            <select
-              value={lessonDurationMinutes}
-              onChange={(event) => setLessonDurationMinutes(Number(event.target.value))}
-            >
-              {createDurationOptions().map((minutes) => (
-                <option key={minutes} value={minutes}>
-                  {t("teacherSettings.minutes", { count: minutes })}
-                </option>
-              ))}
-            </select>
-            <small>{t("teacherSettings.lessonDurationHint")}</small>
-          </label>
-
-          <div className={styles.readOnlyField}>
-            <span>{t("teacherSettings.slotInterval")}</span>
-            <strong>
-              {t("teacherSettings.minutes", {
-                count: DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
-              })}
-            </strong>
-            <small>{t("teacherSettings.slotIntervalHint")}</small>
-          </div>
-
-          <div className={styles.workingDaysHeader}>
-            <strong>{t("teacherSettings.recurringPreferences.title")}</strong>
-            <small>{t("teacherSettings.recurringPreferences.description")}</small>
-          </div>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.recurringPreferences.reschedulePricePolicy")}</span>
-            <select
-              value={reschedulePricePolicy}
-              onChange={(event) => setReschedulePricePolicy(event.target.value)}
-            >
-              <option value="keep_original">
-                {t("teacherSettings.recurringPreferences.keepOriginalPrice")}
-              </option>
-              <option value="target_date_tariff">
-                {t("teacherSettings.recurringPreferences.useTargetDateTariff")}
-              </option>
-            </select>
-            <small>{t("teacherSettings.recurringPreferences.reschedulePriceHint")}</small>
-          </label>
-
-          <label className={styles.workingDayToggle}>
-            <input
-              type="checkbox"
-              checked={allowOpenEndedRecurringLessons}
-              onChange={(event) =>
-                setAllowOpenEndedRecurringLessons(event.target.checked)
-              }
-            />
-            <span>{t("teacherSettings.recurringPreferences.allowOpenEndedLessons")}</span>
-          </label>
-          <small>{t("teacherSettings.recurringPreferences.allowOpenEndedLessonsHint")}</small>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.recurringPreferences.horizonWeeks")}</span>
-            <input
-              type="number"
-              min={MIN_RECURRING_GENERATION_HORIZON_WEEKS}
-              max={MAX_RECURRING_GENERATION_HORIZON_WEEKS}
-              step="1"
-              value={recurringGenerationHorizonWeeks}
-              onChange={(event) =>
-                setRecurringGenerationHorizonWeeks(event.target.value)
-              }
-            />
-            <small>{t("teacherSettings.recurringPreferences.horizonWeeksHint")}</small>
-          </label>
-
-          {errorMessage && <p className={styles.error}>{errorMessage}</p>}
-
-          <div className={styles.actions}>
-            <button type="submit" className={styles.primaryButton} disabled={saving}>
-              {saving ? t("teacherSettings.saving") : t("teacherSettings.save")}
-            </button>
-          </div>
-        </form>
-
-        <PagePreferencesSettings role="teacher" financeHistorySize={historyPageSize}
-          onFinanceSave={async (value) => {
-            const { error } = await updateMyFinanceHistoryPageSize(user.id, value);
-            if (error) throw error;
-            setHistoryPageSize(value);
-          }} />
-
-        <form
-          id="finance-preferences"
-          className={styles.card}
-          onSubmit={handleFinancePreferencesSubmit}
-        >
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherSettings.financePreferences.title")}</h2>
-            <p>{t("teacherSettings.financePreferences.description")}</p>
-          </div>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.financePreferences.lowBalanceThreshold")}</span>
-            <input
-              type="number"
-              min={MIN_LOW_BALANCE_LESSONS}
-              max={MAX_LOW_BALANCE_LESSONS}
-              step="1"
-              value={lowBalanceThresholdLessons}
-              onChange={(event) =>
-                setLowBalanceThresholdLessons(event.target.value)
-              }
-              disabled={financePreferencesSaving}
-            />
-            <small>{t("teacherSettings.financePreferences.lowBalanceHint")}</small>
-          </label>
-
-          <label className={styles.workingDayToggle}>
-            <input
-              type="checkbox"
-              checked={financialBlockingEnabled}
-              onChange={(event) =>
-                setFinancialBlockingEnabled(event.target.checked)
-              }
-              disabled={financePreferencesSaving}
-            />
-            <span>{t("teacherSettings.financePreferences.financialBlockingEnabled")}</span>
-          </label>
-          <small>
-            {t("teacherSettings.financePreferences.financialBlockingEnabledHint")}
-          </small>
-
-          <label className={styles.field}>
-            <span>
-              {t("teacherSettings.financePreferences.financialBlockingDebtThreshold")}
-            </span>
-            <input
-              type="number"
-              min={MIN_FINANCIAL_BLOCKING_DEBT_LESSONS}
-              max={MAX_FINANCIAL_BLOCKING_DEBT_LESSONS}
-              step="1"
-              value={financialBlockingDebtThresholdLessons}
-              onChange={(event) =>
-                setFinancialBlockingDebtThresholdLessons(event.target.value)
-              }
-              disabled={financePreferencesSaving || !financialBlockingEnabled}
-            />
-            <small>
-              {t("teacherSettings.financePreferences.financialBlockingDebtThresholdHint")}
-            </small>
-          </label>
-
-          <label className={styles.field}>
-            <span>{t("teacherSettings.financePreferences.freeCancellationHours")}</span>
-            <input
-              type="number"
-              min={MIN_FREE_CANCELLATION_HOURS}
-              max={MAX_FREE_CANCELLATION_HOURS}
-              step="1"
-              value={freeCancellationHours}
-              onChange={(event) => setFreeCancellationHours(event.target.value)}
-              disabled={financePreferencesSaving}
-            />
-            <small>{t("teacherSettings.financePreferences.freeCancellationHint")}</small>
-          </label>
-
-
-
-          {financePreferencesError && (
-            <p className={styles.error}>{financePreferencesError}</p>
-          )}
-
-          <div className={styles.actions}>
-            <button
-              type="submit"
-              className={styles.primaryButton}
-              disabled={financePreferencesSaving}
-            >
-              {financePreferencesSaving
-                ? t("teacherSettings.financePreferences.saving")
-                : t("teacherSettings.financePreferences.save")}
-            </button>
-          </div>
-        </form>
-
-        <section id="tax-profile" className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherSettings.tax.title")}</h2>
-            <p>{t("teacherSettings.tax.description")}</p>
-          </div>
-
-          {!taxEditing ? (
-            <>
-              <div className={styles.savedTaxProfile}>
-                <span>{t("teacherSettings.tax.currentStatus")}</span>
-                <strong>{formatTaxProfile(currentTaxProfile, t)}</strong>
-                {currentTaxProfile?.effective_from && (
-                  <small>
-                    {t("teacherSettings.tax.activeSince", {
-                      date: formatDate(currentTaxProfile.effective_from),
-                    })}
-                  </small>
-                )}
+            <div className={styles.workingDays}>
+              <div className={styles.workingDaysHeader}>
+                <strong>{t("teacherSettings.workingDaysTitle")}</strong>
+                <small>{t("teacherSettings.workingDaysHint")}</small>
               </div>
 
-              {scheduledTaxProfiles.length > 0 && (
-                <div className={styles.scheduledList}>
-                  <strong>{t("teacherSettings.tax.scheduledTitle")}</strong>
-                  {scheduledTaxProfiles.map((profile) => (
-                    <div key={profile.id} className={styles.scheduledItem}>
-                      <span>{formatTaxProfile(profile, t)}</span>
-                      <small>
-                        {t("teacherSettings.tax.fromDate", {
-                          date: formatDate(profile.effective_from),
-                        })}
-                      </small>
+              {workingHours.map((item) => {
+                const day = WEEKDAYS.find(
+                  (weekday) => weekday.value === item.weekday,
+                );
+
+                return (
+                  <div key={item.weekday} className={styles.workingDayRow}>
+                    <label className={styles.workingDayToggle}>
+                      <input
+                        type="checkbox"
+                        checked={item.isWorking}
+                        onChange={(event) =>
+                          handleWorkingHoursChange(
+                            item.weekday,
+                            "isWorking",
+                            event.target.checked,
+                          )
+                        }
+                      />
+                      <span>{t(`teacherSettings.weekdays.${day.key}`)}</span>
+                    </label>
+
+                    <div className={styles.workingDayTimes}>
+                      <input
+                        type="time"
+                        step="1800"
+                        value={item.workdayStart}
+                        disabled={!item.isWorking}
+                        aria-label={t("teacherSettings.workdayStart")}
+                        onChange={(event) =>
+                          handleWorkingHoursChange(
+                            item.weekday,
+                            "workdayStart",
+                            event.target.value,
+                          )
+                        }
+                      />
+                      <span>—</span>
+                      <input
+                        type="time"
+                        step="1800"
+                        value={item.workdayEnd}
+                        disabled={!item.isWorking}
+                        aria-label={t("teacherSettings.workdayEnd")}
+                        onChange={(event) =>
+                          handleWorkingHoursChange(
+                            item.weekday,
+                            "workdayEnd",
+                            event.target.value,
+                          )
+                        }
+                      />
                     </div>
-                  ))}
-                </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <label className={styles.field}>
+              <span>{t("teacherSettings.lessonDuration")}</span>
+              <select
+                value={lessonDurationMinutes}
+                onChange={(event) =>
+                  setLessonDurationMinutes(Number(event.target.value))
+                }
+              >
+                {createDurationOptions().map((minutes) => (
+                  <option key={minutes} value={minutes}>
+                    {t("teacherSettings.minutes", { count: minutes })}
+                  </option>
+                ))}
+              </select>
+              <small>{t("teacherSettings.lessonDurationHint")}</small>
+            </label>
+
+            <div className={styles.readOnlyField}>
+              <span>{t("teacherSettings.slotInterval")}</span>
+              <strong>
+                {t("teacherSettings.minutes", {
+                  count: DEFAULT_SCHEDULE_SETTINGS.slotIntervalMinutes,
+                })}
+              </strong>
+              <small>{t("teacherSettings.slotIntervalHint")}</small>
+            </div>
+
+            <div className={styles.workingDaysHeader}>
+              <strong>{t("teacherSettings.recurringPreferences.title")}</strong>
+              <small>
+                {t("teacherSettings.recurringPreferences.description")}
+              </small>
+            </div>
+
+            <label className={styles.field}>
+              <span>
+                {t(
+                  "teacherSettings.recurringPreferences.reschedulePricePolicy",
+                )}
+              </span>
+              <select
+                value={reschedulePricePolicy}
+                onChange={(event) =>
+                  setReschedulePricePolicy(event.target.value)
+                }
+              >
+                <option value="keep_original">
+                  {t("teacherSettings.recurringPreferences.keepOriginalPrice")}
+                </option>
+                <option value="target_date_tariff">
+                  {t(
+                    "teacherSettings.recurringPreferences.useTargetDateTariff",
+                  )}
+                </option>
+              </select>
+              <small>
+                {t("teacherSettings.recurringPreferences.reschedulePriceHint")}
+              </small>
+            </label>
+
+            <label className={styles.workingDayToggle}>
+              <input
+                type="checkbox"
+                checked={allowOpenEndedRecurringLessons}
+                onChange={(event) =>
+                  setAllowOpenEndedRecurringLessons(event.target.checked)
+                }
+              />
+              <span>
+                {t(
+                  "teacherSettings.recurringPreferences.allowOpenEndedLessons",
+                )}
+              </span>
+            </label>
+            <small>
+              {t(
+                "teacherSettings.recurringPreferences.allowOpenEndedLessonsHint",
               )}
+            </small>
 
-              <div className={styles.actions}>
-                <button type="button" className={styles.secondaryButton} onClick={startTaxEditing}>
-                  {t("teacherSettings.tax.edit")}
-                </button>
-              </div>
-            </>
-          ) : (
-            <form className={styles.inlineForm} onSubmit={handleTaxSubmit}>
-              <label className={styles.field}>
-                <span>{t("teacherSettings.tax.taxpayerType")}</span>
-                <select
-                  value={taxpayerType}
-                  onChange={(event) => setTaxpayerType(event.target.value)}
-                  disabled={taxSaving}
-                >
-                  <option value="none">{t("teacherSettings.tax.types.none")}</option>
-                  <option value="pe">{t("teacherSettings.tax.types.pe")}</option>
-                </select>
-                <small>{t("teacherSettings.tax.taxpayerTypeHint")}</small>
-              </label>
+            <label className={styles.field}>
+              <span>
+                {t("teacherSettings.recurringPreferences.horizonWeeks")}
+              </span>
+              <input
+                type="number"
+                min={MIN_RECURRING_GENERATION_HORIZON_WEEKS}
+                max={MAX_RECURRING_GENERATION_HORIZON_WEEKS}
+                step="1"
+                value={recurringGenerationHorizonWeeks}
+                onChange={(event) =>
+                  setRecurringGenerationHorizonWeeks(event.target.value)
+                }
+              />
+              <small>
+                {t("teacherSettings.recurringPreferences.horizonWeeksHint")}
+              </small>
+            </label>
 
-              {taxpayerType === "pe" ? (
-                <label className={styles.field}>
-                  <span>{t("teacherSettings.tax.peGroup")}</span>
-                  <select
-                    value={peGroup}
-                    onChange={(event) => setPeGroup(Number(event.target.value))}
-                    disabled={taxSaving}
-                  >
-                    <option value={1}>{t("teacherSettings.tax.groups.1")}</option>
-                    <option value={2}>{t("teacherSettings.tax.groups.2")}</option>
-                    <option value={3}>{t("teacherSettings.tax.groups.3")}</option>
-                  </select>
-                  <small>{t("teacherSettings.finance.parametersFollowProfile")}</small>
-                </label>
-              ) : (
-                <div className={styles.readOnlyField}>
-                  <span>{t("teacherSettings.tax.noTaxTitle")}</span>
-                  <small>{t("teacherSettings.tax.noTaxHint")}</small>
-                </div>
+            {errorMessage && <p className={styles.error}>{errorMessage}</p>}
+
+            <div className={styles.actions}>
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={saving}
+              >
+                {saving
+                  ? t("teacherSettings.saving")
+                  : t("teacherSettings.save")}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "display"}>
+          <PagePreferencesSettings
+            role="teacher"
+            financeHistorySize={historyPageSize}
+            onDirtyChange={(dirty) => setFormDirty("pagination", dirty)}
+            onFinanceSave={async (value) => {
+              const { error } = await updateMyFinanceHistoryPageSize(
+                user.id,
+                value,
+              );
+              if (error) throw error;
+              // Saving pagination must not silently mark unrelated finance edits as saved.
+              const previousFinance = JSON.parse(
+                baselines.current.finance ?? financeDraft,
+              );
+              baselines.current.finance = JSON.stringify({
+                ...previousFinance,
+                historyPageSize: Number(value),
+              });
+              setHistoryPageSize(value);
+            }}
+          />
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "finance"}>
+          <form
+            id="finance-preferences"
+            className={styles.card}
+            onSubmit={handleFinancePreferencesSubmit}
+          >
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.financePreferences.title")}</h2>
+              <p>{t("teacherSettings.financePreferences.description")}</p>
+            </div>
+
+            <label className={styles.field}>
+              <span>
+                {t("teacherSettings.financePreferences.lowBalanceThreshold")}
+              </span>
+              <input
+                type="number"
+                min={MIN_LOW_BALANCE_LESSONS}
+                max={MAX_LOW_BALANCE_LESSONS}
+                step="1"
+                value={lowBalanceThresholdLessons}
+                onChange={(event) =>
+                  setLowBalanceThresholdLessons(event.target.value)
+                }
+                disabled={financePreferencesSaving}
+              />
+              <small>
+                {t("teacherSettings.financePreferences.lowBalanceHint")}
+              </small>
+            </label>
+
+            <label className={styles.workingDayToggle}>
+              <input
+                type="checkbox"
+                checked={financialBlockingEnabled}
+                onChange={(event) =>
+                  setFinancialBlockingEnabled(event.target.checked)
+                }
+                disabled={financePreferencesSaving}
+              />
+              <span>
+                {t(
+                  "teacherSettings.financePreferences.financialBlockingEnabled",
+                )}
+              </span>
+            </label>
+            <small>
+              {t(
+                "teacherSettings.financePreferences.financialBlockingEnabledHint",
               )}
+            </small>
 
-              <label className={styles.field}>
-                <span>{t("teacherSettings.tax.effectiveFrom")}</span>
-                <input
-                  type="date"
-                  min={teacherToday}
-                  value={taxEffectiveFrom}
-                  onChange={(event) => setTaxEffectiveFrom(event.target.value)}
-                  disabled={taxSaving}
-                />
-                <small>{t("teacherSettings.tax.effectiveFromHint")}</small>
-              </label>
+            <label className={styles.field}>
+              <span>
+                {t(
+                  "teacherSettings.financePreferences.financialBlockingDebtThreshold",
+                )}
+              </span>
+              <input
+                type="number"
+                min={MIN_FINANCIAL_BLOCKING_DEBT_LESSONS}
+                max={MAX_FINANCIAL_BLOCKING_DEBT_LESSONS}
+                step="1"
+                value={financialBlockingDebtThresholdLessons}
+                onChange={(event) =>
+                  setFinancialBlockingDebtThresholdLessons(event.target.value)
+                }
+                disabled={financePreferencesSaving || !financialBlockingEnabled}
+              />
+              <small>
+                {t(
+                  "teacherSettings.financePreferences.financialBlockingDebtThresholdHint",
+                )}
+              </small>
+            </label>
 
-              {taxErrorMessage && <p className={styles.error}>{taxErrorMessage}</p>}
+            <label className={styles.field}>
+              <span>
+                {t("teacherSettings.financePreferences.freeCancellationHours")}
+              </span>
+              <input
+                type="number"
+                min={MIN_FREE_CANCELLATION_HOURS}
+                max={MAX_FREE_CANCELLATION_HOURS}
+                step="1"
+                value={freeCancellationHours}
+                onChange={(event) =>
+                  setFreeCancellationHours(event.target.value)
+                }
+                disabled={financePreferencesSaving}
+              />
+              <small>
+                {t("teacherSettings.financePreferences.freeCancellationHint")}
+              </small>
+            </label>
 
-              <div className={styles.actionsSplit}>
-                {taxProfiles.length > 0 && (
+            {financePreferencesError && (
+              <p className={styles.error}>{financePreferencesError}</p>
+            )}
+
+            <div className={styles.actions}>
+              <button
+                type="submit"
+                className={styles.primaryButton}
+                disabled={financePreferencesSaving}
+              >
+                {financePreferencesSaving
+                  ? t("teacherSettings.financePreferences.saving")
+                  : t("teacherSettings.financePreferences.save")}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "taxes"}>
+          <section id="tax-profile" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.tax.title")}</h2>
+              <p>{t("teacherSettings.tax.description")}</p>
+            </div>
+
+            {!taxEditing ? (
+              <>
+                <div className={styles.savedTaxProfile}>
+                  <span>{t("teacherSettings.tax.currentStatus")}</span>
+                  <strong>{formatTaxProfile(currentTaxProfile, t)}</strong>
+                  {currentTaxProfile?.effective_from && (
+                    <small>
+                      {t("teacherSettings.tax.activeSince", {
+                        date: formatDate(currentTaxProfile.effective_from),
+                      })}
+                    </small>
+                  )}
+                </div>
+
+                {scheduledTaxProfiles.length > 0 && (
+                  <div className={styles.scheduledList}>
+                    <strong>{t("teacherSettings.tax.scheduledTitle")}</strong>
+                    {scheduledTaxProfiles.map((profile) => (
+                      <div key={profile.id} className={styles.scheduledItem}>
+                        <span>{formatTaxProfile(profile, t)}</span>
+                        <small>
+                          {t("teacherSettings.tax.fromDate", {
+                            date: formatDate(profile.effective_from),
+                          })}
+                        </small>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className={styles.actions}>
                   <button
                     type="button"
                     className={styles.secondaryButton}
-                    onClick={() => setTaxEditing(false)}
+                    onClick={startTaxEditing}
+                  >
+                    {t("teacherSettings.tax.edit")}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <form className={styles.inlineForm} onSubmit={handleTaxSubmit}>
+                <label className={styles.field}>
+                  <span>{t("teacherSettings.tax.taxpayerType")}</span>
+                  <select
+                    value={taxpayerType}
+                    onChange={(event) => setTaxpayerType(event.target.value)}
                     disabled={taxSaving}
                   >
-                    {t("common.cancel")}
-                  </button>
+                    <option value="none">
+                      {t("teacherSettings.tax.types.none")}
+                    </option>
+                    <option value="pe">
+                      {t("teacherSettings.tax.types.pe")}
+                    </option>
+                  </select>
+                  <small>{t("teacherSettings.tax.taxpayerTypeHint")}</small>
+                </label>
+
+                {taxpayerType === "pe" ? (
+                  <label className={styles.field}>
+                    <span>{t("teacherSettings.tax.peGroup")}</span>
+                    <select
+                      value={peGroup}
+                      onChange={(event) =>
+                        setPeGroup(Number(event.target.value))
+                      }
+                      disabled={taxSaving}
+                    >
+                      <option value={1}>
+                        {t("teacherSettings.tax.groups.1")}
+                      </option>
+                      <option value={2}>
+                        {t("teacherSettings.tax.groups.2")}
+                      </option>
+                      <option value={3}>
+                        {t("teacherSettings.tax.groups.3")}
+                      </option>
+                    </select>
+                    <small>
+                      {t("teacherSettings.finance.parametersFollowProfile")}
+                    </small>
+                  </label>
+                ) : (
+                  <div className={styles.readOnlyField}>
+                    <span>{t("teacherSettings.tax.noTaxTitle")}</span>
+                    <small>{t("teacherSettings.tax.noTaxHint")}</small>
+                  </div>
                 )}
-                <button type="submit" className={styles.primaryButton} disabled={taxSaving}>
-                  {taxSaving ? t("teacherSettings.tax.saving") : t("teacherSettings.tax.save")}
-                </button>
-              </div>
-            </form>
-          )}
-        </section>
 
-        <section id="tax-parameters" className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherSettings.finance.parametersTitle")}</h2>
-            <p>{t("teacherSettings.finance.parametersDescription")}</p>
-          </div>
-
-          {hasAnyPeProfile ? (
-            <>
-              <form className={styles.inlineForm} onSubmit={handleParameterSubmit}>
                 <label className={styles.field}>
-                  <span>{t("teacherSettings.finance.effectiveFrom")}</span>
+                  <span>{t("teacherSettings.tax.effectiveFrom")}</span>
                   <input
                     type="date"
                     min={teacherToday}
-                    value={parameterEffectiveFrom}
-                    onChange={(event) => handleParameterDateChange(event.target.value)}
-                    disabled={parameterSaving}
+                    value={taxEffectiveFrom}
+                    onChange={(event) =>
+                      setTaxEffectiveFrom(event.target.value)
+                    }
+                    disabled={taxSaving}
                   />
+                  <small>{t("teacherSettings.tax.effectiveFromHint")}</small>
                 </label>
 
-                {activePeGroup ? (
-                  <>
-                    <div className={styles.sectionBadge}>
-                      {t("teacherSettings.finance.groupLabel", { group: activePeGroup })}
-                    </div>
-                    <div className={styles.referenceGrid}>
-                      <MoneyParameterField
-                        label={t("teacherSettings.finance.minimumWage")}
-                        code="minimum_wage_minor"
-                        value={parameterValues.minimum_wage_minor}
-                        source={parameterSources.minimum_wage_minor}
-                        onChange={setParameterValues}
-                        t={t}
-                        disabled={parameterSaving}
-                      />
+                {taxErrorMessage && (
+                  <p className={styles.error}>{taxErrorMessage}</p>
+                )}
 
-                      {activePeGroup === 1 && (
+                <div className={styles.actionsSplit}>
+                  {taxProfiles.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={() => {
+                        setTaxEditing(false);
+                        setFormDirty("taxProfile", false);
+                      }}
+                      disabled={taxSaving}
+                    >
+                      {t("common.cancel")}
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className={styles.primaryButton}
+                    disabled={taxSaving}
+                  >
+                    {taxSaving
+                      ? t("teacherSettings.tax.saving")
+                      : t("teacherSettings.tax.save")}
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+
+          <section id="tax-parameters" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.finance.parametersTitle")}</h2>
+              <p>{t("teacherSettings.finance.parametersDescription")}</p>
+            </div>
+
+            {hasAnyPeProfile ? (
+              <>
+                <form
+                  className={styles.inlineForm}
+                  onSubmit={handleParameterSubmit}
+                >
+                  <label className={styles.field}>
+                    <span>{t("teacherSettings.finance.effectiveFrom")}</span>
+                    <input
+                      type="date"
+                      min={teacherToday}
+                      value={parameterEffectiveFrom}
+                      onChange={(event) =>
+                        handleParameterDateChange(event.target.value)
+                      }
+                      disabled={parameterSaving}
+                    />
+                  </label>
+
+                  {activePeGroup ? (
+                    <>
+                      <div className={styles.sectionBadge}>
+                        {t("teacherSettings.finance.groupLabel", {
+                          group: activePeGroup,
+                        })}
+                      </div>
+                      <div className={styles.referenceGrid}>
                         <MoneyParameterField
-                          label={t("teacherSettings.finance.livingWage")}
-                          code="living_wage_minor"
-                          value={parameterValues.living_wage_minor}
-                          source={parameterSources.living_wage_minor}
+                          label={t("teacherSettings.finance.minimumWage")}
+                          code="minimum_wage_minor"
+                          value={parameterValues.minimum_wage_minor}
+                          source={parameterSources.minimum_wage_minor}
                           onChange={setParameterValues}
                           t={t}
                           disabled={parameterSaving}
                         />
-                      )}
 
-                      <RateParameterField
-                        label={t("teacherSettings.finance.singleTaxRate")}
-                        code={`group${activePeGroup}_single_tax_rate`}
-                        value={parameterValues[`group${activePeGroup}_single_tax_rate`]}
-                        source={parameterSources[`group${activePeGroup}_single_tax_rate`]}
-                        onChange={setParameterValues}
-                        t={t}
-                        disabled={parameterSaving}
-                      />
+                        {activePeGroup === 1 && (
+                          <MoneyParameterField
+                            label={t("teacherSettings.finance.livingWage")}
+                            code="living_wage_minor"
+                            value={parameterValues.living_wage_minor}
+                            source={parameterSources.living_wage_minor}
+                            onChange={setParameterValues}
+                            t={t}
+                            disabled={parameterSaving}
+                          />
+                        )}
 
-                      <RateParameterField
-                        label={t("teacherSettings.finance.militaryRate")}
-                        code={`group${activePeGroup}_military_levy_rate`}
-                        value={parameterValues[`group${activePeGroup}_military_levy_rate`]}
-                        source={parameterSources[`group${activePeGroup}_military_levy_rate`]}
-                        onChange={setParameterValues}
-                        t={t}
-                        disabled={parameterSaving}
-                      />
+                        <RateParameterField
+                          label={t("teacherSettings.finance.singleTaxRate")}
+                          code={`group${activePeGroup}_single_tax_rate`}
+                          value={
+                            parameterValues[
+                              `group${activePeGroup}_single_tax_rate`
+                            ]
+                          }
+                          source={
+                            parameterSources[
+                              `group${activePeGroup}_single_tax_rate`
+                            ]
+                          }
+                          onChange={setParameterValues}
+                          t={t}
+                          disabled={parameterSaving}
+                        />
 
-                      <RateParameterField
-                        label={t("teacherSettings.finance.esvRate")}
-                        code="esv_rate"
-                        value={parameterValues.esv_rate}
-                        source={parameterSources.esv_rate}
-                        onChange={setParameterValues}
-                        t={t}
-                        disabled={parameterSaving}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <p className={styles.hint}>{t("teacherSettings.finance.noPeForDate")}</p>
-                )}
+                        <RateParameterField
+                          label={t("teacherSettings.finance.militaryRate")}
+                          code={`group${activePeGroup}_military_levy_rate`}
+                          value={
+                            parameterValues[
+                              `group${activePeGroup}_military_levy_rate`
+                            ]
+                          }
+                          source={
+                            parameterSources[
+                              `group${activePeGroup}_military_levy_rate`
+                            ]
+                          }
+                          onChange={setParameterValues}
+                          t={t}
+                          disabled={parameterSaving}
+                        />
 
-                {parameterError && <p className={styles.error}>{parameterError}</p>}
-
-                <div className={styles.actions}>
-                  <button
-                    type="submit"
-                    className={styles.primaryButton}
-                    disabled={parameterSaving || !activePeGroup}
-                  >
-                    {parameterSaving
-                      ? t("teacherSettings.finance.savingParameters")
-                      : t("teacherSettings.finance.saveParameters")}
-                  </button>
-                </div>
-              </form>
-
-              <div className={styles.scheduledList}>
-                <strong>{t("teacherSettings.finance.scheduledParameters")}</strong>
-                {scheduledParameterOverrides.length > 0 ? (
-                  scheduledParameterOverrides.map((item) => (
-                    <div key={item.id} className={styles.scheduledItem}>
-                      <div className={styles.scheduledText}>
-                        <span>{formatParameterName(item.code, t)}</span>
-                        <strong>{formatParameterValue(item, language)}</strong>
+                        <RateParameterField
+                          label={t("teacherSettings.finance.esvRate")}
+                          code="esv_rate"
+                          value={parameterValues.esv_rate}
+                          source={parameterSources.esv_rate}
+                          onChange={setParameterValues}
+                          t={t}
+                          disabled={parameterSaving}
+                        />
                       </div>
-                      <small>{formatDate(item.effective_from)}</small>
-                    </div>
-                  ))
-                ) : (
-                  <p className={styles.hint}>{t("teacherSettings.finance.noScheduledParameters")}</p>
-                )}
-              </div>
-            </>
-          ) : (
-            <p className={styles.hint}>{t("teacherSettings.finance.parametersOnlyPe")}</p>
-          )}
-        </section>
-
-        <section id="payment-accounts" className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2>{t("teacherSettings.finance.accountsTitle")}</h2>
-            <p>{t("teacherSettings.finance.accountsDescription")}</p>
-          </div>
-
-          {paymentAccounts.length > 0 ? (
-            <div className={styles.accountList}>
-              {paymentAccounts.map((account) => (
-                <div key={account.id} className={styles.accountItem}>
-                  <div>
-                    <strong>{account.name}</strong>
-                    <small>
-                      {account.currency} · {formatAccountOwner(account.owner_type, t)} · {formatAccountType(account.account_type, t)}
-                    </small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.hint}>{t("teacherSettings.finance.noAccounts")}</p>
-          )}
-
-          <form className={styles.inlineForm} onSubmit={handleAccountSubmit}>
-            <div className={styles.referenceGrid}>
-              <label className={`${styles.field} ${styles.fullField}`}>
-                <span>{t("teacherSettings.finance.accountName")}</span>
-                <input
-                  type="text"
-                  value={accountName}
-                  onChange={(event) => setAccountName(event.target.value)}
-                  placeholder={t("teacherSettings.finance.accountNamePlaceholder")}
-                  maxLength={100}
-                  disabled={accountSaving}
-                />
-              </label>
-
-              <label className={styles.field}>
-                <span>{t("teacherSettings.finance.currency")}</span>
-                <select
-                  value={accountCurrency}
-                  onChange={(event) => setAccountCurrency(event.target.value)}
-                  disabled={accountSaving}
-                >
-                  {FINANCE_CURRENCIES.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className={styles.field}>
-                <span>{t("teacherSettings.finance.owner")}</span>
-                <select
-                  value={resolvedAccountOwnerType}
-                  onChange={(event) => setAccountOwnerType(event.target.value)}
-                  disabled={accountSaving}
-                >
-                  <option value="personal">{t("teacherSettings.finance.ownerPersonal")}</option>
-                  {peTaxEnabled && (
-                    <option value="pe">{t("teacherSettings.finance.ownerPe")}</option>
+                    </>
+                  ) : (
+                    <p className={styles.hint}>
+                      {t("teacherSettings.finance.noPeForDate")}
+                    </p>
                   )}
-                </select>
-              </label>
 
-              <label className={styles.field}>
-                <span>{t("teacherSettings.finance.accountType")}</span>
-                <select
-                  value={resolvedAccountType}
-                  onChange={(event) => setAccountType(event.target.value)}
+                  {parameterError && (
+                    <p className={styles.error}>{parameterError}</p>
+                  )}
+
+                  <div className={styles.actions}>
+                    <button
+                      type="submit"
+                      className={styles.primaryButton}
+                      disabled={parameterSaving || !activePeGroup}
+                    >
+                      {parameterSaving
+                        ? t("teacherSettings.finance.savingParameters")
+                        : t("teacherSettings.finance.saveParameters")}
+                    </button>
+                  </div>
+                </form>
+
+                <div className={styles.scheduledList}>
+                  <strong>
+                    {t("teacherSettings.finance.scheduledParameters")}
+                  </strong>
+                  {scheduledParameterOverrides.length > 0 ? (
+                    scheduledParameterOverrides.map((item) => (
+                      <div key={item.id} className={styles.scheduledItem}>
+                        <div className={styles.scheduledText}>
+                          <span>{formatParameterName(item.code, t)}</span>
+                          <strong>
+                            {formatParameterValue(item, language)}
+                          </strong>
+                        </div>
+                        <small>{formatDate(item.effective_from)}</small>
+                      </div>
+                    ))
+                  ) : (
+                    <p className={styles.hint}>
+                      {t("teacherSettings.finance.noScheduledParameters")}
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className={styles.hint}>
+                {t("teacherSettings.finance.parametersOnlyPe")}
+              </p>
+            )}
+          </section>
+        </div>
+        <div className={styles.tabPanel} hidden={activeTab !== "finance"}>
+          <section id="payment-accounts" className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>{t("teacherSettings.finance.accountsTitle")}</h2>
+              <p>{t("teacherSettings.finance.accountsDescription")}</p>
+            </div>
+
+            {paymentAccounts.length > 0 ? (
+              <div className={styles.accountList}>
+                {paymentAccounts.map((account) => (
+                  <div key={account.id} className={styles.accountItem}>
+                    <div>
+                      <strong>{account.name}</strong>
+                      <small>
+                        {account.currency} ·{" "}
+                        {formatAccountOwner(account.owner_type, t)} ·{" "}
+                        {formatAccountType(account.account_type, t)}
+                      </small>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.hint}>
+                {t("teacherSettings.finance.noAccounts")}
+              </p>
+            )}
+
+            <form className={styles.inlineForm} onSubmit={handleAccountSubmit}>
+              <div className={styles.referenceGrid}>
+                <label className={`${styles.field} ${styles.fullField}`}>
+                  <span>{t("teacherSettings.finance.accountName")}</span>
+                  <input
+                    type="text"
+                    value={accountName}
+                    onChange={(event) => setAccountName(event.target.value)}
+                    placeholder={t(
+                      "teacherSettings.finance.accountNamePlaceholder",
+                    )}
+                    maxLength={100}
+                    disabled={accountSaving}
+                  />
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("teacherSettings.finance.currency")}</span>
+                  <select
+                    value={accountCurrency}
+                    onChange={(event) => setAccountCurrency(event.target.value)}
+                    disabled={accountSaving}
+                  >
+                    {FINANCE_CURRENCIES.map((currency) => (
+                      <option key={currency} value={currency}>
+                        {currency}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("teacherSettings.finance.owner")}</span>
+                  <select
+                    value={resolvedAccountOwnerType}
+                    onChange={(event) =>
+                      setAccountOwnerType(event.target.value)
+                    }
+                    disabled={accountSaving}
+                  >
+                    <option value="personal">
+                      {t("teacherSettings.finance.ownerPersonal")}
+                    </option>
+                    {peTaxEnabled && (
+                      <option value="pe">
+                        {t("teacherSettings.finance.ownerPe")}
+                      </option>
+                    )}
+                  </select>
+                </label>
+
+                <label className={styles.field}>
+                  <span>{t("teacherSettings.finance.accountType")}</span>
+                  <select
+                    value={resolvedAccountType}
+                    onChange={(event) => setAccountType(event.target.value)}
+                    disabled={accountSaving}
+                  >
+                    {availableAccountTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {formatAccountType(type, t)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {!peTaxEnabled && (
+                <p className={styles.hint}>
+                  {t("teacherSettings.finance.peAccountDisabled")}
+                </p>
+              )}
+              {accountError && <p className={styles.error}>{accountError}</p>}
+
+              <div className={styles.actions}>
+                <button
+                  type="submit"
+                  className={styles.secondaryButton}
                   disabled={accountSaving}
                 >
-                  {availableAccountTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {formatAccountType(type, t)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {!peTaxEnabled && (
-              <p className={styles.hint}>{t("teacherSettings.finance.peAccountDisabled")}</p>
-            )}
-            {accountError && <p className={styles.error}>{accountError}</p>}
-
-            <div className={styles.actions}>
-              <button type="submit" className={styles.secondaryButton} disabled={accountSaving}>
-                {accountSaving
-                  ? t("teacherSettings.finance.creatingAccount")
-                  : t("teacherSettings.finance.createAccount")}
-              </button>
-            </div>
-          </form>
-        </section>
-        <TeacherPaymentInstructionsSection />
+                  {accountSaving
+                    ? t("teacherSettings.finance.creatingAccount")
+                    : t("teacherSettings.finance.createAccount")}
+                </button>
+              </div>
+            </form>
+          </section>
+          <TeacherPaymentInstructionsSection
+            onDirtyChange={(dirty) =>
+              setFormDirty("paymentInstructions", dirty)
+            }
+          />
+        </div>
       </div>
+      <UnsavedChangesDialog
+        open={isPromptOpen}
+        onStay={stay}
+        onLeave={() => {
+          leave();
+          onDiscard();
+        }}
+        title={t("settingsUnsaved.title")}
+        description={t("settingsUnsaved.description")}
+        stayLabel={t("settingsUnsaved.stay")}
+        leaveLabel={t("settingsUnsaved.leave")}
+      />
+      <ConfirmDialog
+        open={pendingParameterDate !== null}
+        title={t("settingsUnsaved.title")}
+        description={t("settingsUnsaved.description")}
+        cancelLabel={t("settingsUnsaved.stay")}
+        confirmLabel={t("settingsUnsaved.leave")}
+        variant="danger"
+        onCancel={() => setPendingParameterDate(null)}
+        onConfirm={() => {
+          const next = pendingParameterDate;
+          setPendingParameterDate(null);
+          if (next) void applyParameterDateChange(next);
+        }}
+      />
     </section>
   );
 };
 
-const MoneyParameterField = ({ label, code, value, source, onChange, t, disabled }) => (
+const MoneyParameterField = ({
+  label,
+  code,
+  value,
+  source,
+  onChange,
+  t,
+  disabled,
+}) => (
   <label className={styles.field}>
     <span>{label}</span>
     <input
@@ -1257,7 +1642,15 @@ const MoneyParameterField = ({ label, code, value, source, onChange, t, disabled
   </label>
 );
 
-const RateParameterField = ({ label, code, value, source, onChange, t, disabled }) => (
+const RateParameterField = ({
+  label,
+  code,
+  value,
+  source,
+  onChange,
+  t,
+  disabled,
+}) => (
   <label className={styles.field}>
     <span>{label}</span>
     <input
@@ -1284,6 +1677,18 @@ const createDurationOptions = () => {
     options.push(value);
   }
   return options;
+};
+
+const resolvedParameterValues = (rows) => {
+  const values = { ...DEFAULT_PARAMETER_VALUES };
+  rows.forEach((item) => {
+    const numeric = Number(item.value_numeric);
+    values[item.code] =
+      item.unit === "uah_minor"
+        ? toDecimalInput(numeric / 100)
+        : toDecimalInput(numeric * 100);
+  });
+  return values;
 };
 
 const applyResolvedParameters = (
@@ -1338,19 +1743,28 @@ const buildParameterPayload = (group, values) => {
 };
 
 const parseMajorMoney = (value) => {
-  const numeric = Number(String(value ?? "").trim().replace(",", "."));
+  const numeric = Number(
+    String(value ?? "")
+      .trim()
+      .replace(",", "."),
+  );
   if (!Number.isFinite(numeric) || numeric <= 0) return NaN;
   return Math.round(numeric * 100);
 };
 
 const parsePercent = (value) => {
-  const numeric = Number(String(value ?? "").trim().replace(",", "."));
+  const numeric = Number(
+    String(value ?? "")
+      .trim()
+      .replace(",", "."),
+  );
   if (!Number.isFinite(numeric) || numeric <= 0) return NaN;
   return numeric / 100;
 };
 
 const isPositiveInteger = (value) => Number.isInteger(value) && value > 0;
-const isValidRatio = (value) => Number.isFinite(value) && value > 0 && value <= 1;
+const isValidRatio = (value) =>
+  Number.isFinite(value) && value > 0 && value <= 1;
 
 const toDecimalInput = (value) => {
   if (!Number.isFinite(Number(value))) return "";
@@ -1370,7 +1784,9 @@ const getDateInTimeZone = (timeZone) => {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(new Date());
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
   return `${values.year}-${values.month}-${values.day}`;
 };
 
@@ -1381,11 +1797,13 @@ const getProfileForDate = (profiles, date) =>
         profile.effective_from <= date &&
         (!profile.effective_to || date < profile.effective_to),
     )
-    .sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0] ?? null;
+    .sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0] ??
+  null;
 
 const formatTaxProfile = (profile, t) => {
   if (!profile) return t("teacherSettings.tax.notConfigured");
-  if (profile.taxpayer_type === "none") return t("teacherSettings.tax.types.none");
+  if (profile.taxpayer_type === "none")
+    return t("teacherSettings.tax.types.none");
   return `${t("teacherSettings.tax.types.pe")} · ${t(`teacherSettings.tax.groups.${profile.pe_group}`)}`;
 };
 
@@ -1401,10 +1819,13 @@ const formatSource = (source, t) =>
     : t("teacherSettings.finance.platformDefault");
 
 const formatParameterName = (code, t) => {
-  if (code === "minimum_wage_minor") return t("teacherSettings.finance.minimumWage");
-  if (code === "living_wage_minor") return t("teacherSettings.finance.livingWage");
+  if (code === "minimum_wage_minor")
+    return t("teacherSettings.finance.minimumWage");
+  if (code === "living_wage_minor")
+    return t("teacherSettings.finance.livingWage");
   if (code === "esv_rate") return t("teacherSettings.finance.esvRate");
-  if (code.includes("single_tax")) return t("teacherSettings.finance.singleTaxRate");
+  if (code.includes("single_tax"))
+    return t("teacherSettings.finance.singleTaxRate");
   return t("teacherSettings.finance.militaryRate");
 };
 
@@ -1421,13 +1842,16 @@ const formatAccountOwner = (ownerType, t) =>
     : t("teacherSettings.finance.ownerPersonal");
 
 const formatAccountType = (accountType, t) => {
-  if (accountType === "bank_account") return t("teacherSettings.finance.typeBank");
+  if (accountType === "bank_account")
+    return t("teacherSettings.finance.typeBank");
   if (accountType === "cash") return t("teacherSettings.finance.typeCash");
   return t("teacherSettings.finance.typeCard");
 };
 
 const normalizeWorkingHours = (rows, fallbackStart, fallbackEnd) => {
-  const byWeekday = new Map((rows ?? []).map((item) => [Number(item.weekday), item]));
+  const byWeekday = new Map(
+    (rows ?? []).map((item) => [Number(item.weekday), item]),
+  );
 
   return WEEKDAYS.map(({ value: weekday }) => {
     const row = byWeekday.get(weekday);
@@ -1448,23 +1872,35 @@ const timeValueToMinutes = (value) => {
 
 const getSettingsError = (error, t) => {
   const message = error?.message ?? "";
-  if (message.includes("INVALID_TIMEZONE")) return t("teacherSettings.errors.invalidTimezone");
-  if (message.includes("INVALID_WORKING_HOURS")) return t("teacherSettings.errors.invalidWorkingHours");
-  if (message.includes("INVALID_WORKDAY")) return t("teacherSettings.errors.invalidWorkday");
-  if (message.includes("INVALID_LESSON_DURATION")) return t("teacherSettings.errors.invalidDuration");
-  if (message.includes("INVALID_RECURRING_HORIZON")) return t("teacherSettings.errors.invalidRecurringHorizon");
-  if (message.includes("INVALID_RESCHEDULE_PRICE_POLICY")) return t("teacherSettings.errors.save");
-  if (message.includes("INVALID_OPEN_ENDED_RECURRING_POLICY")) return t("teacherSettings.errors.save");
-  if (message.includes("WORKDAY_TOO_SHORT")) return t("teacherSettings.errors.workdayTooShort");
-  if (message.includes("TEACHER_REQUIRED")) return t("teacherSettings.errors.teacherRequired");
+  if (message.includes("INVALID_TIMEZONE"))
+    return t("teacherSettings.errors.invalidTimezone");
+  if (message.includes("INVALID_WORKING_HOURS"))
+    return t("teacherSettings.errors.invalidWorkingHours");
+  if (message.includes("INVALID_WORKDAY"))
+    return t("teacherSettings.errors.invalidWorkday");
+  if (message.includes("INVALID_LESSON_DURATION"))
+    return t("teacherSettings.errors.invalidDuration");
+  if (message.includes("INVALID_RECURRING_HORIZON"))
+    return t("teacherSettings.errors.invalidRecurringHorizon");
+  if (message.includes("INVALID_RESCHEDULE_PRICE_POLICY"))
+    return t("teacherSettings.errors.save");
+  if (message.includes("INVALID_OPEN_ENDED_RECURRING_POLICY"))
+    return t("teacherSettings.errors.save");
+  if (message.includes("WORKDAY_TOO_SHORT"))
+    return t("teacherSettings.errors.workdayTooShort");
+  if (message.includes("TEACHER_REQUIRED"))
+    return t("teacherSettings.errors.teacherRequired");
   return t("teacherSettings.errors.save");
 };
 
 const getTaxSettingsError = (error, t) => {
   const message = error?.message ?? "";
-  if (message.includes("INVALID_PE_GROUP")) return t("teacherSettings.tax.errors.invalidGroup");
-  if (message.includes("TAX_PROFILE_PAST_DATE_NOT_ALLOWED")) return t("teacherSettings.tax.errors.pastDate");
-  if (message.includes("INVALID_TAXPAYER_TYPE")) return t("teacherSettings.tax.errors.invalidType");
+  if (message.includes("INVALID_PE_GROUP"))
+    return t("teacherSettings.tax.errors.invalidGroup");
+  if (message.includes("TAX_PROFILE_PAST_DATE_NOT_ALLOWED"))
+    return t("teacherSettings.tax.errors.pastDate");
+  if (message.includes("INVALID_TAXPAYER_TYPE"))
+    return t("teacherSettings.tax.errors.invalidType");
   return t("teacherSettings.tax.errors.save");
 };
 
